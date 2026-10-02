@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#4fa9f2">
+  <meta name="description" content="Coin Quest เกมแพลตฟอร์มเลื่อนฉากด้านข้าง ผจญภัยเก็บเหรียญทองให้ครบ 20 เหรียญ เล่นได้ทั้งคอมพิวเตอร์และมือถือ">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta property="og:title" content="Coin Quest — เก็บเหรียญให้ครบ 20 เหรียญ">
+  <meta property="og:description" content="เกมแพลตฟอร์มเลื่อนฉากด้านข้าง เล่นบนเว็บได้ทันที รองรับมือถือ">
+  <title>Coin Quest — เก็บเหรียญให้ครบ 20 เหรียญ</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;800&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game" aria-label="พื้นที่เล่นเกม Coin Quest"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" hidden>
+    <div class="hud-group" id="hud-left">
+      <div class="pill" id="coin-pill" title="เหรียญที่เก็บได้">
+        <svg class="ico coin-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#ffd23f" stroke="#d48a00" stroke-width="2"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="#fff0aa" stroke-width="1.8"/></svg>
+        <span><b id="coin-count">0</b><span class="dim" id="coin-total">/20</span></span>
+      </div>
+      <div class="pill" title="เวลา">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 8.5V13l3 2M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span id="timer">00:00.0</span>
+      </div>
+    </div>
+    <div class="hud-group" id="hud-right">
+      <button class="icon-btn" id="btn-music" type="button" aria-label="เปิด/ปิดเพลง" title="เพลง">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="currentColor"/><circle cx="17.5" cy="16" r="3" fill="currentColor"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-sound" type="button" aria-label="เปิด/ปิดเสียงเอฟเฟกต์" title="เสียงเอฟเฟกต์">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h4l5-4.5v14l-5-4.5H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-fullscreen" type="button" aria-label="เต็มจอ" title="เต็มจอ">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-pause" type="button" aria-label="หยุดเกมชั่วคราว" title="หยุดชั่วคราว (P)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ปุ่มควบคุมบนมือถือ -->
+  <div id="touch" aria-hidden="true">
+    <div class="pad pad-left">
+      <button class="tbtn" data-btn="left" type="button" tabindex="-1">
+        <svg viewBox="0 0 24 24"><path d="M15.5 5 8 12l7.5 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tbtn" data-btn="right" type="button" tabindex="-1">
+        <svg viewBox="0 0 24 24"><path d="M8.5 5 16 12l-7.5 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="pad pad-right">
+      <button class="tbtn tbtn-jump" data-btn="jump" type="button" tabindex="-1">
+        <svg viewBox="0 0 24 24"><path d="M5 14.5 12 7.5l7 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>กระโดด</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- หน้าแรก -->
+  <section class="screen" id="screen-title" aria-labelledby="title-heading">
+    <div class="card">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffd23f" stroke="#d48a00" stroke-width="2"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="#fff0aa" stroke-width="1.8"/></svg>
+      </div>
+      <h1 id="title-heading">Coin Quest</h1>
+      <p class="subtitle">ผจญภัยเก็บเหรียญทอง</p>
+      <p class="mission">ภารกิจ: ตามหาและเก็บ <b>เหรียญทอง 20 เหรียญ</b> ที่ซ่อนอยู่ตามจุดต่าง ๆ ทั่วทั้งฉาก</p>
+      <button class="btn btn-primary" id="btn-start" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
+        เริ่มเกม
+      </button>
+      <p class="best" id="best-title" hidden></p>
+      <div class="help">
+        <div class="help-col only-desktop">
+          <h2>คีย์บอร์ด</h2>
+          <ul>
+            <li><kbd>←</kbd><kbd>→</kbd> หรือ <kbd>A</kbd><kbd>D</kbd> เดิน</li>
+            <li><kbd>Space</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> กระโดด</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> หยุดเกม</li>
+          </ul>
+        </div>
+        <div class="help-col only-touch">
+          <h2>มือถือ</h2>
+          <ul>
+            <li>ปุ่ม ◀ ▶ มุมซ้ายล่าง เดิน</li>
+            <li>ปุ่ม กระโดด มุมขวาล่าง</li>
+            <li>ลากนิ้วสลับปุ่มซ้าย-ขวาได้</li>
+          </ul>
+        </div>
+        <div class="help-col">
+          <h2>เคล็ดลับ</h2>
+          <ul>
+            <li>กดค้างเพื่อกระโดดสูงขึ้น</li>
+            <li>เหยียบหัวสไลม์เพื่อกำจัด</li>
+            <li>ระวังหนามแหลมและหลุม</li>
+            <li>แตะธงเพื่อบันทึกเช็กพอยต์</li>
+          </ul>
+        </div>
+      </div>
+      <p class="rotate-hint">หมุนจอเป็นแนวนอนเพื่อเล่นได้สะดวกขึ้น</p>
+    </div>
+  </section>
+
+  <!-- หยุดชั่วคราว -->
+  <section class="screen" id="screen-pause" hidden aria-labelledby="pause-heading">
+    <div class="card card-sm">
+      <h2 class="screen-title" id="pause-heading">หยุดชั่วคราว</h2>
+      <button class="btn btn-primary" id="btn-resume" type="button">เล่นต่อ</button>
+      <button class="btn" id="btn-restart" type="button">เริ่มใหม่</button>
+      <button class="btn btn-ghost" id="btn-home" type="button">กลับหน้าแรก</button>
+    </div>
+  </section>
+
+  <!-- ชนะ -->
+  <section class="screen" id="screen-win" hidden aria-labelledby="win-heading">
+    <div class="card card-sm">
+      <div class="trophy" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M7 3h10v5a5 5 0 0 1-10 0z" fill="#ffd23f" stroke="#d48a00" stroke-width="1.6"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5" fill="none" stroke="#d48a00" stroke-width="1.6"/><path d="M12 13v4M8 21h8l-1-4H9z" fill="#ffd23f" stroke="#d48a00" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </div>
+      <h2 class="screen-title" id="win-heading">ภารกิจสำเร็จ!</h2>
+      <p class="subtitle">เก็บเหรียญทองครบ 20 เหรียญแล้ว</p>
+      <p class="badge" id="win-new" hidden>สถิติใหม่!</p>
+      <dl class="stats">
+        <div><dt>เวลา</dt><dd id="win-time">00:00.0</dd></div>
+        <div><dt>พลาด</dt><dd id="win-deaths">0 ครั้ง</dd></div>
+        <div><dt>สถิติดีที่สุด</dt><dd id="win-best">00:00.0</dd></div>
+      </dl>
+      <button class="btn btn-primary" id="btn-again" type="button">เล่นอีกครั้ง</button>
+      <button class="btn btn-ghost" id="btn-win-home" type="button">กลับหน้าแรก</button>
+    </div>
+  </section>
+
+  <noscript><p class="noscript">เกมนี้ต้องเปิดใช้งาน JavaScript</p></noscript>
+
+  <script src="js/level.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
