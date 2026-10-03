@@ -5,7 +5,7 @@
 
 **เล่นเกม:** https://phuwiny.github.io/boss-game/ — เล่นบนเบราว์เซอร์ได้ทันที ทั้งคอมพิวเตอร์และมือถือ ไม่ต้องติดตั้ง
 
-**เวอร์ชันล่าสุด:** [v0.3.0-beta — ตัวละครใหม่และโหมดจับเวลา](https://github.com/phuwiny/boss-game/releases/tag/v0.3.0-beta) · [ดูทุกเวอร์ชัน](https://github.com/phuwiny/boss-game/releases)
+**เวอร์ชันล่าสุด:** [v0.4.0-beta — ตัวละครและ HUD แบบ pixel art](https://github.com/phuwiny/boss-game/releases/tag/v0.4.0-beta) · [ดูทุกเวอร์ชัน](https://github.com/phuwiny/boss-game/releases)
 
 เกมแพลตฟอร์มเลื่อนฉากด้านข้าง (side-scrolling) แบบผู้เล่นคนเดียว
 
@@ -47,7 +47,8 @@
 
 | เวอร์ชัน | วันที่ | สิ่งที่เปลี่ยน |
 |---|---|---|
-| [v0.3.0-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.3.0-beta) | 3 ต.ค. 2569 | ตัวละครใหม่ Mew (วิ่งไว) และ Aclaire (กระโดดสูง), เมนูเลือกตัวละคร, โหมดจับเวลา 120 วินาที 80 เหรียญ, สถิติแยกตามโหมดและตัวละคร, ปุ่มมินิเกม (เร็วๆ นี้) |
+| [v0.4.0-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.4.0-beta) | 4 ต.ค. 2569 | ตัวละครทั้ง 3 ตัวและ HUD เปลี่ยนเป็น pixel art สไตล์ 16-bit (ตัวละครละ 9 ท่า ภาพคมทุกขนาดจอ), แถบเวลาในโหมดจับเวลา, แถบพลังของไอเทม, ปุ่มบนจอแบบพิกเซล |
+| [v0.3.0-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.3.0-beta) | 4 ต.ค. 2569 | ตัวละครใหม่ Mew (วิ่งไว) และ Aclaire (กระโดดสูง), เมนูเลือกตัวละคร, โหมดจับเวลา 120 วินาที 80 เหรียญ, สถิติแยกตามโหมดและตัวละคร, ปุ่มมินิเกม (เร็วๆ นี้) |
 | [v0.2.0-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.2.0-beta) | 3 ต.ค. 2569 | เหรียญ 40 เหรียญสุ่มตำแหน่งรายวัน (เก็บ 20 เหรียญชนะ), ไอเทมปีก/เห็ด/ดาว, สถิติวันนี้และสถิติตลอดกาล |
 | [v0.1.0-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.1.0-beta) | 3 ต.ค. 2569 | เวอร์ชันแรก: ด่าน 9 ช่วง, เหรียญวางตายตัว 20 เหรียญ, รองรับมือถือและจอยเกม |
 
