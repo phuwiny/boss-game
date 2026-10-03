@@ -812,7 +812,17 @@
   };
 
   Renderer.prototype.drawHero = function (p, g, time, dead) {
-    const ctx = this.ctx;
+    drawHeroAt(this.ctx, p, g, time, dead);
+  };
+
+  // ── ตัวละคร ──────────────────────────────────────────────────
+  // วาดโดยให้ (0,0) อยู่ที่กึ่งกลางเท้า แกน y ติดลบขึ้นด้านบน hitbox สูง 28 หน่วย
+
+  /**
+   * วาดตัวละคร (ใช้ทั้งในเกมและหน้าเลือกตัวละคร)
+   * p = ผู้เล่นหรือ deathAnim (ต้องมี x, y, w, h, face, ch), g = { landSquash, runPhase }
+   */
+  function drawHeroAt(ctx, p, g, time, dead) {
     const f = p.face || 1;
     const cx = p.x + p.w / 2, by = p.y + p.h;
     let sx = 1, sy = 1;
@@ -836,12 +846,11 @@
     const pw = !dead && p.pw ? p.pw : null;
     const shown = function (t) { return t > 0 && (t > 2 || Math.floor(time * 8) % 2 === 0); }; // กะพริบช่วง 2 วินาทีสุดท้าย
     const hue = (time * 540) % 360;
-    let bodyFill = '#ff6a3d', bodyStroke = '#c8461f';
+    let tint = null;
     if (pw && shown(pw.star)) {
-      bodyFill = 'hsl(' + hue + ',95%,60%)';
-      bodyStroke = 'hsl(' + hue + ',85%,38%)';
+      tint = hue;
       ctx.fillStyle = 'hsla(' + ((hue + 60) % 360) + ',100%,70%,0.35)';
-      ellipse(ctx, 0, -15, 19, 19); ctx.fill();
+      ellipse(ctx, 0, -16, 19, 21); ctx.fill();
     }
     if (pw && shown(pw.mush) && Math.abs(p.vx) > 230) {
       const d = Math.sign(p.vx);
@@ -870,74 +879,423 @@
       });
     }
 
-    const speed = Math.min(1, Math.abs(p.vx || 0) / 210);
-    const sway = Math.sin(time * 13) * (1 + speed * 1.5);
-    ctx.strokeStyle = '#2f6fde';
-    ctx.lineWidth = 3.2;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-8 * f, -20);
-    ctx.quadraticCurveTo(-15 * f, -21 + sway * 0.5, -(20 + speed * 5) * f, -15 + sway + (1 - speed) * 5);
-    ctx.moveTo(-8 * f, -19);
-    ctx.quadraticCurveTo(-14 * f, -17 + sway * 0.4, -(17 + speed * 4) * f, -10 + sway * 0.8 + (1 - speed) * 4);
-    ctx.stroke();
-
-    const run = !dead && p.onGround && Math.abs(p.vx) > 25;
-    const ph = g.runPhase || 0;
-    ctx.fillStyle = '#5a2a1a';
-    if (run) {
-      ellipse(ctx, -4 + Math.sin(ph) * 4.5, -3 - Math.max(0, Math.cos(ph)) * 3, 4.6, 3); ctx.fill();
-      ellipse(ctx, 4 + Math.sin(ph + Math.PI) * 4.5, -3 - Math.max(0, Math.cos(ph + Math.PI)) * 3, 4.6, 3); ctx.fill();
-    } else if (!dead && !p.onGround) {
-      ellipse(ctx, -5 + f, -4, 4.4, 3); ctx.fill();
-      ellipse(ctx, 5 + f * 2, -2.5, 4.4, 3); ctx.fill();
-    } else {
-      ellipse(ctx, -5, -3, 4.6, 3); ctx.fill();
-      ellipse(ctx, 5, -3, 4.6, 3); ctx.fill();
-    }
-
-    rr(ctx, -11, -27, 22, 23, 10);
-    ctx.fillStyle = bodyFill;
-    ctx.fill();
-    ctx.save();
-    ctx.clip();
-    ctx.fillStyle = '#ffd3ad';
-    ellipse(ctx, f * 2.5, -9, 7.5, 6); ctx.fill();
-    ctx.fillStyle = '#2f6fde';
-    ctx.fillRect(-12, -23, 24, 4.2);
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillRect(-12, -23, 24, 1.2);
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ellipse(ctx, -5 * f, -25, 5, 2.2); ctx.fill();
+    const pose = {
+      f: f,
+      dead: dead,
+      speed: Math.min(1, Math.abs(p.vx || 0) / 210),
+      run: !dead && p.onGround && Math.abs(p.vx) > 25,
+      air: !dead && !p.onGround,
+      vy: p.vy || 0,
+      ph: g.runPhase || 0,
+      tint: tint
+    };
+    (HERO_BODY[p.ch] || HERO_BODY.bobo)(ctx, pose, time);
     ctx.restore();
-    rr(ctx, -11, -27, 22, 23, 10);
-    ctx.strokeStyle = bodyStroke;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+  }
 
-    const ex = f * 3.2;
-    if (dead) {
-      ctx.strokeStyle = '#1d1d2b'; ctx.lineWidth = 1.6;
-      [-3.8, 3.8].forEach(function (o) {
+  /** ตากลมแบบการ์ตูน 2 ข้าง (มองไปทาง +x) */
+  function drawEyes(ctx, pose, time, xs, y, iris) {
+    if (pose.dead) {
+      ctx.strokeStyle = '#1d1d2b';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      xs.forEach(function (x) {
         ctx.beginPath();
-        ctx.moveTo(ex + o - 2, -17); ctx.lineTo(ex + o + 2, -13);
-        ctx.moveTo(ex + o + 2, -17); ctx.lineTo(ex + o - 2, -13);
+        ctx.moveTo(x - 1.8, y - 1.8); ctx.lineTo(x + 1.8, y + 1.8);
+        ctx.moveTo(x + 1.8, y - 1.8); ctx.lineTo(x - 1.8, y + 1.8);
         ctx.stroke();
       });
-    } else {
-      const blink = (time % 3.3) < 0.12;
-      [-3.8, 3.8].forEach(function (o) {
-        ctx.fillStyle = '#fff';
-        ellipse(ctx, ex + o, -15, 2.8, blink ? 0.6 : 3.5); ctx.fill();
-        if (!blink) {
-          ctx.fillStyle = '#1d1d2b';
-          ellipse(ctx, ex + o + f * 1.1, -14.6, 1.5, 1.9); ctx.fill();
-        }
-      });
-      ctx.fillStyle = 'rgba(255,120,140,0.55)';
-      ellipse(ctx, f * 9, -9.5, 2.2, 1.5); ctx.fill();
+      return;
     }
-    ctx.restore();
+    if ((time % 3.3) < 0.12) {
+      ctx.strokeStyle = '#2a1d1d';
+      ctx.lineWidth = 1.3;
+      ctx.lineCap = 'round';
+      xs.forEach(function (x) {
+        ctx.beginPath(); ctx.moveTo(x - 1.8, y + 0.6); ctx.lineTo(x + 1.8, y + 0.6); ctx.stroke();
+      });
+      return;
+    }
+    xs.forEach(function (x) {
+      ctx.fillStyle = '#ffffff';
+      ellipse(ctx, x, y, 2.1, 2.8); ctx.fill();
+      ctx.fillStyle = iris;
+      ellipse(ctx, x + 0.45, y + 0.3, 1.65, 2.25); ctx.fill();
+      ctx.fillStyle = '#1d1d2b';
+      ellipse(ctx, x + 0.7, y + 0.5, 0.85, 1.2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ellipse(ctx, x + 1.1, y - 0.7, 0.6, 0.6); ctx.fill();
+    });
+    ctx.strokeStyle = '#2a1d1d';
+    ctx.lineWidth = 0.9;
+    xs.forEach(function (x) {
+      ctx.beginPath(); ctx.moveTo(x - 1.9, y - 2.6); ctx.quadraticCurveTo(x, y - 3.6, x + 2.1, y - 2.5); ctx.stroke();
+    });
+  }
+
+  /** ตำแหน่งเท้าและมือของตัวละครแบบมีแขนขา (หันไปทาง +x) */
+  function limbs(pose) {
+    if (pose.run) {
+      const a = pose.ph;
+      return {
+        feet: [
+          { x: Math.sin(a) * 5, y: -1.6 - Math.max(0, Math.cos(a)) * 3 },
+          { x: Math.sin(a + Math.PI) * 5, y: -1.6 - Math.max(0, Math.cos(a + Math.PI)) * 3 }
+        ],
+        hands: [{ x: Math.sin(a) * 4.5 - 0.5, y: -8.8 }, { x: Math.sin(a + Math.PI) * 4.5 + 0.5, y: -8.8 }]
+      };
+    }
+    if (pose.air) {
+      return pose.vy < 0
+        ? { feet: [{ x: -3, y: -2 }, { x: 4, y: -4.5 }], hands: [{ x: -4.5, y: -16 }, { x: 6, y: -18 }] }
+        : { feet: [{ x: -3.5, y: -1.6 }, { x: 3.5, y: -2.6 }], hands: [{ x: -6, y: -14 }, { x: 6.5, y: -15 }] };
+    }
+    return { feet: [{ x: -2.8, y: -1.6 }, { x: 2.8, y: -1.6 }], hands: [{ x: -2, y: -8.8 }, { x: 2.6, y: -8.8 }] };
+  }
+
+  function drawLegs(ctx, L, hipY, legColor, legW, shoe, shoeStroke) {
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 2; i++) {
+      const ft = L.feet[i], hx = i ? 1.8 : -1.8;
+      ctx.strokeStyle = legColor;
+      ctx.lineWidth = legW;
+      ctx.beginPath(); ctx.moveTo(hx, hipY); ctx.lineTo(ft.x, ft.y - 1); ctx.stroke();
+      ctx.fillStyle = shoe;
+      ellipse(ctx, ft.x + 1, ft.y, 3.2, 2); ctx.fill();
+      if (shoeStroke) { ctx.strokeStyle = shoeStroke; ctx.lineWidth = 0.8; ctx.stroke(); }
+    }
+  }
+
+  function drawArm(ctx, hand, skin, sleeve) {
+    const shx = 0.5, shy = -14.6;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(shx, shy); ctx.lineTo(hand.x, hand.y); ctx.stroke();
+    ctx.fillStyle = skin;
+    ellipse(ctx, hand.x, hand.y, 1.6, 1.6); ctx.fill();
+    ctx.fillStyle = sleeve;
+    const ang = Math.atan2(hand.y - shy, hand.x - shx);
+    ellipse(ctx, shx + Math.cos(ang) * 1.6, shy + Math.sin(ang) * 1.6, 2.5, 2.5); ctx.fill();
+  }
+
+  // หัวของตัวละครแบบมีแขนขา: วาดด้วยพิกัดหัวกลางที่ (1.5, -21.5) แล้วย่อ/ยกลงตำแหน่งจริง
+  const HEAD_Y = -23.2, HEAD_S = 0.84;
+  function headSpace(ctx) {
+    ctx.translate(1.5, HEAD_Y);
+    ctx.scale(HEAD_S, HEAD_S);
+    ctx.translate(-1.5, 21.5);
+  }
+
+  /** วาดหน้า คืนฟังก์ชันที่วาดตา แก้ม ปาก (เรียกหลังวาดผมด้านหน้า) ต้องอยู่ใน headSpace */
+  function drawFace(ctx, pose, time, iris) {
+    const SKIN = '#ffe0c4';
+    ctx.fillStyle = SKIN;
+    ellipse(ctx, 1.5, -21.5, 9.2, 9); ctx.fill();
+    ctx.strokeStyle = '#e8b48f';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    return function () {
+      drawEyes(ctx, pose, time, [3.4, 8], -19.6, iris);
+      if (!pose.dead) {
+        ctx.fillStyle = 'rgba(255,120,140,0.5)';
+        ellipse(ctx, 9.4, -16, 1.8, 1.1); ctx.fill();
+        ctx.strokeStyle = '#a5523f';
+        ctx.lineWidth = 0.9;
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(6.2, -15.6, 1.2, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+      }
+    };
+  }
+
+  const HERO_BODY = {
+    // ── Bobo: ก้อนกลมสีส้ม คาดผ้าสีฟ้า (ตัวตั้งต้น) ──
+    bobo: function (ctx, pose, time) {
+      const f = pose.f, dead = pose.dead, speed = pose.speed;
+      const bodyFill = pose.tint !== null ? 'hsl(' + pose.tint + ',95%,60%)' : '#ff6a3d';
+      const bodyStroke = pose.tint !== null ? 'hsl(' + pose.tint + ',85%,38%)' : '#c8461f';
+      const sway = Math.sin(time * 13) * (1 + speed * 1.5);
+      ctx.strokeStyle = '#2f6fde';
+      ctx.lineWidth = 3.2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-8 * f, -20);
+      ctx.quadraticCurveTo(-15 * f, -21 + sway * 0.5, -(20 + speed * 5) * f, -15 + sway + (1 - speed) * 5);
+      ctx.moveTo(-8 * f, -19);
+      ctx.quadraticCurveTo(-14 * f, -17 + sway * 0.4, -(17 + speed * 4) * f, -10 + sway * 0.8 + (1 - speed) * 4);
+      ctx.stroke();
+
+      const ph = pose.ph;
+      ctx.fillStyle = '#5a2a1a';
+      if (pose.run) {
+        ellipse(ctx, -4 + Math.sin(ph) * 4.5, -3 - Math.max(0, Math.cos(ph)) * 3, 4.6, 3); ctx.fill();
+        ellipse(ctx, 4 + Math.sin(ph + Math.PI) * 4.5, -3 - Math.max(0, Math.cos(ph + Math.PI)) * 3, 4.6, 3); ctx.fill();
+      } else if (pose.air) {
+        ellipse(ctx, -5 + f, -4, 4.4, 3); ctx.fill();
+        ellipse(ctx, 5 + f * 2, -2.5, 4.4, 3); ctx.fill();
+      } else {
+        ellipse(ctx, -5, -3, 4.6, 3); ctx.fill();
+        ellipse(ctx, 5, -3, 4.6, 3); ctx.fill();
+      }
+
+      rr(ctx, -11, -27, 22, 23, 10);
+      ctx.fillStyle = bodyFill;
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = '#ffd3ad';
+      ellipse(ctx, f * 2.5, -9, 7.5, 6); ctx.fill();
+      ctx.fillStyle = '#2f6fde';
+      ctx.fillRect(-12, -23, 24, 4.2);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fillRect(-12, -23, 24, 1.2);
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ellipse(ctx, -5 * f, -25, 5, 2.2); ctx.fill();
+      ctx.restore();
+      rr(ctx, -11, -27, 22, 23, 10);
+      ctx.strokeStyle = bodyStroke;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      const ex = f * 3.2;
+      if (dead) {
+        ctx.strokeStyle = '#1d1d2b'; ctx.lineWidth = 1.6;
+        [-3.8, 3.8].forEach(function (o) {
+          ctx.beginPath();
+          ctx.moveTo(ex + o - 2, -17); ctx.lineTo(ex + o + 2, -13);
+          ctx.moveTo(ex + o + 2, -17); ctx.lineTo(ex + o - 2, -13);
+          ctx.stroke();
+        });
+      } else {
+        const blink = (time % 3.3) < 0.12;
+        [-3.8, 3.8].forEach(function (o) {
+          ctx.fillStyle = '#fff';
+          ellipse(ctx, ex + o, -15, 2.8, blink ? 0.6 : 3.5); ctx.fill();
+          if (!blink) {
+            ctx.fillStyle = '#1d1d2b';
+            ellipse(ctx, ex + o + f * 1.1, -14.6, 1.5, 1.9); ctx.fill();
+          }
+        });
+        ctx.fillStyle = 'rgba(255,120,140,0.55)';
+        ellipse(ctx, f * 9, -9.5, 2.2, 1.5); ctx.fill();
+      }
+    },
+
+    // ── Mew: ผมยาวสีเหลือง ตาสีเขียว เสื้อสีน้ำเงินเข้ม กระโปรงสีส้ม หมวกเบเร่สีดำ ──
+    mew: function (ctx, pose, time) {
+      ctx.save();
+      ctx.scale(pose.f, 1);
+      const SKIN = '#ffe0c4';
+      const HAIR = '#ffd84a', HAIR_DARK = '#d9a21b';
+      const shirt = pose.tint !== null ? 'hsl(' + pose.tint + ',90%,58%)' : '#1f3f94';
+      const skirt = pose.tint !== null ? 'hsl(' + ((pose.tint + 120) % 360) + ',95%,60%)' : '#ff8a2a';
+      const L = limbs(pose);
+      const flow = pose.speed * 5;
+      const lift = clamp(pose.vy / 900, -1, 1) * (pose.air ? 4 : 0);
+      const sway = Math.sin(time * 6) * (0.6 + pose.speed * 1.2);
+
+      // ผมยาวด้านหลัง
+      ctx.fillStyle = HAIR;
+      ctx.strokeStyle = HAIR_DARK;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(-1, -29);
+      ctx.bezierCurveTo(-10, -29, -11 - flow, -17, -10.5 - flow * 1.6 + sway, -6.5 - lift);
+      ctx.quadraticCurveTo(-8 - flow, -4.5 - lift, -5.5 - flow * 0.6 + sway * 0.5, -7.5 - lift * 0.6);
+      ctx.quadraticCurveTo(-5, -10, -2.5, -13);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(217,162,27,0.7)';
+      ctx.beginPath();
+      ctx.moveTo(-5.5, -23); ctx.quadraticCurveTo(-8.5 - flow * 0.5, -16, -8 - flow + sway * 0.6, -9 - lift * 0.8);
+      ctx.stroke();
+
+      drawArm(ctx, L.hands[0], '#f2c8a6', shirt);
+      drawLegs(ctx, L, -5.5, SKIN, 2.8, '#2b2230', null);
+
+      // กระโปรง
+      const flare = pose.air ? 1.2 : 0;
+      ctx.fillStyle = skirt;
+      ctx.beginPath();
+      ctx.moveTo(-5, -10.2);
+      ctx.lineTo(5, -10.2);
+      ctx.lineTo(7.5 + flare, -4.6 - flare);
+      ctx.quadraticCurveTo(0, -3.4, -7.5 - flare, -4.6 - flare);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = pose.tint !== null ? 'rgba(0,0,0,0.25)' : '#cf6414';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-2, -9.3); ctx.lineTo(-3, -4.7);
+      ctx.moveTo(2, -9.3); ctx.lineTo(3, -4.7);
+      ctx.stroke();
+
+      // เสื้อ
+      rr(ctx, -5.2, -16.8, 10.4, 7.4, 3);
+      ctx.fillStyle = shirt;
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(-2.4, -15.8); ctx.lineTo(1.5, -15.8); ctx.lineTo(-0.4, -13.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(1.5, -15.8); ctx.lineTo(5, -15.8); ctx.lineTo(3.4, -13.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#ffd23f';
+      ellipse(ctx, 1.5, -12.4, 0.9, 0.9); ctx.fill();
+
+      drawArm(ctx, L.hands[1], SKIN, shirt);
+
+      // หัวและผมด้านหน้า
+      ctx.save();
+      headSpace(ctx);
+      const finishFace = drawFace(ctx, pose, time, '#2fae5a');
+      ctx.fillStyle = HAIR;
+      ctx.beginPath();
+      ctx.moveTo(-7.5, -13.5);
+      ctx.bezierCurveTo(-11.5, -20, -9, -31, 1.5, -31.3);
+      ctx.bezierCurveTo(8.5, -31.6, 11.8, -27, 11.1, -21.5);
+      ctx.lineTo(9.6, -24.2);
+      ctx.lineTo(8.1, -21.6);
+      ctx.lineTo(6.2, -24.6);
+      ctx.lineTo(4.4, -22);
+      ctx.lineTo(2.5, -24.8);
+      ctx.lineTo(0.6, -22.4);
+      ctx.lineTo(-0.6, -17);
+      ctx.lineTo(-2.4, -13);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = HAIR_DARK;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.arc(1, -22, 7, 1.15 * Math.PI, 1.45 * Math.PI); ctx.stroke();
+
+      // หมวกเบเร่สีดำ
+      ctx.save();
+      ctx.translate(0, -30.2);
+      ctx.rotate(-0.22);
+      ctx.fillStyle = '#22222c';
+      ellipse(ctx, 0, 0, 9, 3.7); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ellipse(ctx, -2.5, -1.2, 4, 1.2); ctx.fill();
+      ctx.fillStyle = '#22222c';
+      rr(ctx, -0.8, -5.2, 1.6, 2.6, 0.7); ctx.fill();
+      ctx.restore();
+
+      finishFace();
+      ctx.restore();
+      ctx.restore();
+    },
+
+    // ── Aclaire: ผมสั้นสีส้มหางม้า ตาสีฟ้า เสื้อแขนสั้นสีชมพู กางเกงสีน้ำเงิน ──
+    aclaire: function (ctx, pose, time) {
+      ctx.save();
+      ctx.scale(pose.f, 1);
+      const SKIN = '#ffe0c4';
+      const HAIR = '#ff8c32', HAIR_DARK = '#d4651a';
+      const shirt = pose.tint !== null ? 'hsl(' + pose.tint + ',90%,62%)' : '#ff8fc0';
+      const pants = pose.tint !== null ? 'hsl(' + ((pose.tint + 120) % 360) + ',80%,45%)' : '#2a4fc0';
+      const L = limbs(pose);
+
+      // หางม้า (เด้งตามจังหวะวิ่ง ปลิวขึ้นตอนตก)
+      const bounce = pose.run ? Math.sin(pose.ph * 2) * 0.18 : Math.sin(time * 3) * 0.06;
+      const ang = 0.15 + pose.speed * 0.55 + bounce + clamp(pose.vy / 900, -1, 1) * (pose.air ? 0.5 : 0);
+      ctx.save();
+      headSpace(ctx);
+      ctx.translate(-7.2, -25.5);
+      ctx.rotate(ang);
+      ctx.fillStyle = HAIR;
+      ctx.strokeStyle = HAIR_DARK;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(1, -2.2);
+      ctx.bezierCurveTo(-6, -3.5, -9.5, 4, -6.5, 11.5);
+      ctx.bezierCurveTo(-5.2, 6.5, -2, 3.5, 1.2, 2.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-1.5, -0.5); ctx.quadraticCurveTo(-5.5, 2, -5.5, 7.5);
+      ctx.stroke();
+      ctx.restore();
+
+      drawArm(ctx, L.hands[0], '#f2c8a6', shirt);
+      drawLegs(ctx, L, -6, pants, 3.6, '#ffffff', '#c3c9d6');
+
+      // สะโพก (กางเกง)
+      rr(ctx, -5, -10.6, 10, 5.4, 2);
+      ctx.fillStyle = pants;
+      ctx.fill();
+
+      // เสื้อแขนสั้น
+      rr(ctx, -5.2, -16.8, 10.4, 7.6, 3);
+      ctx.fillStyle = shirt;
+      ctx.fill();
+      ctx.strokeStyle = pose.tint !== null ? 'rgba(0,0,0,0.2)' : '#e56aa0';
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ellipse(ctx, 1.6, -12.4, 1.5, 1.4); ctx.fill();
+
+      drawArm(ctx, L.hands[1], SKIN, shirt);
+
+      // หัวและผมสั้น
+      ctx.save();
+      headSpace(ctx);
+      const finishFace = drawFace(ctx, pose, time, '#3a8fe8');
+      ctx.fillStyle = HAIR;
+      ctx.beginPath();
+      ctx.moveTo(-6.8, -16.5);
+      ctx.bezierCurveTo(-10.8, -21, -9, -31, 1.5, -31.2);
+      ctx.bezierCurveTo(8.8, -31.4, 12, -27, 11.1, -21.8);
+      ctx.quadraticCurveTo(9.5, -25.5, 5.5, -25.2);
+      ctx.quadraticCurveTo(3.5, -22.5, 0.8, -23.2);
+      ctx.lineTo(-0.4, -18.5);
+      ctx.lineTo(-2.6, -16.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = HAIR_DARK;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.arc(1, -22, 7, 1.15 * Math.PI, 1.45 * Math.PI); ctx.stroke();
+      // ยางรัดผม
+      ctx.fillStyle = '#ffd23f';
+      ellipse(ctx, -7.4, -25.4, 1.9, 2.3); ctx.fill();
+      ctx.strokeStyle = '#e0a800';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      finishFace();
+      ctx.restore();
+      ctx.restore();
+    }
+  };
+
+  /** วาดตัวอย่างตัวละครลง canvas ของหน้าเมนู (ปรับความละเอียดตามขนาดที่แสดงจริง) */
+  CQ.drawCharPreview = function (canvas, id, time, running) {
+    const cw = canvas.clientWidth, chh = canvas.clientHeight;
+    if (!cw || !chh) return;
+    const dpr = Math.min(root.devicePixelRatio || 1, 2);
+    const W = Math.round(cw * dpr), H = Math.round(chh * dpr);
+    if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const k = Math.min(H / 44, W / 40);
+    ctx.setTransform(k, 0, 0, k, W / 2, H - 5 * k);
+    ctx.fillStyle = 'rgba(16,28,52,0.16)';
+    ellipse(ctx, 0, 0.5, 12, 2.6); ctx.fill();
+    const P = CQ.PHYS;
+    const p = { x: -P.PW / 2, y: -P.PH, w: P.PW, h: P.PH, face: 1, onGround: true, vx: running ? 230 : 0, vy: 0, ch: id, pw: null };
+    drawHeroAt(ctx, p, { landSquash: 0, runPhase: running ? time * 15 : 0 }, time, false);
   };
 
   Renderer.prototype.drawParticles = function (list) {
@@ -1035,7 +1393,7 @@
       ctx.stroke();
     }
     const p = g.deathAnim || g.player;
-    ctx.fillStyle = '#ff5a3d';
+    ctx.fillStyle = CQ.getCharacter(p.ch).color;
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1.2 * k;
     ellipse(ctx, x + (p.x + p.w / 2) * sx, y + clamp(p.y + p.h / 2, 0, lv.h * T) * sy, 3 * k, 3 * k);

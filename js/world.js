@@ -125,7 +125,10 @@
     return null;
   }
 
-  function makePlayer(tx, ty) {
+  const DEFAULT_STATS = { run: 1, accel: 1, jump: 1 };
+
+  /** ch = ตัวละครจาก CQ.CHARACTERS (ไม่ใส่ = ค่าพื้นฐาน) */
+  function makePlayer(tx, ty, ch) {
     return {
       x: tx * T + (T - P.PW) / 2,
       y: (ty + 1) * T - P.PH,
@@ -137,6 +140,8 @@
       prevBottom: 0,
       dead: false, invuln: 0,
       airJumps: 0,
+      ch: ch ? ch.id : 'bobo',
+      st: ch ? ch.stats : DEFAULT_STATS, // ตัวคูณความเร็ว/ความเร่ง/แรงกระโดดของตัวละคร
       pw: { wing: 0, mush: 0, star: 0 } // เวลาที่เหลือของไอเทมแต่ละชนิด (วินาที)
     };
   }
@@ -152,6 +157,7 @@
     if (p.ride && p.ride.dx) moveX(p, p.ride.dx, lv);
 
     const pw = p.pw;
+    const st = p.st || DEFAULT_STATS;
     const hasWing = !!pw && pw.wing > 0;
     const speedMul = pw && pw.mush > 0 ? P.MUSH_SPEED : 1;
     const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
@@ -159,14 +165,14 @@
     let accel;
     if (p.onGround) accel = (dir === 0 || p.vx * dir < 0) ? P.DEC_GROUND : P.ACC_GROUND;
     else accel = dir === 0 ? P.DEC_AIR : P.ACC_AIR;
-    p.vx = approach(p.vx, dir * P.RUN * speedMul, accel * speedMul * dt);
+    p.vx = approach(p.vx, dir * P.RUN * st.run * speedMul, accel * st.accel * speedMul * dt);
 
     p.coyote = p.onGround ? P.COYOTE : Math.max(0, p.coyote - dt);
     p.buffer = inp.jumpPressed ? P.BUFFER : Math.max(0, p.buffer - dt);
     if (p.onGround) p.airJumps = hasWing ? 1 : 0;
 
     if (p.buffer > 0 && p.coyote > 0) {
-      p.vy = -P.JUMP_V;
+      p.vy = -P.JUMP_V * st.jump;
       if (p.ride) p.vx += p.ride.vx;
       p.buffer = 0;
       p.coyote = 0;
@@ -176,7 +182,7 @@
       if (ev) ev.push({ type: 'jump' });
     } else if (inp.jumpPressed && hasWing && p.airJumps > 0 && !p.onGround) {
       // กระโดดชั้นที่ 2 กลางอากาศ (ต้องกดใหม่ ไม่ใช้ jump buffer)
-      p.vy = -P.AIR_JUMP_V;
+      p.vy = -P.AIR_JUMP_V * st.jump;
       p.airJumps--;
       p.buffer = 0;
       p.ride = null;

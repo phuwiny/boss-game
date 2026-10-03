@@ -121,6 +121,11 @@
     zap: function () {
       tone(900, 0.18, { vol: 0.12, slide: 220 });
       noise(0.1, 0.2, 2500);
+    },
+    tick: function () { tone(1175, 0.07, { type: 'triangle', vol: 0.28 }); },
+    timeup: function () {
+      [784, 659, 523].forEach(function (f, i) { tone(f, 0.16, { type: 'triangle', vol: 0.28, delay: i * 0.13 }); });
+      tone(392, 0.6, { vol: 0.12, delay: 0.39 });
     }
   };
 

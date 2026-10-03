@@ -92,6 +92,11 @@ button { font: inherit; color: inherit; }
 .ico { width: 22px; height: 22px; flex: none; }
 
 #coin-pill.bump { animation: bump 0.35s ease-out; }
+#timer-pill.warn { background: rgba(214, 40, 52, 0.85); animation: warn-pulse 0.5s ease-in-out infinite alternate; }
+@keyframes warn-pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
 @keyframes bump {
   0% { transform: scale(1); }
   35% { transform: scale(1.18); }
@@ -263,8 +268,6 @@ h1 {
 }
 
 .subtitle { margin: 2px 0 10px; color: var(--muted); font-size: 17px; }
-.mission { margin: 0 auto 16px; max-width: 420px; font-size: 16px; line-height: 1.55; }
-.mission b { color: #c98500; }
 
 .btn {
   display: flex;
@@ -291,10 +294,184 @@ h1 {
 .btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .btn-primary { background: var(--orange); color: #fff; font-size: 20px; box-shadow: inset 0 -5px 0 var(--orange-dark); }
 .btn-ghost { background: transparent; box-shadow: none; color: var(--muted); min-height: 42px; }
+.btn:disabled { cursor: not-allowed; filter: none; transform: none; }
 
-.best { margin: 12px 0 0; font-size: 15px; color: #a06a00; font-weight: 600; }
+/* ── หน้าแรก: ตัวละคร / โหมด / มินิเกม ─────────────────── */
+.char-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto 10px;
+  padding: 6px 14px 6px 8px;
+  border: 0;
+  border-radius: 16px;
+  background: #f4f6fa;
+  color: var(--navy);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.06);
+  transition: transform 0.1s, background 0.1s;
+}
+.char-pick:hover { background: #eaf0f8; }
+.char-pick:active { transform: translateY(1px); }
+.char-pick:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.char-pick-preview {
+  width: 54px;
+  height: 54px;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 60%, #ffffff 0 58%, #e3e9f2 60%);
+}
+.char-pick-text { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; }
+.char-pick-label { font-size: 12.5px; color: var(--muted); }
+.char-pick-text b { font-size: 19px; font-weight: 800; }
+.char-pick-tag { font-size: 13.5px; color: #3a4456; }
+.char-pick-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--orange-dark);
+}
+.char-pick-change svg { width: 18px; height: 18px; }
 
-.day { margin: -8px 0 12px; font-size: 14px; color: var(--muted); }
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+.mode-btn {
+  flex-direction: column;
+  gap: 2px;
+  max-width: none;
+  min-height: 84px;
+  margin: 0;
+  padding: 10px 10px 12px;
+  line-height: 1.3;
+}
+.mode-name { display: inline-flex; align-items: center; gap: 6px; font-size: 19px; font-weight: 800; }
+.mode-name svg { width: 20px; height: 20px; }
+.mode-desc { font-size: 13.5px; font-weight: 400; opacity: 0.85; }
+.mode-best {
+  margin-top: 3px;
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.07);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #8a5a00;
+}
+.btn-primary .mode-best { background: rgba(255, 255, 255, 0.22); color: #fff; }
+
+.btn-soon {
+  max-width: 460px;
+  min-height: 44px;
+  margin-top: 10px;
+  background: #f0f2f6;
+  color: #9aa3b2;
+  font-size: 16px;
+  box-shadow: none;
+  border: 2px dashed #d6dbe4;
+}
+.btn-soon svg { width: 18px; height: 18px; }
+.soon-badge {
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: #ffe9a8;
+  color: #8a5a00;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── หน้าเลือกตัวละคร ─────────────────────────────────── */
+.card-chars { width: min(720px, 100%); }
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.char-card {
+  --accent: var(--orange);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 10px 12px;
+  border: 3px solid transparent;
+  border-radius: 18px;
+  background: #f4f6fa;
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s, background 0.12s, box-shadow 0.12s;
+}
+.char-card:hover { background: #eef2f8; }
+.char-card:active { transform: scale(0.98); }
+.char-card:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.char-card.selected {
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(16, 28, 52, 0.14);
+}
+.char-card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 24px;
+}
+.char-preview {
+  display: block;
+  width: 100px;
+  height: 100px;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 60%, #ffffff 0 58%, #e3e9f2 60%);
+}
+.char-card.selected .char-preview { background: radial-gradient(circle at 50% 60%, #fffaf0 0 58%, #fff0cc 60%); }
+.char-info { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; }
+.char-name { font-size: 21px; font-weight: 800; color: var(--navy); line-height: 1.1; }
+.char-tag {
+  padding: 0 10px;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.char-desc { font-size: 12.5px; color: var(--muted); line-height: 1.35; min-height: 2.7em; }
+.stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  max-width: 170px;
+  font-size: 12.5px;
+  color: #3a4456;
+}
+.dots { display: inline-flex; gap: 3px; }
+.dots i { width: 9px; height: 9px; border-radius: 50%; background: #d5dbe5; }
+.dots i.on { background: var(--accent); box-shadow: inset 0 -1.5px 0 rgba(0, 0, 0, 0.15); }
+.char-best { margin-top: 2px; font-size: 12px; font-weight: 600; color: #a06a00; }
+
+
+.day { margin: -4px 0 12px; font-size: 14px; color: var(--muted); }
 .day span { color: var(--navy); font-weight: 600; }
 
 .items-help {
@@ -395,14 +572,12 @@ body.touch .only-desktop { display: none; }
   .trophy { width: 38px; height: 38px; }
   h1 { font-size: 30px; }
   .subtitle { margin: 0 0 4px; font-size: 15px; }
-  .mission { max-width: none; margin-bottom: 4px; font-size: 14.5px; line-height: 1.45; }
   .help { margin-top: 10px; gap: 10px; }
   .help-col { padding: 7px 12px; }
   .help h2 { font-size: 14px; margin-bottom: 2px; }
   .help ul { line-height: 1.5; font-size: 13px; }
   .btn { min-height: 44px; margin-top: 6px; }
   .btn-ghost { min-height: 36px; }
-  .best { margin-top: 6px; }
   .day { margin: 0 0 6px; font-size: 13px; }
   .items-help { margin-top: 8px; gap: 6px; }
   .item-chip { font-size: 13px; padding: 2px 10px 2px 5px; }
@@ -410,6 +585,18 @@ body.touch .only-desktop { display: none; }
   .rotate-hint { margin-top: 6px; }
   .screen-title { font-size: 24px; margin-bottom: 4px; }
   .stats { margin: 4px 0 6px; }
+  .char-pick { margin-bottom: 6px; padding: 4px 12px 4px 6px; }
+  .char-pick-preview { width: 42px; height: 42px; }
+  .char-pick-text b { font-size: 17px; }
+  .mode-btn { min-height: 66px; padding: 6px 8px 8px; }
+  .mode-name { font-size: 17px; }
+  .mode-desc { font-size: 12.5px; }
+  .btn-soon { min-height: 38px; margin-top: 6px; font-size: 15px; }
+  .char-grid { gap: 8px; }
+  .char-card { padding: 6px 8px 8px; gap: 2px; }
+  .char-preview { width: 70px; height: 70px; }
+  .char-name { font-size: 18px; }
+  .char-desc { min-height: 0; }
 }
 
 /* จอแคบ (มือถือแนวตั้ง) */
@@ -420,6 +607,13 @@ body.touch .only-desktop { display: none; }
   .icon-btn svg { width: 20px; height: 20px; }
   .hud-group { gap: 6px; }
   #hud-left { flex-direction: column; align-items: flex-start; }
+  .modes { grid-template-columns: 1fr; gap: 8px; }
+  .mode-btn { min-height: 0; padding: 8px 10px 10px; }
+  .char-grid { grid-template-columns: 1fr; gap: 8px; }
+  .char-card { flex-direction: row; gap: 10px; text-align: left; padding: 8px 10px; }
+  .char-preview { width: 76px; height: 76px; }
+  .char-info { align-items: flex-start; }
+  .char-desc { min-height: 0; }
 }
 
 @media (max-height: 380px) {
@@ -434,4 +628,5 @@ body.touch .only-desktop { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .logo { animation: none; }
   .card { animation: none; }
+  #timer-pill.warn { animation: none; }
 }

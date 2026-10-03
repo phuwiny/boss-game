@@ -11,8 +11,8 @@
   const Sound = CQ.Audio;
   const Input = CQ.Input;
   const Spawn = CQ.Spawn;
-  const BEST_KEY = 'coinquest.best.v2';   // สถิติดีที่สุดตลอดกาล
-  const DAILY_KEY = 'coinquest.daily.v2'; // สถิติของด่านประจำวัน
+  const CHAR_KEY = 'coinquest.char';  // ตัวละครที่เลือกไว้
+  const MODE_KEY = 'coinquest.mode';  // โหมดที่เล่นล่าสุด
   const POWERS = ['wing', 'mush', 'star'];
   const ITEM_INFO = {
     wing: { name: 'ปีก', toast: 'ได้ปีก! กระโดด 2 ชั้นได้ 10 วินาที', colors: ['#ffffff', '#bfe6ff', '#7fc4f5'] },
@@ -30,16 +30,29 @@
     coinPill: $('coin-pill'),
     coinCount: $('coin-count'),
     coinTotal: $('coin-total'),
+    timerPill: $('timer-pill'),
     timer: $('timer'),
     toast: $('toast'),
     title: $('screen-title'),
+    chars: $('screen-chars'),
     pause: $('screen-pause'),
     win: $('screen-win'),
-    bestTitle: $('best-title'),
     titleDay: $('title-day'),
+    titleCharPreview: $('title-char-preview'),
+    titleCharName: $('title-char-name'),
+    titleCharTag: $('title-char-tag'),
+    btnNormal: $('btn-normal'),
+    btnTimed: $('btn-timed'),
+    descNormal: $('desc-normal'),
+    descTimed: $('desc-timed'),
+    bestNormal: $('best-normal'),
+    bestTimed: $('best-timed'),
+    charGrid: $('char-grid'),
+    winHeading: $('win-heading'),
+    winSub: $('win-sub'),
+    winLabel: $('win-label'),
     winTime: $('win-time'),
     winBestAll: $('win-best-all'),
-    winDeaths: $('win-deaths'),
     winBest: $('win-best'),
     winNew: $('win-new'),
     btnSound: $('btn-sound'),
@@ -48,15 +61,19 @@
   };
 
   let g = null;
-  let state = 'title'; // title | playing | paused | cleared | won
+  let state = 'title'; // title | chars | playing | paused | cleared | won
   let pendingJump = false;
   let lastTime = performance.now();
   let acc = 0;
   let clock = 0;
   let winShownAt = 0;
-  let hudCache = { coins: -1, timer: '' };
+  let hudCache = { coins: -1, timer: '', warn: false };
   let spawnPool = null;
   let tempo = 1;
+  let charId = CQ.getCharacter(CQ.store.get(CHAR_KEY)).id;
+  let lastMode = CQ.store.get(MODE_KEY) === 'timed' ? 'timed' : 'normal';
+  let charCards = [];
+  let navPrev = 0;
   const events = [];
 
   // ── seed ของด่าน: รายวัน หรือกำหนดเองด้วย ?seed=xxx ───────────────
@@ -77,7 +94,9 @@
   }
 
   // ── สร้างเกมใหม่ ──────────────────────────────────────────────
-  function newGame() {
+  function newGame(mode) {
+    const timed = mode === 'timed';
+    const ch = CQ.getCharacter(charId);
     const lv = CQ.parseLevel(CQ.LEVEL_SECTIONS);
     if (lv.errors.length) console.warn('Level errors:', lv.errors);
     const springs = [];
@@ -85,13 +104,16 @@
       if (lv.tiles[i] === TILE.SPRING) springs.push({ tx: i % lv.w, ty: Math.floor(i / lv.w), hit: -10 });
     }
     const seedInfo = currentSeed();
-    const picked = Spawn.pick(getPool(), lv.w, Spawn.makeRng(seedInfo.seed));
+    const rng = Spawn.makeRng(Spawn.modeSeed(seedInfo.seed, timed ? 'timed' : 'normal'));
+    const picked = Spawn.pick(getPool(), lv.w, rng, { coins: timed ? Spawn.TIMED_COINS : Spawn.COINS });
     const center = function (o) { return { tx: o.tx, ty: o.ty, x: o.tx * T + T / 2, y: o.ty * T + T / 2 }; };
     const coins = lv.coins.map(center).concat(picked.coins.map(center));
     g = {
       lv: lv,
+      mode: timed ? 'timed' : 'normal',
+      char: ch,
       seedInfo: seedInfo,
-      player: W.makePlayer(lv.start.tx, lv.start.ty),
+      player: W.makePlayer(lv.start.tx, lv.start.ty, ch),
       coins: coins.map(function (c, i) { c.taken = false; c.phase = i * 0.83; return c; }),
       items: picked.items.map(function (it, i) { const o = center(it); o.type = it.type; o.taken = false; o.phase = i * 1.7; return o; }),
       enemies: lv.enemies.map(function (e) { return W.makeSlime(e.tx, e.ty); }),
@@ -101,9 +123,12 @@
       respawn: { tx: lv.start.tx, ty: lv.start.ty },
       collected: 0,
       total: coins.length,
-      goal: Math.min(Spawn.GOAL, coins.length),
+      goal: timed ? coins.length : Math.min(Spawn.GOAL, coins.length),
+      limit: timed ? Spawn.TIMED_TIME : 0, // โหมดจับเวลา: เวลาที่มี (วินาที) / 0 = ไม่จำกัด
       time: 0,
       deaths: 0,
+      lastTick: 0,
+      warned: false,
       shake: 0,
       flash: 0,
       landSquash: 0,
@@ -116,7 +141,8 @@
     renderer.look = 0;
     renderer.updateCamera(focusPoint(), 1, 0, true);
     ui.coinTotal.textContent = '/' + g.goal;
-    hudCache = { coins: -1, timer: '' };
+    hudCache = { coins: -1, timer: '', warn: false };
+    ui.timerPill.classList.remove('warn');
   }
 
   function focusPoint() {
@@ -257,7 +283,9 @@
     ui.coinPill.classList.add('bump');
     const left = g.goal - g.collected;
     if (left === 0) clearGame();
-    else if (left === 1) toast('อีกเหรียญเดียวก็ครบแล้ว!');
+    else if (g.mode === 'timed') {
+      if (g.collected % 10 === 0) toast(g.collected + ' เหรียญแล้ว!');
+    } else if (left === 1) toast('อีกเหรียญเดียวก็ครบแล้ว!');
     else if (left === Math.floor(g.goal / 2)) toast('ครึ่งทางแล้ว! เหลืออีก ' + left + ' เหรียญ');
   }
 
@@ -304,7 +332,7 @@
   function stomp(e, p, inp) {
     e.dead = true;
     e.deadT = 0;
-    p.vy = inp.jump ? -P.JUMP_V * 0.9 : -P.STOMP_V;
+    p.vy = inp.jump ? -P.JUMP_V * p.st.jump * 0.9 : -P.STOMP_V;
     p.jumping = !!inp.jump;
     p.onGround = false;
     p.ride = null;
@@ -326,7 +354,7 @@
   function kill() {
     const p = g.player;
     g.deaths++;
-    g.deathAnim = { x: p.x, y: p.y, startY: p.y, w: p.w, h: p.h, vx: 0, vy: -430, face: p.face, rot: 0, t: 0, onGround: false };
+    g.deathAnim = { x: p.x, y: p.y, startY: p.y, w: p.w, h: p.h, vx: 0, vy: -430, face: p.face, rot: 0, t: 0, onGround: false, ch: p.ch };
     g.shake = 7;
     g.flash = 1;
     Sound.sfx.die();
@@ -335,7 +363,7 @@
 
   function respawn() {
     const r = g.respawn;
-    g.player = W.makePlayer(r.tx, r.ty);
+    g.player = W.makePlayer(r.tx, r.ty, g.char);
     g.player.invuln = 1.5;
     g.deathAnim = null;
     pendingJump = false;
@@ -347,20 +375,46 @@
     Sound.stopMusic();
     Sound.sfx.win();
     confetti(140);
-    toast('เก็บครบ ' + g.goal + ' เหรียญแล้ว!');
+    toast(g.mode === 'timed' ? 'เก็บครบทุกเหรียญแล้ว!' : 'เก็บครบ ' + g.goal + ' เหรียญแล้ว!');
   }
 
-  // ── บันทึกสถิติ (ตลอดกาล + ของด่านวันนี้) ───────────────────────
-  function readRecord(key) {
+  /** โหมดจับเวลา: หมดเวลา */
+  function timeUp() {
+    g.time = g.limit;
+    state = 'cleared';
+    g.clearT = 0;
+    Sound.stopMusic();
+    Sound.sfx.timeup();
+    toast('หมดเวลา! เก็บได้ ' + g.collected + ' เหรียญ');
+  }
+
+  // ── บันทึกสถิติ (แยกตามโหมดและตัวละคร: ตลอดกาล + ของด่านวันนี้) ─────
+  /** Bobo โหมดปกติใช้ key เดิม เพื่อเก็บสถิติที่ทำไว้ก่อนมีหลายตัวละคร */
+  function recordKeys(mode, id) {
+    if (mode === 'timed') return { all: 'coinquest.timed.best.v1.' + id, day: 'coinquest.timed.daily.v1.' + id };
+    const sfx = id === 'bobo' ? '' : '.' + id;
+    return { all: 'coinquest.best.v2' + sfx, day: 'coinquest.daily.v2' + sfx };
+  }
+
+  function readRecord(key, mode) {
     try {
       const v = JSON.parse(CQ.store.get(key));
-      return v && typeof v.time === 'number' ? v : null;
+      const field = mode === 'timed' ? 'coins' : 'time';
+      return v && typeof v[field] === 'number' ? v : null;
     } catch (e) { return null; }
   }
 
-  function loadRecords(day) {
-    const daily = readRecord(DAILY_KEY);
-    return { all: readRecord(BEST_KEY), today: daily && daily.day === day ? daily : null };
+  function loadRecords(mode, id, day) {
+    const keys = recordKeys(mode, id);
+    const daily = readRecord(keys.day, mode);
+    return { all: readRecord(keys.all, mode), today: daily && daily.day === day ? daily : null };
+  }
+
+  /** ผล a ดีกว่าสถิติ b หรือไม่ (จับเวลา: เหรียญมากกว่า ถ้าเท่ากันดูเวลาที่เหลือ) */
+  function isBetter(mode, a, b) {
+    if (!b) return true;
+    if (mode === 'timed') return a.coins > b.coins || (a.coins === b.coins && (a.left || 0) > (b.left || 0));
+    return a.time < b.time;
   }
 
   function fmtTime(t) {
@@ -370,30 +424,142 @@
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + '.' + d;
   }
 
-  function showBestOnTitle() {
-    const info = currentSeed();
-    ui.titleDay.textContent = info.label;
-    const rec = loadRecords(info.day);
+  function fmtRecord(mode, rec) {
+    return mode === 'timed' ? rec.coins + ' เหรียญ' : fmtTime(rec.time);
+  }
+
+  function bestLine(mode, id, info) {
+    const rec = loadRecords(mode, id, info.day);
     const parts = [];
-    if (rec.today && !info.custom) parts.push('สถิติวันนี้ ' + fmtTime(rec.today.time));
-    if (rec.all) parts.push('ดีที่สุด ' + fmtTime(rec.all.time));
-    ui.bestTitle.hidden = parts.length === 0;
-    ui.bestTitle.textContent = parts.join(' · ');
+    if (rec.today && !info.custom) parts.push('วันนี้ ' + fmtRecord(mode, rec.today));
+    if (rec.all) parts.push('ดีที่สุด ' + fmtRecord(mode, rec.all));
+    return parts.join(' · ');
+  }
+
+  function refreshTitle() {
+    const info = currentSeed();
+    const ch = CQ.getCharacter(charId);
+    ui.titleDay.textContent = info.label;
+    ui.titleCharName.textContent = ch.name;
+    ui.titleCharTag.textContent = ch.tagline;
+    [['normal', ui.bestNormal, ui.btnNormal], ['timed', ui.bestTimed, ui.btnTimed]].forEach(function (m) {
+      const line = bestLine(m[0], charId, info);
+      m[1].hidden = !line;
+      m[1].textContent = line;
+      m[2].classList.toggle('btn-primary', m[0] === lastMode);
+    });
+  }
+
+  // ── หน้าเลือกตัวละคร ───────────────────────────────────────────
+  function statRow(label, n) {
+    let dots = '';
+    for (let i = 0; i < 5; i++) dots += '<i' + (i < n ? ' class="on"' : '') + '></i>';
+    return '<span class="stat"><span class="stat-label">' + label + '</span><span class="dots" role="img" aria-label="' + n + ' จาก 5">' + dots + '</span></span>';
+  }
+
+  function buildCharCards() {
+    ui.charGrid.textContent = '';
+    charCards = CQ.CHARACTERS.map(function (ch) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'char-card';
+      btn.setAttribute('role', 'radio');
+      btn.style.setProperty('--accent', ch.color);
+      btn.innerHTML = '<canvas class="char-preview" aria-hidden="true"></canvas>' +
+        '<span class="char-info">' +
+        '<b class="char-name"></b><span class="char-tag"></span><span class="char-desc"></span>' +
+        statRow('ความเร็ว', ch.bars.speed) + statRow('กระโดด', ch.bars.jump) +
+        '<span class="char-best"></span>' +
+        '</span>';
+      btn.querySelector('.char-name').textContent = ch.name;
+      btn.querySelector('.char-tag').textContent = ch.tagline;
+      btn.querySelector('.char-desc').textContent = ch.desc;
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        Sound.unlock();
+        Sound.sfx.click();
+        if (ch.id === charId) closeChars(); // กดตัวที่เลือกอยู่แล้วซ้ำ = ตกลง
+        else selectChar(ch.id);
+      });
+      ui.charGrid.appendChild(btn);
+      return { id: ch.id, btn: btn, canvas: btn.querySelector('canvas'), best: btn.querySelector('.char-best') };
+    });
+  }
+
+  function refreshCharCards() {
+    const info = currentSeed();
+    charCards.forEach(function (c) {
+      const on = c.id === charId;
+      c.btn.classList.toggle('selected', on);
+      c.btn.setAttribute('aria-checked', String(on));
+      const parts = [];
+      const n = loadRecords('normal', c.id, info.day).all;
+      const t = loadRecords('timed', c.id, info.day).all;
+      if (n) parts.push('ปกติ ' + fmtRecord('normal', n));
+      if (t) parts.push('จับเวลา ' + fmtRecord('timed', t));
+      c.best.textContent = parts.length ? 'ดีที่สุด: ' + parts.join(' · ') : 'ยังไม่มีสถิติ';
+    });
+  }
+
+  function selectChar(id) {
+    if (state !== 'chars' || id === charId) return;
+    charId = CQ.getCharacter(id).id;
+    CQ.store.set(CHAR_KEY, charId);
+    newGame(lastMode); // ให้ตัวละครในฉากหลังเปลี่ยนตามทันที
+    refreshCharCards();
+  }
+
+  /** เลื่อนเลือกตัวละครด้วยลูกศรซ้าย/ขวา หรือจอยเกม */
+  function navChar(dir) {
+    const n = CQ.CHARACTERS.length;
+    let i = 0;
+    while (i < n && CQ.CHARACTERS[i].id !== charId) i++;
+    const next = CQ.CHARACTERS[(i + dir + n) % n].id;
+    const focusCard = document.activeElement && document.activeElement.classList.contains('char-card');
+    Sound.sfx.click();
+    selectChar(next);
+    if (focusCard) {
+      const c = charCards.find(function (cc) { return cc.id === next; });
+      if (c) c.btn.focus({ preventScroll: true });
+    }
+  }
+
+  function openChars() {
+    if (state !== 'title') return;
+    state = 'chars';
+    navPrev = 0;
+    refreshCharCards();
+    setScreen(ui.chars);
+  }
+
+  function closeChars() {
+    if (state !== 'chars') return;
+    state = 'title';
+    refreshTitle();
+    setScreen(ui.title);
   }
 
   // ── หน้าจอและสถานะ ─────────────────────────────────────────────
   function setScreen(el) {
-    [ui.title, ui.pause, ui.win].forEach(function (s) { s.hidden = s !== el; });
+    [ui.title, ui.chars, ui.pause, ui.win].forEach(function (s) { s.hidden = s !== el; });
     document.body.classList.toggle('overlay', !!el);
     const focusBtn = el && el.querySelector('.btn-primary');
     if (focusBtn) setTimeout(function () { try { focusBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 30);
   }
 
-  function startGame() {
+  function currentScreen() {
+    return [ui.title, ui.chars, ui.pause, ui.win].find(function (s) { return !s.hidden; }) || null;
+  }
+
+  /** mode = 'normal' | 'timed' ไม่ระบุ = เล่นโหมดเดิมซ้ำ */
+  function startGame(mode) {
     Sound.unlock();
     if (state === 'playing' || state === 'cleared') return;
     if (state === 'won' && clock - winShownAt < 0.8) return; // กันกดค้างจากในเกมแล้วข้ามหน้าสรุปผล
-    newGame();
+    mode = mode || (g && g.mode) || lastMode;
+    lastMode = mode;
+    CQ.store.set(MODE_KEY, mode);
+    newGame(mode);
     state = 'playing';
     g.showMinimap = true;
     setScreen(null);
@@ -429,31 +595,47 @@
   function goTitle() {
     state = 'title';
     Sound.stopMusic();
-    newGame();
+    newGame(lastMode);
     ui.hud.hidden = true;
     document.body.classList.remove('in-game');
-    showBestOnTitle();
+    refreshTitle();
     setScreen(ui.title);
   }
 
   function showWin() {
     state = 'won';
     winShownAt = clock;
-    ui.winTime.textContent = fmtTime(g.time);
-    ui.winDeaths.textContent = g.deaths + ' ครั้ง';
+    const mode = g.mode;
+    const timed = mode === 'timed';
+    const result = timed
+      ? { coins: g.collected, left: Math.max(0, g.limit - g.time), deaths: g.deaths }
+      : { time: g.time, deaths: g.deaths };
+    const deaths = 'พลาด ' + g.deaths + ' ครั้ง';
+    if (timed) {
+      const all = g.collected >= g.total;
+      ui.winHeading.textContent = all ? 'เก็บครบทุกเหรียญ!' : 'หมดเวลา!';
+      ui.winSub.textContent = g.char.name + (all ? ' · เหลือเวลา ' + fmtTime(result.left) : '') + ' · ' + deaths;
+      ui.winLabel.textContent = 'เหรียญที่เก็บได้';
+    } else {
+      ui.winHeading.textContent = 'ภารกิจสำเร็จ!';
+      ui.winSub.textContent = 'เก็บครบ ' + g.goal + ' เหรียญ · ' + g.char.name + ' · ' + deaths;
+      ui.winLabel.textContent = 'เวลา';
+    }
+    ui.winTime.textContent = fmtRecord(mode, result);
     if (g.seedInfo.custom) {
       // ด่านพิเศษ (?seed=) ไม่บันทึกสถิติ
       ui.winBest.textContent = '-';
       ui.winBestAll.textContent = '-';
       ui.winNew.hidden = true;
     } else {
-      const rec = loadRecords(g.seedInfo.day);
-      const newToday = !rec.today || g.time < rec.today.time;
-      const newAll = !rec.all || g.time < rec.all.time;
-      if (newToday) CQ.store.set(DAILY_KEY, JSON.stringify({ day: g.seedInfo.day, time: g.time, deaths: g.deaths }));
-      if (newAll) CQ.store.set(BEST_KEY, JSON.stringify({ time: g.time, deaths: g.deaths, at: Date.now() }));
-      ui.winBest.textContent = fmtTime(newToday ? g.time : rec.today.time);
-      ui.winBestAll.textContent = fmtTime(newAll ? g.time : rec.all.time);
+      const keys = recordKeys(mode, g.char.id);
+      const rec = loadRecords(mode, g.char.id, g.seedInfo.day);
+      const newToday = isBetter(mode, result, rec.today);
+      const newAll = isBetter(mode, result, rec.all);
+      if (newToday) CQ.store.set(keys.day, JSON.stringify(Object.assign({ day: g.seedInfo.day }, result)));
+      if (newAll) CQ.store.set(keys.all, JSON.stringify(Object.assign({ at: Date.now() }, result)));
+      ui.winBest.textContent = fmtRecord(mode, newToday ? result : rec.today);
+      ui.winBestAll.textContent = fmtRecord(mode, newAll ? result : rec.all);
       ui.winNew.hidden = !newToday;
       ui.winNew.textContent = newAll ? 'สถิติใหม่ตลอดกาล!' : 'สถิติใหม่ของวันนี้!';
     }
@@ -473,10 +655,31 @@
       hudCache.coins = g.collected;
       ui.coinCount.textContent = g.collected;
     }
-    const t = fmtTime(g.time);
+    const left = g.limit ? Math.max(0, g.limit - g.time) : 0;
+    const t = fmtTime(g.limit ? left : g.time);
     if (t !== hudCache.timer) {
       hudCache.timer = t;
       ui.timer.textContent = t;
+    }
+    const warn = !!g.limit && left < 10;
+    if (warn !== hudCache.warn) {
+      hudCache.warn = warn;
+      ui.timerPill.classList.toggle('warn', warn);
+    }
+  }
+
+  /** โหมดจับเวลา: เตือนตอนเหลือ 10 วินาที และเสียงนับถอยหลัง 5 วินาทีสุดท้าย */
+  function updateCountdown() {
+    if (!g.limit || state !== 'playing') return;
+    const left = g.limit - g.time;
+    if (left <= 10 && !g.warned) {
+      g.warned = true;
+      toast('เหลือ 10 วินาที!');
+    }
+    const sec = Math.ceil(left);
+    if (sec >= 1 && sec <= 5 && sec !== g.lastTick) {
+      g.lastTick = sec;
+      Sound.sfx.tick();
     }
   }
 
@@ -500,6 +703,17 @@
     }
   }
 
+  function drawMenuPreviews() {
+    if (state === 'chars') {
+      for (let i = 0; i < charCards.length; i++) {
+        const c = charCards[i];
+        CQ.drawCharPreview(c.canvas, c.id, clock, c.id === charId);
+      }
+    } else if (state === 'title') {
+      CQ.drawCharPreview(ui.titleCharPreview, charId, clock, false);
+    }
+  }
+
   // ── Game loop ────────────────────────────────────────────────
   function frame(now) {
     let dt = (now - lastTime) / 1000;
@@ -518,10 +732,18 @@
         g.time += P.DT;
         acc -= P.DT;
         n++;
+        if (g.limit && g.time >= g.limit && state === 'playing') timeUp();
       }
       if (n >= 12) acc = 0;
+      updateCountdown();
     } else {
       acc = 0;
+    }
+
+    if (state === 'chars') {
+      const nav = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+      if (nav !== 0 && nav !== navPrev) navChar(nav);
+      navPrev = nav;
     }
 
     if (state === 'cleared') {
@@ -529,7 +751,9 @@
       if (g.clearT > 1.9) showWin();
     }
 
-    const wantTempo = state === 'playing' && !g.deathAnim && g.player.pw.star > 0 ? 1.3 : 1;
+    let wantTempo = 1;
+    if (state === 'playing' && !g.deathAnim && g.player.pw.star > 0) wantTempo = 1.3;
+    else if (state === 'playing' && g.limit && g.limit - g.time < 10) wantTempo = 1.15;
     if (wantTempo !== tempo) { tempo = wantTempo; Sound.setTempo(tempo); }
 
     updateEffects(dt);
@@ -537,6 +761,7 @@
     renderer.updateCamera(focusPoint(), face, dt, false);
     renderer.render(g, clock);
     updateHud();
+    drawMenuPreviews();
     requestAnimationFrame(frame);
   }
 
@@ -618,20 +843,35 @@
       resize();
     });
     Input.bindTouch($('touch'));
+    // Space / Enter / ปุ่ม A ของจอย: กดปุ่มที่ focus อยู่ ถ้าไม่มีกดปุ่มหลักของหน้านั้น
     Input.on('confirm', function () {
-      if (state === 'title') startGame();
-      else if (state === 'won') startGame();
+      if (state !== 'title' && state !== 'chars' && state !== 'won') return;
+      if (state === 'won' && clock - winShownAt < 0.8) return;
+      const scr = currentScreen();
+      if (!scr) return;
+      const el = document.activeElement;
+      const target = el && el.tagName === 'BUTTON' && !el.disabled && scr.contains(el) ? el : scr.querySelector('.btn-primary');
+      if (target) target.click();
     });
     Input.on('pause', function () {
       if (state === 'playing') pauseGame();
       else if (state === 'paused') resumeGame();
+      else if (state === 'chars') closeChars();
     });
 
-    bindButton('btn-start', startGame);
-    bindButton('btn-again', startGame);
+    ui.descNormal.textContent = 'เก็บให้ครบ ' + Spawn.GOAL + ' จาก ' + Spawn.COINS + ' เหรียญ';
+    ui.descTimed.textContent = 'เก็บให้มากที่สุดใน ' + Spawn.TIMED_TIME + ' วินาที';
+    ui.btnTimed.title = 'มีเหรียญ ' + Spawn.TIMED_COINS + ' เหรียญในฉาก มากกว่าโหมดปกติ';
+    buildCharCards();
+
+    bindButton('btn-normal', function () { startGame('normal'); });
+    bindButton('btn-timed', function () { startGame('timed'); });
+    bindButton('btn-char', openChars);
+    bindButton('btn-chars-ok', closeChars);
+    bindButton('btn-again', function () { startGame(); });
     bindButton('btn-win-home', goTitle);
     bindButton('btn-resume', resumeGame);
-    bindButton('btn-restart', startGame);
+    bindButton('btn-restart', function () { startGame(); });
     bindButton('btn-home', goTitle);
     bindButton('btn-pause', function () { if (state === 'playing') pauseGame(); else if (state === 'paused') resumeGame(); });
     bindButton('btn-sound', function () { Sound.setSfx(!Sound.sfxOn); refreshToggles(); });
@@ -647,9 +887,9 @@
     window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
     document.addEventListener('fullscreenchange', function () { setTimeout(resize, 50); });
 
-    newGame();
+    newGame(lastMode);
     resize();
-    showBestOnTitle();
+    refreshTitle();
     setScreen(ui.title);
     document.body.classList.add('ready');
     lastTime = performance.now();
@@ -660,6 +900,7 @@
   CQ.debug = {
     get game() { return g; },
     get state() { return state; },
+    get charId() { return charId; },
     renderer: renderer
   };
 

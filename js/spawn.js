@@ -14,6 +14,8 @@
   const COINS = 40;        // จำนวนเหรียญในฉาก
   const GOAL = 20;         // เก็บครบเท่านี้ = ชนะ
   const ITEMS = ['wing', 'wing', 'mush', 'mush', 'star', 'star'];
+  const TIMED_COINS = 80;  // โหมดจับเวลา: จำนวนเหรียญในฉาก
+  const TIMED_TIME = 120;  // โหมดจับเวลา: เวลาที่มี (วินาที)
 
   function hashString(str) {
     let h = 2166136261 >>> 0;
@@ -41,6 +43,11 @@
     const d = date || new Date();
     const pad = function (n) { return (n < 10 ? '0' : '') + n; };
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  /** seed ของแต่ละโหมด โหมดจับเวลาต่อท้ายเพื่อให้ตำแหน่งของต่างจากโหมดปกติในวันเดียวกัน */
+  function modeSeed(seed, mode) {
+    return mode === 'timed' ? seed + '|timed' : seed;
   }
 
   /**
@@ -156,8 +163,11 @@
     COINS: COINS,
     GOAL: GOAL,
     ITEMS: ITEMS,
+    TIMED_COINS: TIMED_COINS,
+    TIMED_TIME: TIMED_TIME,
     makeRng: makeRng,
     dailySeed: dailySeed,
+    modeSeed: modeSeed,
     buildPool: buildPool,
     pick: pick
   };

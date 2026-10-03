@@ -31,7 +31,9 @@
     }
     if (e.repeat) return;
     if (e.code === 'Escape' || e.code === 'KeyP') { e.preventDefault(); emit('pause'); }
-    if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') emit('confirm');
+    if (e.code === 'Space') emit('confirm');
+    // Enter บนปุ่มที่ focus อยู่ให้เบราว์เซอร์กดปุ่มนั้นเอง (ไม่ส่ง confirm ซ้ำ)
+    if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !(e.target && e.target.closest && e.target.closest('button'))) emit('confirm');
   });
 
   root.addEventListener('keyup', function (e) {
