@@ -24,6 +24,9 @@
     BUFFER: 0.12,          // กดกระโดดก่อนถึงพื้นเล็กน้อยก็ยังนับ
     SPRING_V: 980,
     STOMP_V: 430,
+    AIR_JUMP_V: 590,       // กระโดดชั้นที่ 2 (ปีก)
+    MUSH_SPEED: 1.5,       // ตัวคูณความเร็ว (เห็ด)
+    POWER_TIME: 10,        // ระยะเวลาไอเทม (วินาที)
     PW: 20,
     PH: 28,
     SLIME_W: 26,
@@ -132,7 +135,9 @@
       onGround: false, ride: null,
       coyote: 0, buffer: 0, jumping: false,
       prevBottom: 0,
-      dead: false, invuln: 0
+      dead: false, invuln: 0,
+      airJumps: 0,
+      pw: { wing: 0, mush: 0, star: 0 } // เวลาที่เหลือของไอเทมแต่ละชนิด (วินาที)
     };
   }
 
@@ -146,15 +151,19 @@
     // ยืนบนแพลตฟอร์มเคลื่อนที่ → เคลื่อนตาม
     if (p.ride && p.ride.dx) moveX(p, p.ride.dx, lv);
 
+    const pw = p.pw;
+    const hasWing = !!pw && pw.wing > 0;
+    const speedMul = pw && pw.mush > 0 ? P.MUSH_SPEED : 1;
     const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
     if (dir !== 0) p.face = dir;
     let accel;
     if (p.onGround) accel = (dir === 0 || p.vx * dir < 0) ? P.DEC_GROUND : P.ACC_GROUND;
     else accel = dir === 0 ? P.DEC_AIR : P.ACC_AIR;
-    p.vx = approach(p.vx, dir * P.RUN, accel * dt);
+    p.vx = approach(p.vx, dir * P.RUN * speedMul, accel * speedMul * dt);
 
     p.coyote = p.onGround ? P.COYOTE : Math.max(0, p.coyote - dt);
     p.buffer = inp.jumpPressed ? P.BUFFER : Math.max(0, p.buffer - dt);
+    if (p.onGround) p.airJumps = hasWing ? 1 : 0;
 
     if (p.buffer > 0 && p.coyote > 0) {
       p.vy = -P.JUMP_V;
@@ -165,6 +174,14 @@
       p.ride = null;
       p.jumping = true;
       if (ev) ev.push({ type: 'jump' });
+    } else if (inp.jumpPressed && hasWing && p.airJumps > 0 && !p.onGround) {
+      // กระโดดชั้นที่ 2 กลางอากาศ (ต้องกดใหม่ ไม่ใช้ jump buffer)
+      p.vy = -P.AIR_JUMP_V;
+      p.airJumps--;
+      p.buffer = 0;
+      p.ride = null;
+      p.jumping = true;
+      if (ev) ev.push({ type: 'airjump' });
     }
     if (p.jumping && !inp.jump && p.vy < 0) {
       p.vy *= P.JUMP_CUT;
@@ -192,6 +209,7 @@
       for (let tx = tx0; tx <= tx1; tx++) {
         const t = tileAt(lv, tx, ty);
         if (t === TILE.SPIKE) {
+          if (pw && pw.star > 0) continue; // ดาว: หนามทำอะไรไม่ได้
           if (overlap(p.x + 3, p.y + 4, p.w - 6, p.h - 4, tx * T + 4, ty * T + 16, 24, 16)) {
             p.dead = true;
             if (ev) ev.push({ type: 'die', cause: 'spike' });
@@ -206,6 +224,7 @@
             p.onGround = false;
             p.ride = null;
             p.coyote = 0;
+            p.airJumps = hasWing ? 1 : 0;
             if (ev) ev.push({ type: 'spring', tx: tx, ty: ty });
           }
         }

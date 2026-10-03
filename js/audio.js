@@ -107,12 +107,27 @@
       seq.forEach(function (n, i) { tone(n[0], i === seq.length - 1 ? 0.7 : 0.16, { vol: 0.13, delay: n[1] }); });
       seq.forEach(function (n) { tone(n[0] / 2, 0.2, { type: 'triangle', vol: 0.2, delay: n[1] }); });
     },
-    click: function () { tone(660, 0.05, { type: 'triangle', vol: 0.15 }); }
+    click: function () { tone(660, 0.05, { type: 'triangle', vol: 0.15 }); },
+    airjump: function () {
+      tone(520, 0.16, { type: 'sine', vol: 0.18, slide: 1150 });
+      noise(0.12, 0.08, 3000);
+    },
+    powerup: function () {
+      [523, 659, 784, 1047, 1319, 1568].forEach(function (f, i) { tone(f, 0.12, { vol: 0.1, delay: i * 0.05 }); });
+    },
+    powerdown: function () {
+      [784, 587, 440].forEach(function (f, i) { tone(f, 0.14, { type: 'triangle', vol: 0.2, delay: i * 0.09 }); });
+    },
+    zap: function () {
+      tone(900, 0.18, { vol: 0.12, slide: 220 });
+      noise(0.1, 0.2, 2500);
+    }
   };
 
   // ── ดนตรีประกอบ (ลูปสั้น ๆ 8 ห้อง) ─────────────────────────────
   const BPM = 132;
-  const STEP = 60 / BPM / 2; // โน้ตเขบ็ต 1 ชั้น
+  const BASE_STEP = 60 / BPM / 2; // โน้ตเขบ็ต 1 ชั้น
+  let STEP = BASE_STEP;
   const _ = 0;
   const MELODY = [
     72, 76, 79, 76, 84, _, 79, _,
@@ -158,6 +173,11 @@
     musicTimer = null;
   }
 
+  /** เร่ง/ผ่อนจังหวะเพลง (ใช้ตอนได้ดาว) */
+  function setTempo(mul) {
+    STEP = BASE_STEP / (mul || 1);
+  }
+
   function setSfx(on) {
     sfxOn = on;
     store.set('coinquest.sfx', on ? '1' : '0');
@@ -175,6 +195,7 @@
     sfx: sfx,
     startMusic: startMusic,
     stopMusic: stopMusic,
+    setTempo: setTempo,
     setSfx: setSfx,
     setMusic: setMusic,
     get sfxOn() { return sfxOn; },
