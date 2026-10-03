@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#4fa9f2">
-  <meta name="description" content="Coin Quest เกมแพลตฟอร์มเลื่อนฉากด้านข้าง ตามหาเหรียญทองที่สุ่มวางใหม่ทุกวัน เก็บให้ครบ 20 เหรียญ มีไอเทมปีก เห็ด ดาว เล่นได้ทั้งคอมพิวเตอร์และมือถือ">
+  <meta name="description" content="Coin Quest เกมแพลตฟอร์มเลื่อนฉากด้านข้าง ตามหาเหรียญทองที่สุ่มวางใหม่ทุกวัน เลือกตัวละครได้ 3 ตัว มีโหมดปกติและโหมดจับเวลา ไอเทมปีก เห็ด ดาว เล่นได้ทั้งคอมพิวเตอร์และมือถือ">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta property="og:title" content="Coin Quest — เก็บเหรียญให้ครบ 20 เหรียญ">
-  <meta property="og:description" content="เกมแพลตฟอร์มเลื่อนฉากด้านข้าง เล่นบนเว็บได้ทันที รองรับมือถือ">
-  <title>Coin Quest — เก็บเหรียญให้ครบ 20 เหรียญ</title>
+  <meta property="og:title" content="Coin Quest — ผจญภัยเก็บเหรียญทอง">
+  <meta property="og:description" content="เกมแพลตฟอร์มเลื่อนฉากด้านข้าง 3 ตัวละคร 2 โหมด เล่นบนเว็บได้ทันที รองรับมือถือ">
+  <title>Coin Quest — ผจญภัยเก็บเหรียญทอง</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +27,7 @@
         <svg class="ico coin-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#ffd23f" stroke="#d48a00" stroke-width="2"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="#fff0aa" stroke-width="1.8"/></svg>
         <span><b id="coin-count">0</b><span class="dim" id="coin-total">/20</span></span>
       </div>
-      <div class="pill" title="เวลา">
+      <div class="pill" id="timer-pill" title="เวลา">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 8.5V13l3 2M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
         <span id="timer">00:00.0</span>
       </div>
@@ -76,13 +76,44 @@
       </div>
       <h1 id="title-heading">Coin Quest</h1>
       <p class="subtitle">ผจญภัยเก็บเหรียญทอง</p>
-      <p class="mission">ภารกิจ: เหรียญทอง 40 เหรียญกระจายอยู่ทั่วฉาก เก็บให้ได้ <b>20 เหรียญ</b> เพื่อชนะ</p>
       <p class="day"><span id="title-day">ด่านประจำวัน</span> · ตำแหน่งเหรียญและไอเทมเปลี่ยนทุกวัน</p>
-      <button class="btn btn-primary" id="btn-start" type="button">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
-        เริ่มเกม
+
+      <button class="char-pick" id="btn-char" type="button">
+        <canvas class="char-pick-preview" id="title-char-preview" aria-hidden="true"></canvas>
+        <span class="char-pick-text">
+          <span class="char-pick-label">ตัวละคร</span>
+          <b id="title-char-name">Bobo</b>
+          <span class="char-pick-tag" id="title-char-tag">สมดุลทุกด้าน</span>
+        </span>
+        <span class="char-pick-change">เปลี่ยน<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 15.5 12 9 18.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </button>
-      <p class="best" id="best-title" hidden></p>
+
+      <div class="modes">
+        <button class="btn mode-btn btn-primary" id="btn-normal" type="button">
+          <span class="mode-name">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>
+            โหมดปกติ
+          </span>
+          <span class="mode-desc" id="desc-normal">เก็บให้ครบ 20 จาก 40 เหรียญ</span>
+          <span class="mode-best" id="best-normal" hidden></span>
+        </button>
+        <button class="btn mode-btn" id="btn-timed" type="button">
+          <span class="mode-name">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 8.5V13l3 2M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+            โหมดจับเวลา
+          </span>
+          <span class="mode-desc" id="desc-timed">เก็บให้มากที่สุดใน 120 วินาที</span>
+          <span class="mode-best" id="best-timed" hidden></span>
+        </button>
+      </div>
+
+      <!-- เมนูมินิเกมอื่นๆ: ยังไม่เปิดให้เล่น เมื่อมีมินิเกมพร้อมให้เอา disabled ออกแล้วผูกปุ่มใน js/main.js -->
+      <button class="btn btn-soon" id="btn-minigames" type="button" disabled aria-disabled="true" title="กำลังพัฒนา">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>
+        มินิเกมอื่นๆ
+        <span class="soon-badge">เร็วๆ นี้</span>
+      </button>
+
       <div class="items-help" aria-label="ไอเทมในเกม">
         <div class="item-chip">
           <svg viewBox="-14 -12 28 24" aria-hidden="true"><g fill="#fff" stroke="#7fb8e6" stroke-width="1.4"><path d="M-1 2C-5-6-10-9-13-5C-10-4-11-1-12 1C-9 0-9 3-10 5C-6 3-3 4-1 2Z"/><path transform="scale(-1,1)" d="M-1 2C-5-6-10-9-13-5C-10-4-11-1-12 1C-9 0-9 3-10 5C-6 3-3 4-1 2Z"/></g><circle cx="0" cy="2" r="2.4" fill="#ffd23f"/></svg>
@@ -128,6 +159,15 @@
     </div>
   </section>
 
+  <!-- เลือกตัวละคร -->
+  <section class="screen" id="screen-chars" hidden aria-labelledby="chars-heading">
+    <div class="card card-chars">
+      <h2 class="screen-title" id="chars-heading">เลือกตัวละคร</h2>
+      <div class="char-grid" id="char-grid" role="radiogroup" aria-labelledby="chars-heading"></div>
+      <button class="btn btn-primary" id="btn-chars-ok" type="button">ตกลง</button>
+    </div>
+  </section>
+
   <!-- หยุดชั่วคราว -->
   <section class="screen" id="screen-pause" hidden aria-labelledby="pause-heading">
     <div class="card card-sm">
@@ -145,10 +185,10 @@
         <svg viewBox="0 0 24 24"><path d="M7 3h10v5a5 5 0 0 1-10 0z" fill="#ffd23f" stroke="#d48a00" stroke-width="1.6"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5" fill="none" stroke="#d48a00" stroke-width="1.6"/><path d="M12 13v4M8 21h8l-1-4H9z" fill="#ffd23f" stroke="#d48a00" stroke-width="1.6" stroke-linejoin="round"/></svg>
       </div>
       <h2 class="screen-title" id="win-heading">ภารกิจสำเร็จ!</h2>
-      <p class="subtitle">เก็บเหรียญทองครบ 20 เหรียญ · พลาด <span id="win-deaths">0 ครั้ง</span></p>
+      <p class="subtitle" id="win-sub">เก็บเหรียญทองครบ 20 เหรียญ</p>
       <p class="badge" id="win-new" hidden>สถิติใหม่!</p>
       <dl class="stats">
-        <div><dt>เวลา</dt><dd id="win-time">00:00.0</dd></div>
+        <div><dt id="win-label">เวลา</dt><dd id="win-time">00:00.0</dd></div>
         <div><dt>สถิติวันนี้</dt><dd id="win-best">00:00.0</dd></div>
         <div><dt>ดีที่สุด</dt><dd id="win-best-all">00:00.0</dd></div>
       </dl>
@@ -161,6 +201,7 @@
 
   <script src="js/level.js"></script>
   <script src="js/world.js"></script>
+  <script src="js/characters.js"></script>
   <script src="js/spawn.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/input.js"></script>
