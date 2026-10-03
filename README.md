@@ -1,5 +1,12 @@
 # Coin Quest — ผจญภัยเก็บเหรียญทอง
 
+[![Play](https://img.shields.io/badge/Play-GitHub%20Pages-ff6a3d?style=for-the-badge)](https://phuwiny.github.io/boss-game/)
+[![Version](https://img.shields.io/github/v/release/phuwiny/boss-game?include_prereleases&label=version&style=for-the-badge&color=2ecc71)](https://github.com/phuwiny/boss-game/releases)
+
+**เล่นเกม:** https://phuwiny.github.io/boss-game/ — เล่นบนเบราว์เซอร์ได้ทันที ทั้งคอมพิวเตอร์และมือถือ ไม่ต้องติดตั้ง
+
+**เวอร์ชันล่าสุด:** [v0.2.0-beta — เหรียญสุ่มรายวันและไอเทม](https://github.com/phuwiny/boss-game/releases/tag/v0.2.0-beta) · [ดูทุกเวอร์ชัน](https://github.com/phuwiny/boss-game/releases)
+
 เกมแพลตฟอร์มเลื่อนฉากด้านข้าง (side-scrolling) แบบผู้เล่นคนเดียว
 
 ## โหมดเกม
@@ -32,6 +39,13 @@
 - กราฟิกและเสียงสร้างด้วยโค้ดทั้งหมด (Canvas 2D + Web Audio API) ไม่มีไฟล์ภาพ/เสียง
 - รองรับคอมพิวเตอร์ มือถือ (ปุ่มสัมผัสแบบ multi-touch) และจอยเกม (Gamepad API)
 - พร้อมเผยแพร่บน GitHub Pages ทันที
+
+## ประวัติเวอร์ชัน
+
+| เวอร์ชัน | วันที่ | สิ่งที่เปลี่ยน |
+|---|---|---|
+| [v0.2.0-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.2.0-beta) | 3 ต.ค. 2569 | เหรียญ 40 เหรียญสุ่มตำแหน่งรายวัน (เก็บ 20 เหรียญชนะ), ไอเทมปีก/เห็ด/ดาว, สถิติวันนี้และสถิติตลอดกาล |
+| [v0.1.0-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.1.0-beta) | 3 ต.ค. 2569 | เวอร์ชันแรก: ด่าน 9 ช่วง, เหรียญวางตายตัว 20 เหรียญ, รองรับมือถือและจอยเกม |
 
 ## วิธีเล่น
 
@@ -74,6 +88,13 @@ python -m http.server 8000
 
 ไฟล์ `.nojekyll` มีไว้ให้ GitHub Pages เสิร์ฟไฟล์ตรง ๆ โดยไม่ผ่าน Jekyll
 ทุก path ในโปรเจกต์เป็น relative path จึงทำงานได้ทั้งบน subpath ของ GitHub Pages และ custom domain
+
+## การออกเวอร์ชันใหม่
+
+1. merge การเปลี่ยนแปลงเข้า `main` (GitHub Pages จะ deploy ให้อัตโนมัติ)
+2. สร้าง tag และ Release ที่หน้า **Releases → Draft a new release** ตั้งชื่อตาม semver เช่น `v0.3.0-beta`
+   ติ๊ก **Set as a pre-release** ถ้ายังเป็นเวอร์ชันทดลอง
+3. แก้บรรทัด **เวอร์ชันล่าสุด** และตาราง **ประวัติเวอร์ชัน** ใน README นี้ (badge ด้านบนอัปเดตเอง)
 
 ## โครงสร้างโปรเจกต์
 
