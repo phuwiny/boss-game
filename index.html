@@ -20,30 +20,21 @@
 <body>
   <canvas id="game" aria-label="พื้นที่เล่นเกม Coin Quest"></canvas>
 
-  <!-- HUD -->
+  <!-- HUD: กรอบเหรียญ/เวลา/ไอเทมวาดบน canvas (js/hud.js) โดยเริ่มที่ตำแหน่งของ #hud-left ส่วนปุ่มเป็นปุ่ม DOM แต่งแบบพิกเซล -->
   <div id="hud" hidden>
-    <div class="hud-group" id="hud-left">
-      <div class="pill" id="coin-pill" title="เหรียญที่เก็บได้">
-        <svg class="ico coin-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#ffd23f" stroke="#d48a00" stroke-width="2"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="#fff0aa" stroke-width="1.8"/></svg>
-        <span><b id="coin-count">0</b><span class="dim" id="coin-total">/20</span></span>
-      </div>
-      <div class="pill" id="timer-pill" title="เวลา">
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 8.5V13l3 2M9.5 2.5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-        <span id="timer">00:00.0</span>
-      </div>
-    </div>
+    <div class="hud-group" id="hud-left" aria-hidden="true"></div>
     <div class="hud-group" id="hud-right">
       <button class="icon-btn" id="btn-music" type="button" aria-label="เปิด/ปิดเพลง" title="เพลง">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="3" fill="currentColor"/><circle cx="17.5" cy="16" r="3" fill="currentColor"/></svg>
+        <svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g class="ic" fill="currentColor"><rect x="2" y="0" width="5" height="1"/><rect x="2" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="0" y="4" width="3" height="1"/><rect x="4" y="4" width="3" height="1"/><rect x="0" y="5" width="3" height="1"/><rect x="4" y="5" width="3" height="1"/></g><g class="slash" fill="#ff5a5a"><rect x="0" y="0" width="1" height="1"/><rect x="1" y="1" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/></g></svg>
       </button>
       <button class="icon-btn" id="btn-sound" type="button" aria-label="เปิด/ปิดเสียงเอฟเฟกต์" title="เสียงเอฟเฟกต์">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h4l5-4.5v14l-5-4.5H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g class="ic" fill="currentColor"><rect x="2" y="0" width="1" height="1"/><rect x="1" y="1" width="2" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="0" y="2" width="3" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="0" y="3" width="3" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="0" y="4" width="3" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="1" y="5" width="2" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/></g><g class="slash" fill="#ff5a5a"><rect x="0" y="0" width="1" height="1"/><rect x="1" y="1" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/></g></svg>
       </button>
       <button class="icon-btn" id="btn-fullscreen" type="button" aria-label="เต็มจอ" title="เต็มจอ">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g class="ic" fill="currentColor"><rect x="0" y="0" width="2" height="1"/><rect x="5" y="0" width="2" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="0" y="6" width="2" height="1"/><rect x="5" y="6" width="2" height="1"/></g></svg>
       </button>
       <button class="icon-btn" id="btn-pause" type="button" aria-label="หยุดเกมชั่วคราว" title="หยุดชั่วคราว (P)">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg>
+        <svg viewBox="0 0 7 7" shape-rendering="crispEdges" aria-hidden="true"><g class="ic" fill="currentColor"><rect x="1" y="0" width="2" height="1"/><rect x="4" y="0" width="2" height="1"/><rect x="1" y="1" width="2" height="1"/><rect x="4" y="1" width="2" height="1"/><rect x="1" y="2" width="2" height="1"/><rect x="4" y="2" width="2" height="1"/><rect x="1" y="3" width="2" height="1"/><rect x="4" y="3" width="2" height="1"/><rect x="1" y="4" width="2" height="1"/><rect x="4" y="4" width="2" height="1"/><rect x="1" y="5" width="2" height="1"/><rect x="4" y="5" width="2" height="1"/><rect x="1" y="6" width="2" height="1"/><rect x="4" y="6" width="2" height="1"/></g></svg>
       </button>
     </div>
   </div>
@@ -205,6 +196,8 @@
   <script src="js/spawn.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/input.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/hud.js"></script>
   <script src="js/render.js"></script>
   <script src="js/main.js"></script>
 </body>
