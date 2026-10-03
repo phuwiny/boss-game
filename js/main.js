@@ -10,7 +10,15 @@
   const TILE = CQ.TILE;
   const Sound = CQ.Audio;
   const Input = CQ.Input;
-  const BEST_KEY = 'coinquest.best';
+  const Spawn = CQ.Spawn;
+  const BEST_KEY = 'coinquest.best.v2';   // สถิติดีที่สุดตลอดกาล
+  const DAILY_KEY = 'coinquest.daily.v2'; // สถิติของด่านประจำวัน
+  const POWERS = ['wing', 'mush', 'star'];
+  const ITEM_INFO = {
+    wing: { name: 'ปีก', toast: 'ได้ปีก! กระโดด 2 ชั้นได้ 10 วินาที', colors: ['#ffffff', '#bfe6ff', '#7fc4f5'] },
+    mush: { name: 'เห็ด', toast: 'ได้เห็ด! วิ่งเร็วขึ้น 10 วินาที', colors: ['#ff5a7a', '#ffffff', '#ffc2cd'] },
+    star: { name: 'ดาว', toast: 'ได้ดาว! อมตะ 10 วินาที ชนศัตรูได้เลย', colors: ['#ffd23f', '#fff3a0', '#ff9df5'] }
+  };
 
   const $ = function (id) { return document.getElementById(id); };
   const canvas = $('game');
@@ -28,7 +36,9 @@
     pause: $('screen-pause'),
     win: $('screen-win'),
     bestTitle: $('best-title'),
+    titleDay: $('title-day'),
     winTime: $('win-time'),
+    winBestAll: $('win-best-all'),
     winDeaths: $('win-deaths'),
     winBest: $('win-best'),
     winNew: $('win-new'),
@@ -45,7 +55,26 @@
   let clock = 0;
   let winShownAt = 0;
   let hudCache = { coins: -1, timer: '' };
+  let spawnPool = null;
+  let tempo = 1;
   const events = [];
+
+  // ── seed ของด่าน: รายวัน หรือกำหนดเองด้วย ?seed=xxx ───────────────
+  function currentSeed() {
+    let custom = null;
+    try { custom = new URLSearchParams(window.location.search).get('seed'); } catch (e) { /* ignore */ }
+    if (custom) return { seed: 'custom:' + custom, custom: true, label: 'ด่านพิเศษ: ' + custom };
+    const now = new Date();
+    const day = Spawn.dailySeed(now);
+    let label = day;
+    try { label = now.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { /* ignore */ }
+    return { seed: day, day: day, custom: false, label: 'ด่านประจำวันที่ ' + label };
+  }
+
+  function getPool() {
+    if (!spawnPool) spawnPool = Spawn.buildPool(CQ.parseLevel(CQ.LEVEL_SECTIONS, { staticPlatforms: true }));
+    return spawnPool;
+  }
 
   // ── สร้างเกมใหม่ ──────────────────────────────────────────────
   function newGame() {
@@ -55,17 +84,24 @@
     for (let i = 0; i < lv.tiles.length; i++) {
       if (lv.tiles[i] === TILE.SPRING) springs.push({ tx: i % lv.w, ty: Math.floor(i / lv.w), hit: -10 });
     }
+    const seedInfo = currentSeed();
+    const picked = Spawn.pick(getPool(), lv.w, Spawn.makeRng(seedInfo.seed));
+    const center = function (o) { return { tx: o.tx, ty: o.ty, x: o.tx * T + T / 2, y: o.ty * T + T / 2 }; };
+    const coins = lv.coins.map(center).concat(picked.coins.map(center));
     g = {
       lv: lv,
+      seedInfo: seedInfo,
       player: W.makePlayer(lv.start.tx, lv.start.ty),
-      coins: lv.coins.map(function (c, i) { return { x: c.x, y: c.y, tx: c.tx, ty: c.ty, taken: false, phase: i * 0.83 }; }),
+      coins: coins.map(function (c, i) { c.taken = false; c.phase = i * 0.83; return c; }),
+      items: picked.items.map(function (it, i) { const o = center(it); o.type = it.type; o.taken = false; o.phase = i * 1.7; return o; }),
       enemies: lv.enemies.map(function (e) { return W.makeSlime(e.tx, e.ty); }),
       checkpoints: lv.checkpoints.map(function (c) { return { tx: c.tx, ty: c.ty, active: false, raise: 0 }; }),
       springs: springs,
       particles: [],
       respawn: { tx: lv.start.tx, ty: lv.start.ty },
       collected: 0,
-      total: lv.coins.length,
+      total: coins.length,
+      goal: Math.min(Spawn.GOAL, coins.length),
       time: 0,
       deaths: 0,
       shake: 0,
@@ -79,7 +115,7 @@
     renderer.setLevel(lv);
     renderer.look = 0;
     renderer.updateCamera(focusPoint(), 1, 0, true);
-    ui.coinTotal.textContent = '/' + g.total;
+    ui.coinTotal.textContent = '/' + g.goal;
     hudCache = { coins: -1, timer: '' };
   }
 
@@ -146,6 +182,7 @@
 
     for (let i = 0; i < events.length; i++) handleEvent(events[i], p);
     if (p.dead) { kill(); return; }
+    updatePowers(p, dt);
 
     const R = P.COIN_R;
     for (let i = 0; i < g.coins.length; i++) {
@@ -156,11 +193,18 @@
       }
     }
 
+    const IR = P.COIN_R + 1;
+    for (let i = 0; i < g.items.length; i++) {
+      const it = g.items[i];
+      if (!it.taken && W.overlap(p.x, p.y, p.w, p.h, it.x - IR, it.y - IR, IR * 2, IR * 2)) collectItem(it, p);
+    }
+
     for (let i = 0; i < g.enemies.length; i++) {
       const e = g.enemies[i];
       if (e.dead) continue;
       if (!W.overlap(p.x + 2, p.y + 3, p.w - 4, p.h - 3, e.x + 2, e.y + 4, e.w - 4, e.h - 4)) continue;
-      if (p.vy > 0 && p.prevBottom <= e.y + e.h * 0.6) stomp(e, p, inp);
+      if (p.pw.star > 0) knockOut(e, p);
+      else if (p.vy > 0 && p.prevBottom <= e.y + e.h * 0.6) stomp(e, p, inp);
       else if (p.invuln <= 0) { kill(); return; }
     }
 
@@ -186,6 +230,12 @@
       case 'bonk':
         Sound.sfx.bonk();
         break;
+      case 'airjump':
+        Sound.sfx.airjump();
+        for (let i = 0; i < 6; i++) {
+          spawn({ kind: 'feather', x: p.x + p.w / 2 + (Math.random() - 0.5) * 20, y: p.y + p.h - 4, vx: (Math.random() - 0.5) * 70, vy: 20 + Math.random() * 40, g: 30, size: 5 + Math.random() * 3, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 6, color: '#ffffff', life: 0.7 + Math.random() * 0.3 });
+        }
+        break;
       case 'spring': {
         Sound.sfx.spring();
         const s = g.springs.find(function (sp) { return sp.tx === ev.tx && sp.ty === ev.ty; });
@@ -205,10 +255,50 @@
     ui.coinPill.classList.remove('bump');
     void ui.coinPill.offsetWidth;
     ui.coinPill.classList.add('bump');
-    const left = g.total - g.collected;
+    const left = g.goal - g.collected;
     if (left === 0) clearGame();
-    else if (left === 1) toast('เหลืออีกเหรียญสุดท้าย!');
-    else if (left === Math.floor(g.total / 2)) toast('ครึ่งทางแล้ว! เหลืออีก ' + left + ' เหรียญ');
+    else if (left === 1) toast('อีกเหรียญเดียวก็ครบแล้ว!');
+    else if (left === Math.floor(g.goal / 2)) toast('ครึ่งทางแล้ว! เหลืออีก ' + left + ' เหรียญ');
+  }
+
+  // ── ไอเทม ────────────────────────────────────────────────────
+  function collectItem(it, p) {
+    const info = ITEM_INFO[it.type];
+    it.taken = true;
+    p.pw[it.type] = P.POWER_TIME;
+    if (it.type === 'wing') p.airJumps = 1;
+    Sound.sfx.powerup();
+    burst(it.x, it.y, 14, info.colors, 170, 'star');
+    spawn({ kind: 'text', text: info.name + '!', x: it.x, y: it.y - 16, vx: 0, vy: -45, g: 0, color: '#ffffff', life: 1 });
+    toast(info.toast);
+  }
+
+  function updatePowers(p, dt) {
+    for (let i = 0; i < POWERS.length; i++) {
+      const k = POWERS[i];
+      if (p.pw[k] <= 0) continue;
+      p.pw[k] -= dt;
+      if (p.pw[k] <= 0) {
+        p.pw[k] = 0;
+        Sound.sfx.powerdown();
+      }
+    }
+    // เอฟเฟกต์ระหว่างมีพลัง
+    if (p.pw.star > 0 && Math.random() < 0.3) {
+      spawn({ kind: 'star', x: p.x + Math.random() * p.w, y: p.y + Math.random() * p.h, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, g: 0, size: 2.5 + Math.random() * 2.5, color: 'hsl(' + Math.floor(Math.random() * 360) + ',95%,70%)', life: 0.45 });
+    }
+    if (p.pw.mush > 0 && p.onGround && Math.abs(p.vx) > P.RUN && Math.random() < 0.35) {
+      spawn({ kind: 'circle', x: p.x + p.w / 2 - Math.sign(p.vx) * 10, y: p.y + p.h - 3, vx: -p.vx * 0.15, vy: -Math.random() * 30, g: 60, size: 2 + Math.random() * 2, color: 'rgba(255,200,210,0.9)', life: 0.3 });
+    }
+  }
+
+  function knockOut(e, p) {
+    e.dead = true;
+    e.deadT = 0;
+    e.knock = Math.sign(e.x + e.w / 2 - (p.x + p.w / 2)) || p.face;
+    g.shake = Math.max(g.shake, 3);
+    Sound.sfx.zap();
+    burst(e.x + e.w / 2, e.y + e.h / 2, 10, ['#ffd23f', '#ffffff', '#ff9df5'], 160, 'star');
   }
 
   function stomp(e, p, inp) {
@@ -218,6 +308,7 @@
     p.jumping = !!inp.jump;
     p.onGround = false;
     p.ride = null;
+    p.airJumps = p.pw.wing > 0 ? 1 : 0;
     g.shake = Math.max(g.shake, 3);
     Sound.sfx.stomp();
     burst(e.x + e.w / 2, e.y + e.h / 2, 8, ['#58d26d', '#a8f0b4'], 140, 'circle');
@@ -256,15 +347,20 @@
     Sound.stopMusic();
     Sound.sfx.win();
     confetti(140);
-    toast('เก็บครบ ' + g.total + ' เหรียญแล้ว!');
+    toast('เก็บครบ ' + g.goal + ' เหรียญแล้ว!');
   }
 
-  // ── บันทึกสถิติ ────────────────────────────────────────────────
-  function loadBest() {
+  // ── บันทึกสถิติ (ตลอดกาล + ของด่านวันนี้) ───────────────────────
+  function readRecord(key) {
     try {
-      const v = JSON.parse(CQ.store.get(BEST_KEY));
+      const v = JSON.parse(CQ.store.get(key));
       return v && typeof v.time === 'number' ? v : null;
     } catch (e) { return null; }
+  }
+
+  function loadRecords(day) {
+    const daily = readRecord(DAILY_KEY);
+    return { all: readRecord(BEST_KEY), today: daily && daily.day === day ? daily : null };
   }
 
   function fmtTime(t) {
@@ -275,9 +371,14 @@
   }
 
   function showBestOnTitle() {
-    const best = loadBest();
-    ui.bestTitle.hidden = !best;
-    if (best) ui.bestTitle.textContent = 'สถิติดีที่สุด ' + fmtTime(best.time) + ' · พลาด ' + best.deaths + ' ครั้ง';
+    const info = currentSeed();
+    ui.titleDay.textContent = info.label;
+    const rec = loadRecords(info.day);
+    const parts = [];
+    if (rec.today && !info.custom) parts.push('สถิติวันนี้ ' + fmtTime(rec.today.time));
+    if (rec.all) parts.push('ดีที่สุด ' + fmtTime(rec.all.time));
+    ui.bestTitle.hidden = parts.length === 0;
+    ui.bestTitle.textContent = parts.join(' · ');
   }
 
   // ── หน้าจอและสถานะ ─────────────────────────────────────────────
@@ -338,13 +439,24 @@
   function showWin() {
     state = 'won';
     winShownAt = clock;
-    const best = loadBest();
-    const isNew = !best || g.time < best.time;
-    if (isNew) CQ.store.set(BEST_KEY, JSON.stringify({ time: g.time, deaths: g.deaths, at: Date.now() }));
     ui.winTime.textContent = fmtTime(g.time);
     ui.winDeaths.textContent = g.deaths + ' ครั้ง';
-    ui.winBest.textContent = fmtTime(isNew ? g.time : best.time);
-    ui.winNew.hidden = !isNew;
+    if (g.seedInfo.custom) {
+      // ด่านพิเศษ (?seed=) ไม่บันทึกสถิติ
+      ui.winBest.textContent = '-';
+      ui.winBestAll.textContent = '-';
+      ui.winNew.hidden = true;
+    } else {
+      const rec = loadRecords(g.seedInfo.day);
+      const newToday = !rec.today || g.time < rec.today.time;
+      const newAll = !rec.all || g.time < rec.all.time;
+      if (newToday) CQ.store.set(DAILY_KEY, JSON.stringify({ day: g.seedInfo.day, time: g.time, deaths: g.deaths }));
+      if (newAll) CQ.store.set(BEST_KEY, JSON.stringify({ time: g.time, deaths: g.deaths, at: Date.now() }));
+      ui.winBest.textContent = fmtTime(newToday ? g.time : rec.today.time);
+      ui.winBestAll.textContent = fmtTime(newAll ? g.time : rec.all.time);
+      ui.winNew.hidden = !newToday;
+      ui.winNew.textContent = newAll ? 'สถิติใหม่ตลอดกาล!' : 'สถิติใหม่ของวันนี้!';
+    }
     setScreen(ui.win);
   }
 
@@ -416,6 +528,9 @@
       g.clearT += dt;
       if (g.clearT > 1.9) showWin();
     }
+
+    const wantTempo = state === 'playing' && !g.deathAnim && g.player.pw.star > 0 ? 1.3 : 1;
+    if (wantTempo !== tempo) { tempo = wantTempo; Sound.setTempo(tempo); }
 
     updateEffects(dt);
     const face = g.deathAnim ? g.deathAnim.face : g.player.face;

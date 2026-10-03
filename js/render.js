@@ -54,6 +54,103 @@
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
+  const POWER_KEYS = ['wing', 'mush', 'star'];
+  const POWER_COLOR = { wing: '#7fc4f5', mush: '#ff5a7a', star: '#ffd23f' };
+  const ITEM_GLOW = { wing: '191,230,255', mush: '255,120,150', star: '255,214,70' };
+
+  /** ปีก 1 ข้าง: โคนปีกที่ (0,0) ยื่นไปทาง -x */
+  function wingPath(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(-6, -10, -16, -14, -20, -8);
+    ctx.bezierCurveTo(-16, -6, -17, -3, -18, 0);
+    ctx.bezierCurveTo(-13, -1, -13, 2, -14, 5);
+    ctx.bezierCurveTo(-8, 3, -4, 4, 0, 0);
+    ctx.closePath();
+  }
+
+  function fillWing(ctx) {
+    wingPath(ctx);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#7fb8e6';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(127,184,230,0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-3, -1); ctx.lineTo(-14, -6);
+    ctx.moveTo(-3, 1); ctx.lineTo(-12, 1);
+    ctx.stroke();
+  }
+
+  function starPath(ctx, r1, r2) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 5;
+      const r = i % 2 ? r2 : r1;
+      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    ctx.closePath();
+  }
+
+  /** ไอคอนไอเทม วาดกึ่งกลางที่ (0,0) ขนาดราว 24 หน่วย */
+  function drawItemIcon(ctx, type, time) {
+    if (type === 'wing') {
+      const flap = Math.sin(time * 6) * 0.25;
+      [1, -1].forEach(function (side) {
+        ctx.save();
+        ctx.scale(side, 1);
+        ctx.translate(-1.5, 3);
+        ctx.rotate(flap);
+        ctx.scale(0.62, 0.62);
+        fillWing(ctx);
+        ctx.restore();
+      });
+      ctx.fillStyle = '#ffd23f';
+      ellipse(ctx, 0, 3, 2.6, 2.6); ctx.fill();
+    } else if (type === 'mush') {
+      rr(ctx, -5.5, -1, 11, 10, 3);
+      ctx.fillStyle = '#f7e7c6';
+      ctx.fill();
+      ctx.strokeStyle = '#c9a97a';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.fillStyle = '#3a2a1a';
+      ellipse(ctx, -2, 3.6, 1, 1.6); ctx.fill();
+      ellipse(ctx, 2, 3.6, 1, 1.6); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-12.5, 1.5);
+      ctx.bezierCurveTo(-12.5, -12.5, 12.5, -12.5, 12.5, 1.5);
+      ctx.closePath();
+      ctx.fillStyle = '#ff4d6a';
+      ctx.fill();
+      ctx.strokeStyle = '#c42a48';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      [[-5.5, -4, 2.7, 2.3], [4, -6.2, 3, 2.5], [8.6, -1, 1.8, 1.6], [-9.6, -0.6, 1.5, 1.4]].forEach(function (d) {
+        ellipse(ctx, d[0], d[1], d[2], d[3]); ctx.fill();
+      });
+    } else if (type === 'star') {
+      ctx.save();
+      ctx.rotate(Math.sin(time * 3) * 0.15);
+      starPath(ctx, 12.5, 5.6);
+      ctx.fillStyle = '#ffd23f';
+      ctx.fill();
+      ctx.strokeStyle = '#e09b00';
+      ctx.lineWidth = 1.8;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.fillStyle = '#3a2a00';
+      ellipse(ctx, -2.6, -0.5, 1.1, 2); ctx.fill();
+      ellipse(ctx, 2.6, -0.5, 1.1, 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ellipse(ctx, -4, -5, 1.6, 1.1); ctx.fill();
+      ctx.restore();
+    }
+  }
+
   function Renderer(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
@@ -488,6 +585,7 @@
     this.drawSprings(g, time);
     for (let i = 0; i < g.checkpoints.length; i++) this.drawCheckpoint(g.checkpoints[i], time);
     for (let i = 0; i < g.coins.length; i++) if (!g.coins[i].taken) this.drawCoin(g.coins[i], time);
+    for (let i = 0; i < g.items.length; i++) if (!g.items[i].taken) this.drawItem(g.items[i], time);
     for (let i = 0; i < g.lv.platforms.length; i++) this.drawPlatform(g.lv.platforms[i]);
     for (let i = 0; i < g.enemies.length; i++) this.drawSlime(g.enemies[i]);
     if (g.deathAnim) this.drawHero(g.deathAnim, g, time, true);
@@ -499,7 +597,10 @@
       ctx.fillStyle = 'rgba(255,80,80,' + (g.flash * 0.35).toFixed(3) + ')';
       ctx.fillRect(0, 0, this.viewW, this.viewH);
     }
-    if (g.showMinimap) this.drawMinimap(g, time);
+    if (g.showMinimap) {
+      this.drawMinimap(g, time);
+      this.drawPowers(g, time);
+    }
   };
 
   Renderer.prototype.drawPits = function () {
@@ -660,11 +761,21 @@
     const cx = e.x + e.w / 2, by = e.y + e.h;
     let sx = 1 - Math.sin(e.t * 9) * 0.06, sy = 1 + Math.sin(e.t * 9) * 0.08;
     ctx.save();
-    if (e.dead) {
-      sx = 1.35; sy = 0.35;
-      ctx.globalAlpha = Math.max(0, 1 - e.deadT / 0.6);
+    if (e.dead && e.knock) {
+      // โดนดาวชน: กระเด็นหมุนตกจอ
+      const t = e.deadT;
+      ctx.globalAlpha = Math.max(0, 1 - t / 0.6);
+      ctx.translate(cx + e.knock * 150 * t, by - 10 - 240 * t + 800 * t * t);
+      ctx.rotate(e.knock * t * 10);
+      ctx.translate(0, 10);
+      sx = 1; sy = 1;
+    } else {
+      if (e.dead) {
+        sx = 1.35; sy = 0.35;
+        ctx.globalAlpha = Math.max(0, 1 - e.deadT / 0.6);
+      }
+      ctx.translate(cx, by);
     }
-    ctx.translate(cx, by);
     ctx.scale(sx, sy);
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ellipse(ctx, 0, 0, 13, 2.5); ctx.fill();
@@ -722,6 +833,43 @@
     }
     ctx.scale(sx, sy);
 
+    const pw = !dead && p.pw ? p.pw : null;
+    const shown = function (t) { return t > 0 && (t > 2 || Math.floor(time * 8) % 2 === 0); }; // กะพริบช่วง 2 วินาทีสุดท้าย
+    const hue = (time * 540) % 360;
+    let bodyFill = '#ff6a3d', bodyStroke = '#c8461f';
+    if (pw && shown(pw.star)) {
+      bodyFill = 'hsl(' + hue + ',95%,60%)';
+      bodyStroke = 'hsl(' + hue + ',85%,38%)';
+      ctx.fillStyle = 'hsla(' + ((hue + 60) % 360) + ',100%,70%,0.35)';
+      ellipse(ctx, 0, -15, 19, 19); ctx.fill();
+    }
+    if (pw && shown(pw.mush) && Math.abs(p.vx) > 230) {
+      const d = Math.sign(p.vx);
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      for (let k = 0; k < 3; k++) {
+        const ly = -22 + k * 7, off = ((time * 60 + k * 9) % 10);
+        ctx.beginPath();
+        ctx.moveTo(-(14 + off) * d, ly);
+        ctx.lineTo(-(26 + off + k * 3) * d, ly);
+        ctx.stroke();
+      }
+    }
+    if (pw && shown(pw.wing)) {
+      const flap = p.onGround ? Math.sin(time * 5) * 0.15 : Math.sin(time * 24) * 0.55;
+      [0.75, 1].forEach(function (a, idx) {
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.translate(-6 * f + (idx ? 0 : 3 * f), -19);
+        ctx.scale(f, 1);
+        ctx.rotate(-0.35 - flap + (idx ? 0 : 0.35));
+        ctx.scale(0.95, 0.95);
+        fillWing(ctx);
+        ctx.restore();
+      });
+    }
+
     const speed = Math.min(1, Math.abs(p.vx || 0) / 210);
     const sway = Math.sin(time * 13) * (1 + speed * 1.5);
     ctx.strokeStyle = '#2f6fde';
@@ -749,7 +897,7 @@
     }
 
     rr(ctx, -11, -27, 22, 23, 10);
-    ctx.fillStyle = '#ff6a3d';
+    ctx.fillStyle = bodyFill;
     ctx.fill();
     ctx.save();
     ctx.clip();
@@ -763,7 +911,7 @@
     ellipse(ctx, -5 * f, -25, 5, 2.2); ctx.fill();
     ctx.restore();
     rr(ctx, -11, -27, 22, 23, 10);
-    ctx.strokeStyle = '#c8461f';
+    ctx.strokeStyle = bodyStroke;
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -812,6 +960,16 @@
         ctx.rotate(p.rot || 0);
         ctx.fillStyle = p.color;
         ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+        ctx.restore();
+      } else if (p.kind === 'feather') {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot || 0);
+        ctx.fillStyle = p.color;
+        ellipse(ctx, 0, 0, p.size, p.size * 0.38); ctx.fill();
+        ctx.strokeStyle = 'rgba(127,184,230,0.8)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(-p.size, 0); ctx.lineTo(p.size, 0); ctx.stroke();
         ctx.restore();
       } else if (p.kind === 'star') {
         const s = p.size * (0.5 + a * 0.5);
@@ -863,6 +1021,19 @@
       ellipse(ctx, x + c.x * sx, y + c.y * sy, 2.2 * k * pulse, 2.2 * k * pulse);
       ctx.fill();
     }
+    for (let i = 0; i < g.items.length; i++) {
+      const it = g.items[i];
+      if (it.taken) continue;
+      const mx = x + it.x * sx, my = y + it.y * sy, r2 = 2.8 * k;
+      ctx.fillStyle = it.type === 'star' ? '#ffffff' : POWER_COLOR[it.type];
+      ctx.strokeStyle = 'rgba(16,28,52,0.9)';
+      ctx.lineWidth = 1 * k;
+      ctx.beginPath();
+      ctx.moveTo(mx, my - r2); ctx.lineTo(mx + r2, my); ctx.lineTo(mx, my + r2); ctx.lineTo(mx - r2, my);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
     const p = g.deathAnim || g.player;
     ctx.fillStyle = '#ff5a3d';
     ctx.strokeStyle = '#fff';
@@ -870,6 +1041,54 @@
     ellipse(ctx, x + (p.x + p.w / 2) * sx, y + clamp(p.y + p.h / 2, 0, lv.h * T) * sy, 3 * k, 3 * k);
     ctx.fill();
     ctx.stroke();
+  };
+
+  Renderer.prototype.drawItem = function (it, time) {
+    const ctx = this.ctx;
+    if (it.x + 30 < this.cx || it.x - 30 > this.cx + this.viewW) return;
+    const bob = Math.sin(time * 2.6 + it.phase) * 3;
+    const pulse = 0.8 + Math.sin(time * 5 + it.phase) * 0.2;
+    ctx.save();
+    ctx.translate(it.x, it.y + bob);
+    ctx.fillStyle = 'rgba(' + ITEM_GLOW[it.type] + ',0.32)';
+    ellipse(ctx, 0, 0, 17 * pulse, 17 * pulse); ctx.fill();
+    ctx.fillStyle = 'rgba(' + ITEM_GLOW[it.type] + ',0.25)';
+    ellipse(ctx, 0, 0, 11, 11); ctx.fill();
+    drawItemIcon(ctx, it.type, time);
+    ctx.restore();
+  };
+
+  /** แถบแสดงไอเทมที่ใช้งานอยู่และเวลาที่เหลือ (ใต้มินิแมพ) */
+  Renderer.prototype.drawPowers = function (g, time) {
+    const r = this.minimapRect;
+    if (!r || g.deathAnim) return;
+    const pw = g.player.pw;
+    const act = POWER_KEYS.filter(function (key) { return pw[key] > 0; });
+    if (!act.length) return;
+    const ctx = this.ctx, k = 1 / this.scale;
+    const pillW = 78 * k, pillH = 26 * k, gap = 6 * k;
+    const total = act.length * pillW + (act.length - 1) * gap;
+    let x = Math.max(8 * k, (r.x + r.w / 2) * k - total / 2);
+    const y = (r.y + r.h) * k + 10 * k;
+    for (let i = 0; i < act.length; i++) {
+      const key = act[i], t = pw[key];
+      const dim = t < 2 && Math.floor(time * 8) % 2 === 0;
+      ctx.globalAlpha = dim ? 0.55 : 1;
+      ctx.fillStyle = 'rgba(16,28,52,0.62)';
+      rr(ctx, x, y, pillW, pillH, pillH / 2); ctx.fill();
+      ctx.save();
+      ctx.translate(x + 14 * k, y + pillH / 2);
+      ctx.scale(0.62 * k, 0.62 * k);
+      drawItemIcon(ctx, key, time);
+      ctx.restore();
+      const bx = x + 28 * k, bw = pillW - 38 * k, bh = 6 * k, by = y + pillH / 2 - bh / 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      rr(ctx, bx, by, bw, bh, bh / 2); ctx.fill();
+      ctx.fillStyle = POWER_COLOR[key];
+      rr(ctx, bx, by, Math.max(bh, bw * Math.min(1, t / CQ.PHYS.POWER_TIME)), bh, bh / 2); ctx.fill();
+      x += pillW + gap;
+    }
+    ctx.globalAlpha = 1;
   };
 
   CQ.Renderer = Renderer;
