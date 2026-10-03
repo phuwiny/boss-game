@@ -1,7 +1,7 @@
 /* Coin Quest — สไตล์หน้าเกม */
 :root {
+  --hud-px: 3px; /* ขนาดพิกเซลของ HUD (main.js ปรับตามจอ) */
   --navy: #16233f;
-  --navy-soft: rgba(16, 28, 52, 0.58);
   --orange: #ff6a3d;
   --orange-dark: #d9481f;
   --gold: #ffd23f;
@@ -67,72 +67,48 @@ button { font: inherit; color: inherit; }
   z-index: 5;
 }
 
-.hud-group { display: flex; gap: 8px; align-items: center; }
+.hud-group { display: flex; align-items: flex-start; }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 40px;
-  padding: 0 14px 0 9px;
-  border-radius: 999px;
-  background: var(--navy-soft);
-  color: #fff;
-  font-weight: 600;
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-}
-
-.pill .dim { opacity: 0.65; font-weight: 400; margin-left: 1px; }
-.pill b { font-weight: 800; color: var(--gold); }
-.ico { width: 22px; height: 22px; flex: none; }
-
-#coin-pill.bump { animation: bump 0.35s ease-out; }
-#timer-pill.warn { background: rgba(214, 40, 52, 0.85); animation: warn-pulse 0.5s ease-in-out infinite alternate; }
-@keyframes warn-pulse {
-  from { transform: scale(1); }
-  to { transform: scale(1.08); }
-}
 @keyframes bump {
   0% { transform: scale(1); }
   35% { transform: scale(1.18); }
   100% { transform: scale(1); }
 }
 
+/* ปุ่มมุมขวาบนแบบพิกเซล ขนาดตาม --hud-px (ตั้งจาก main.js ให้เท่ากับพิกเซลของ HUD บน canvas)
+   ขอบดำ + ขอบในสว่าง/เงา + พื้นเข้ม เหมือนกรอบใน js/hud.js */
 .icon-btn {
+  --p: var(--hud-px);
   pointer-events: auto;
   position: relative;
-  width: 42px;
-  height: 42px;
+  width: calc(var(--p) * 15);
+  height: calc(var(--p) * 15);
+  margin: var(--p);
+  padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: 0;
   display: grid;
   place-items: center;
-  background: var(--navy-soft);
+  background: #241a42;
   color: #fff;
   cursor: pointer;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  transition: transform 0.12s, background 0.12s;
+  box-shadow:
+    0 0 0 var(--p) #140b20,
+    inset var(--p) var(--p) 0 0 #f1ecff,
+    inset calc(var(--p) * -1) calc(var(--p) * -1) 0 0 #9b90c4,
+    inset calc(var(--p) * 2) calc(var(--p) * 2) 0 0 #140b20,
+    inset calc(var(--p) * -2) calc(var(--p) * -2) 0 0 #140b20;
 }
-.icon-btn svg { width: 22px; height: 22px; }
-.icon-btn:hover { background: rgba(16, 28, 52, 0.75); }
-.icon-btn:active { transform: scale(0.92); }
-.icon-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-.icon-btn.off { color: rgba(255, 255, 255, 0.5); }
-.icon-btn.off::after {
-  content: '';
-  position: absolute;
-  width: 26px;
-  height: 2.5px;
-  border-radius: 2px;
-  background: #ff7a7a;
-  transform: rotate(-45deg);
-}
+.icon-btn svg { width: calc(var(--p) * 7); height: calc(var(--p) * 7); }
+.icon-btn:hover { background: #33275e; }
+.icon-btn:active { background: #1a1230; }
+.icon-btn:active svg { transform: translateY(var(--p)); }
+.icon-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: calc(var(--p) * 2); }
+.icon-btn .slash { display: none; }
+.icon-btn.off .ic { opacity: 0.4; }
+.icon-btn.off .slash { display: inline; }
+/* จอสัมผัส: ปุ่มต้องใหญ่พอให้นิ้วกด */
+body.touch .icon-btn { --p: max(var(--hud-px), 2.6px); }
 
 /* ── Toast ───────────────────────────────────────────── */
 #toast {
@@ -318,6 +294,7 @@ h1 {
 .char-pick:active { transform: translateY(1px); }
 .char-pick:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .char-pick-preview {
+  image-rendering: pixelated;
   width: 54px;
   height: 54px;
   flex: none;
@@ -436,6 +413,7 @@ h1 {
 }
 .char-preview {
   display: block;
+  image-rendering: pixelated;
   width: 100px;
   height: 100px;
   flex: none;
@@ -602,11 +580,6 @@ body.touch .only-desktop { display: none; }
 /* จอแคบ (มือถือแนวตั้ง) */
 @media (max-width: 480px) {
   .help { flex-direction: column; gap: 8px; }
-  .pill { height: 36px; font-size: 16px; padding: 0 12px 0 8px; }
-  .icon-btn { width: 38px; height: 38px; }
-  .icon-btn svg { width: 20px; height: 20px; }
-  .hud-group { gap: 6px; }
-  #hud-left { flex-direction: column; align-items: flex-start; }
   .modes { grid-template-columns: 1fr; gap: 8px; }
   .mode-btn { min-height: 0; padding: 8px 10px 10px; }
   .char-grid { grid-template-columns: 1fr; gap: 8px; }
@@ -628,5 +601,4 @@ body.touch .only-desktop { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .logo { animation: none; }
   .card { animation: none; }
-  #timer-pill.warn { animation: none; }
 }

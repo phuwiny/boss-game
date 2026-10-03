@@ -27,11 +27,6 @@
     hud: $('hud'),
     hudLeft: $('hud-left'),
     hudRight: $('hud-right'),
-    coinPill: $('coin-pill'),
-    coinCount: $('coin-count'),
-    coinTotal: $('coin-total'),
-    timerPill: $('timer-pill'),
-    timer: $('timer'),
     toast: $('toast'),
     title: $('screen-title'),
     chars: $('screen-chars'),
@@ -67,7 +62,6 @@
   let acc = 0;
   let clock = 0;
   let winShownAt = 0;
-  let hudCache = { coins: -1, timer: '', warn: false };
   let spawnPool = null;
   let tempo = 1;
   let charId = CQ.getCharacter(CQ.store.get(CHAR_KEY)).id;
@@ -129,6 +123,7 @@
       deaths: 0,
       lastTick: 0,
       warned: false,
+      bumpT: null, // เวลาที่เก็บเหรียญล่าสุด (ให้ HUD เด้งตัวเลข)
       shake: 0,
       flash: 0,
       landSquash: 0,
@@ -138,11 +133,9 @@
       showMinimap: false
     };
     renderer.setLevel(lv);
+    renderer.prepareHero(ch.id);
     renderer.look = 0;
     renderer.updateCamera(focusPoint(), 1, 0, true);
-    ui.coinTotal.textContent = '/' + g.goal;
-    hudCache = { coins: -1, timer: '', warn: false };
-    ui.timerPill.classList.remove('warn');
   }
 
   function focusPoint() {
@@ -278,9 +271,7 @@
     Sound.sfx.coin();
     burst(c.x, c.y, 10, ['#ffd23f', '#fff3a0', '#ffffff'], 150, 'star');
     spawn({ kind: 'text', text: '+1', x: c.x, y: c.y - 14, vx: 0, vy: -50, g: 0, color: '#ffe066', life: 0.8 });
-    ui.coinPill.classList.remove('bump');
-    void ui.coinPill.offsetWidth;
-    ui.coinPill.classList.add('bump');
+    g.bumpT = clock;
     const left = g.goal - g.collected;
     if (left === 0) clearGame();
     else if (g.mode === 'timed') {
@@ -565,7 +556,7 @@
     setScreen(null);
     ui.hud.hidden = false;
     document.body.classList.add('in-game');
-    layoutMinimap();
+    layoutHud();
     Input.reset();
     pendingJump = false;
     acc = 0;
@@ -648,24 +639,6 @@
     ui.toast.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { ui.toast.classList.remove('show'); }, 1900);
-  }
-
-  function updateHud() {
-    if (g.collected !== hudCache.coins) {
-      hudCache.coins = g.collected;
-      ui.coinCount.textContent = g.collected;
-    }
-    const left = g.limit ? Math.max(0, g.limit - g.time) : 0;
-    const t = fmtTime(g.limit ? left : g.time);
-    if (t !== hudCache.timer) {
-      hudCache.timer = t;
-      ui.timer.textContent = t;
-    }
-    const warn = !!g.limit && left < 10;
-    if (warn !== hudCache.warn) {
-      hudCache.warn = warn;
-      ui.timerPill.classList.toggle('warn', warn);
-    }
   }
 
   /** โหมดจับเวลา: เตือนตอนเหลือ 10 วินาที และเสียงนับถอยหลัง 5 วินาทีสุดท้าย */
@@ -760,31 +733,20 @@
     const face = g.deathAnim ? g.deathAnim.face : g.player.face;
     renderer.updateCamera(focusPoint(), face, dt, false);
     renderer.render(g, clock);
-    updateHud();
     drawMenuPreviews();
     requestAnimationFrame(frame);
   }
 
-  // ── ขนาดจอ / มินิแมพ ───────────────────────────────────────────
-  function layoutMinimap() {
+  // ── ขนาดจอ / HUD / มินิแมพ ─────────────────────────────────────
+  function layoutHud() {
     if (!g || ui.hud.hidden) return;
     const vw = window.innerWidth;
-    const L = ui.hudLeft.getBoundingClientRect();
-    const R = ui.hudRight.getBoundingClientRect();
-    const ratio = (g.lv.h / g.lv.w) * 1.5;
-    let w = Math.min(340, vw * 0.42);
-    let x, y;
-    const gap = R.left - L.right - 32;
-    if (gap >= Math.min(w, 200)) {
-      w = Math.min(w, gap);
-      x = L.right + 16 + (gap - w) / 2;
-      y = L.top + L.height / 2 - (w * ratio) / 2;
-    } else {
-      w = Math.min(300, vw - L.left * 2 - 8);
-      x = L.left + 4;
-      y = Math.max(L.bottom, R.bottom) + 12;
-    }
-    renderer.minimapRect = { x: x, y: y, w: w, h: w * ratio };
+    // ขนาดพิกเซลของ HUD ใช้ร่วมกับปุ่ม DOM ผ่านตัวแปร CSS --hud-px
+    const P = CQ.HUD.pixelSize(vw, window.innerHeight, renderer.dpr);
+    document.documentElement.style.setProperty('--hud-px', (P / renderer.dpr) + 'px');
+    const A = ui.hudLeft.getBoundingClientRect();
+    const B = ui.hudRight.getBoundingClientRect();
+    renderer.layoutHud({ P: P, x: A.left, y: A.top, right: B.left, vw: vw, timed: !!g.limit });
   }
 
   function resize() {
@@ -794,7 +756,7 @@
     renderer.resize(Math.max(1, r.width), Math.max(1, r.height), dpr);
     if (g) {
       renderer.updateCamera(focusPoint(), g.player.face, 0, true);
-      layoutMinimap();
+      layoutHud();
     }
   }
 
