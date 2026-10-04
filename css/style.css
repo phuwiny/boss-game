@@ -176,6 +176,19 @@ body.overlay #touch { display: none; }
 .tbtn-jump svg { width: 34px; height: 34px; margin-bottom: -4px; }
 .tbtn-jump span { font-size: 13px; font-weight: 600; pointer-events: none; }
 .tbtn-jump.active { background: rgba(255, 140, 100, 0.7); }
+/* ปุ่มยิงพลัง: แสดงเฉพาะ Boss Stage */
+.tbtn-fire {
+  display: none;
+  align-self: flex-end;
+  align-content: center;
+  gap: 0;
+  background: rgba(140, 90, 255, 0.45);
+  border-color: rgba(220, 205, 255, 0.75);
+}
+body.boss-stage .tbtn-fire { display: grid; }
+.tbtn-fire svg { width: 30px; height: 30px; margin-bottom: -4px; }
+.tbtn-fire span { font-size: 13px; font-weight: 600; pointer-events: none; }
+.tbtn-fire.active { background: rgba(175, 140, 255, 0.75); }
 
 @media (max-height: 420px) {
   .tbtn { width: 70px; height: 70px; }
@@ -317,9 +330,9 @@ h1 {
 
 .stages {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-  max-width: 460px;
+  max-width: 520px;
   margin: 0 auto 10px;
   padding: 4px;
   border-radius: 16px;
@@ -359,6 +372,7 @@ h1 {
 .stage-name { font-size: 17px; font-weight: 800; }
 .stage-grassland { --swatch: linear-gradient(#8fd3ff 0 45%, #5cc451 45% 62%, #8d5b34 62%); }
 .stage-forest { --swatch: linear-gradient(#2f6b55 0 45%, #3f8a3a 45% 62%, #5a3a22 62%); }
+.stage-castle { --swatch: radial-gradient(circle at 50% 38%, #ff5a3a 0 14%, transparent 15%), linear-gradient(#231c2e 0 62%, #7d738d 62% 70%, #463e52 70%); }
 
 .modes {
   display: grid;
@@ -753,6 +767,16 @@ body.touch .rps-key { display: none; }
   color: #3a4456;
 }
 .char-skill::before { content: 'ความสามารถ: '; font-weight: 600; color: var(--navy); }
+.char-shot {
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #f1ecff;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #3a4456;
+}
+.char-shot:empty { display: none; }
+.char-shot::before { content: 'ยิงพลัง (Boss Stage): '; font-weight: 600; color: #5b3fb0; }
 .char-best { margin-top: 2px; font-size: 12px; font-weight: 600; color: #a06a00; }
 
 
@@ -908,6 +932,10 @@ body.touch .only-desktop { display: none; }
 
 /* จอแคบ (มือถือแนวตั้ง) */
 @media (max-width: 480px) {
+  .stage-btn { gap: 5px; padding: 4px 6px 4px 4px; }
+  .stage-btn::before { width: 20px; height: 20px; }
+  .stage-name { font-size: 14px; }
+  .stage-no { font-size: 11.5px; }
   .help { flex-direction: column; gap: 8px; }
   .modes { grid-template-columns: 1fr; gap: 8px; }
   .mode-btn { min-height: 0; padding: 8px 10px 10px; }

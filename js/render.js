@@ -69,11 +69,17 @@
       ground: { dirt: '#5e3d26', dark: '#4c3020', light: '#7a5235', grassDark: '#2b6a33', grass: '#3d8a3a', grassLight: '#69ad4c' },
       plank: { edge: '#4f3019', mid: '#7e5230', light: '#9c6c40', grain: 'rgba(40,22,10,0.4)', knot: '#3d2412', leg: '#4f3019', leaves: true },
       tuft: '#2f7a35'
+    },
+    castle: {
+      id: 'castle',
+      sky: ['#120e1a', '#1f1829', '#2e2338'],
+      plank: { edge: '#3b2616', mid: '#6a4529', light: '#86603c', grain: 'rgba(30,16,6,0.45)', knot: '#2e1c0e', leg: '#55565e' },
+      tuft: '#5a5268'
     }
   };
 
-  const POWER_COLOR = { wing: '#7fc4f5', mush: '#ff5a7a', star: '#ffd23f' };
-  const ITEM_GLOW = { wing: '191,230,255', mush: '255,120,150', star: '255,214,70' };
+  const POWER_COLOR = { wing: '#7fc4f5', mush: '#ff5a7a', star: '#ffd23f', heart: '#ff4d6a' };
+  const ITEM_GLOW = { wing: '191,230,255', mush: '255,120,150', star: '255,214,70', heart: '255,90,120' };
 
   /** ปีก 1 ข้าง: โคนปีกที่ (0,0) ยื่นไปทาง -x */
   function wingPath(ctx) {
@@ -149,6 +155,26 @@
       [[-5.5, -4, 2.7, 2.3], [4, -6.2, 3, 2.5], [8.6, -1, 1.8, 1.6], [-9.6, -0.6, 1.5, 1.4]].forEach(function (d) {
         ellipse(ctx, d[0], d[1], d[2], d[3]); ctx.fill();
       });
+    } else if (type === 'heart') {
+      const beat = 1 + Math.max(0, Math.sin(time * 7)) * 0.08;
+      ctx.save();
+      ctx.scale(beat, beat);
+      ctx.beginPath();
+      ctx.moveTo(0, 10);
+      ctx.bezierCurveTo(-4, 6, -12, 1, -12, -4.5);
+      ctx.bezierCurveTo(-12, -10, -5, -12, 0, -6);
+      ctx.bezierCurveTo(5, -12, 12, -10, 12, -4.5);
+      ctx.bezierCurveTo(12, 1, 4, 6, 0, 10);
+      ctx.closePath();
+      ctx.fillStyle = '#ff4d6a';
+      ctx.fill();
+      ctx.strokeStyle = '#b8243f';
+      ctx.lineWidth = 1.8;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ellipse(ctx, -6, -5, 2.6, 1.8); ctx.fill();
+      ctx.restore();
     } else if (type === 'star') {
       ctx.save();
       ctx.rotate(Math.sin(time * 3) * 0.15);
@@ -344,9 +370,76 @@
     }
   }
 
+  /** พื้นหินในปราสาท (# ของ Boss Stage) ก้อนหินเรียงสลับ ด้านบนเป็นขอบหินขัด */
+  function drawCastleFloor(c, mask, variant) {
+    const top = mask & 1, left = mask & 2, right = mask & 4;
+    c.fillStyle = '#2a2433';
+    c.fillRect(0, 0, 32, 32);
+    const off = variant * 6;
+    const blocks = [[1 - off, 1, 20, 14], [23 - off, 1, 20, 14], [-9 + off, 17, 20, 14], [13 + off, 17, 20, 14], [35 + off, 17, 20, 14]];
+    blocks.forEach(function (b) {
+      c.fillStyle = '#463e52';
+      c.fillRect(b[0], b[1], b[2], b[3]);
+      c.fillStyle = '#554c62';
+      c.fillRect(b[0], b[1], b[2], 2);
+      c.fillStyle = 'rgba(0,0,0,0.22)';
+      c.fillRect(b[0], b[1] + b[3] - 2, b[2], 2);
+    });
+    const r = rng(variant * 313 + 5);
+    c.fillStyle = 'rgba(0,0,0,0.3)';
+    for (let i = 0; i < 2; i++) c.fillRect(4 + r() * 22, 6 + r() * 20, 3 + r() * 4, 1);
+    c.fillStyle = 'rgba(0,0,0,0.25)';
+    if (left) c.fillRect(0, 0, 3, 32);
+    if (right) c.fillRect(29, 0, 3, 32);
+    if (top) {
+      c.fillStyle = '#7d738d';
+      c.fillRect(0, 0, 32, 6);
+      c.fillStyle = '#a69cb6';
+      c.fillRect(0, 0, 32, 2);
+      c.fillStyle = 'rgba(0,0,0,0.35)';
+      c.fillRect(0, 6, 32, 2);
+      c.fillStyle = '#5f566e';
+      c.fillRect(variant * 9 + 3, 2, 1, 4);
+    }
+  }
+
+  /** อิฐปราสาท (B ของ Boss Stage: เพดานและบล็อก) top = ด้านบนโล่ง */
+  function drawCastleBrick(c, top) {
+    c.fillStyle = '#1e1826';
+    c.fillRect(0, 0, 32, 32);
+    const bricks = [[1, 1, 14, 9], [17, 1, 14, 9], [1, 12, 6, 9], [9, 12, 14, 9], [25, 12, 6, 9], [1, 23, 14, 8], [17, 23, 14, 8]];
+    bricks.forEach(function (b, i) {
+      c.fillStyle = i % 3 === 1 ? '#4a3a52' : '#55445e';
+      c.fillRect(b[0], b[1], b[2], b[3]);
+      c.fillStyle = 'rgba(255,255,255,0.1)';
+      c.fillRect(b[0], b[1], b[2], 1);
+      c.fillStyle = 'rgba(0,0,0,0.22)';
+      c.fillRect(b[0], b[1] + b[3] - 1, b[2], 1);
+    });
+    if (top) {
+      c.fillStyle = '#7d738d';
+      c.fillRect(0, 0, 32, 4);
+      c.fillStyle = '#a69cb6';
+      c.fillRect(0, 0, 32, 1);
+    }
+  }
+
   Renderer.prototype.tileSprite = function (lv, tx, ty, t) {
     const W = CQ.World;
     const th = this.theme;
+    if (th.id === 'castle' && (t === TILE.GROUND || t === TILE.BRICK)) {
+      if (t === TILE.BRICK) {
+        const top = !W.isSolid(lv, tx, ty - 1) && ty > 0;
+        return this.sprite('cbrick' + (top ? 1 : 0), 32, 32, function (c) { drawCastleBrick(c, top); });
+      }
+      const solid = function (x, y) { return W.isSolid(lv, x, y); };
+      let mask = 0;
+      if (ty > 0 && !solid(tx, ty - 1)) mask |= 1;
+      if (!solid(tx - 1, ty)) mask |= 2;
+      if (!solid(tx + 1, ty)) mask |= 4;
+      const v = (tx + ty) % 2;
+      return this.sprite('cfloor' + mask + '_' + v, 32, 32, function (c) { drawCastleFloor(c, mask, v); });
+    }
     if (t === TILE.GROUND) {
       const solid = function (x, y) { return W.isSolid(lv, x, y); };
       let mask = 0;
@@ -396,7 +489,81 @@
       c.closePath();
       c.fill();
     };
-    if (this.theme.id === 'forest') {
+    if (this.theme.id === 'castle') {
+      // ปราสาท: ผนังไกลมีหน้าต่างโค้งรับแสงจันทร์ + แนวเสาหินและธงใกล้ ๆ
+      this.layers = {
+        far: mk(1024, 320, function (c, w, h) {
+          c.fillStyle = '#231c2e';
+          c.fillRect(0, 0, w, h);
+          c.fillStyle = 'rgba(255,255,255,0.03)';
+          for (let y = 8; y < h; y += 22) c.fillRect(0, y, w, 1);
+          for (let i = 0; i < 4; i++) {
+            const x = i * 256 + 128;
+            // หน้าต่างโค้ง
+            c.fillStyle = '#141a33';
+            c.beginPath();
+            c.moveTo(x - 30, 210); c.lineTo(x - 30, 120); c.arc(x, 120, 30, Math.PI, 0); c.lineTo(x + 30, 210);
+            c.closePath(); c.fill();
+            const gl = c.createLinearGradient(x, 90, x, 210);
+            gl.addColorStop(0, 'rgba(140,170,255,0.45)');
+            gl.addColorStop(1, 'rgba(90,110,200,0.12)');
+            c.fillStyle = gl;
+            c.fill();
+            c.fillStyle = 'rgba(235,240,255,0.85)';
+            ellipse(c, x + 10, 118, 9, 9); c.fill();
+            c.fillStyle = '#231c2e';
+            c.fillRect(x - 1.5, 90, 3, 120);
+            c.fillRect(x - 30, 160, 60, 3);
+            // เสาระหว่างหน้าต่าง
+            const px = i * 256;
+            c.fillStyle = '#1b1524';
+            c.fillRect(px - 20, 0, 40, h);
+            c.fillStyle = '#2b2338';
+            c.fillRect(px - 26, 40, 52, 10);
+            c.fillRect(px - 26, h - 30, 52, 30);
+          }
+          // โค้งเพดานระหว่างเสา
+          c.fillStyle = '#1b1524';
+          c.beginPath();
+          c.moveTo(0, 0);
+          for (let i = 0; i < 4; i++) {
+            c.lineTo(i * 256, 70);
+            c.quadraticCurveTo(i * 256 + 128, 6, i * 256 + 256, 70);
+          }
+          c.lineTo(w, 0);
+          c.closePath();
+          c.fill();
+        }),
+        near: mk(900, 260, function (c, w, h) {
+          const r = rng(77);
+          for (let i = 0; i < 3; i++) {
+            const x = (i + 0.5) * (w / 3);
+            c.fillStyle = '#16111e';
+            c.fillRect(x - 26, 0, 52, h);
+            c.fillStyle = '#211a2b';
+            c.fillRect(x - 26, 0, 6, h);
+            c.fillStyle = '#0f0b15';
+            c.fillRect(x + 20, 0, 6, h);
+            // ธงสีแดงห้อยข้างเสา
+            const bx = x + 40 + r() * 30;
+            c.fillStyle = '#6e1c2c';
+            c.beginPath();
+            c.moveTo(bx, 20); c.lineTo(bx + 34, 20); c.lineTo(bx + 34, 130); c.lineTo(bx + 17, 116); c.lineTo(bx, 130);
+            c.closePath(); c.fill();
+            c.fillStyle = '#c9a23a';
+            c.fillRect(bx, 20, 34, 4);
+            c.fillStyle = 'rgba(201,162,58,0.8)';
+            ellipse(c, bx + 17, 64, 7, 9); c.fill();
+            c.fillStyle = '#6e1c2c';
+            ellipse(c, bx + 17, 64, 3.5, 5); c.fill();
+          }
+          c.fillStyle = '#16111e';
+          c.fillRect(0, h - 26, w, 26);
+        })
+      };
+      this.layers.far.fill = '#1b1524';
+      this.layers.near.fill = '#16111e';
+    } else if (this.theme.id === 'forest') {
       // ป่า: แนวยอดไม้ไกล ๆ + ลำต้นไม้ใหญ่ใกล้ ๆ
       this.layers = {
         far: mk(1024, 260, function (c, w, h) {
@@ -486,6 +653,7 @@
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, vw, vh);
     if (this.theme.id === 'forest') { this.drawForestSky(time); return; }
+    if (this.theme.id === 'castle') { this.drawCastleSky(time); return; }
 
     const sx = vw * 0.8 - this.cx * 0.01, sy = 64 - (this.cy - this.camMaxY()) * 0.05;
     ctx.fillStyle = 'rgba(255,245,190,0.35)';
@@ -542,6 +710,21 @@
     }
   };
 
+  /** ในปราสาท: ฝุ่นลอยช้า ๆ ในแสงจันทร์ */
+  Renderer.prototype.drawCastleSky = function (time) {
+    const ctx = this.ctx, vw = this.viewW, vh = this.viewH;
+    for (let i = 0; i < this.clouds.length; i++) {
+      const cl = this.clouds[i];
+      let x = (cl.x - this.cx * 0.15 + time * cl.v) % 2400;
+      if (x < 0) x += 2400;
+      x -= 200;
+      if (x > vw + 20) continue;
+      const y = (cl.y * 2 + Math.sin(time * 0.5 + i) * 20) % vh;
+      ctx.fillStyle = 'rgba(200,190,230,' + (0.12 + 0.08 * Math.sin(time + i)).toFixed(3) + ')';
+      ellipse(ctx, x, y, 1.6 * cl.s, 1.6 * cl.s); ctx.fill();
+    }
+  };
+
   Renderer.prototype.drawLayer = function (layer, fx, fy, groundOffset) {
     const ctx = this.ctx;
     const base = GROUND_ROW * T + groundOffset - this.camMaxY() - (this.cy - this.camMaxY()) * fy;
@@ -565,6 +748,7 @@
       this.layers = null;
     }
     const forest = th.id === 'forest';
+    const castle = th.id === 'castle';
     const W = CQ.World;
     const empty = function (x, y) { return W.tileAt(lv, x, y) === TILE.EMPTY; };
     const ground = function (x, y) { return W.tileAt(lv, x, y) === TILE.GROUND; };
@@ -579,6 +763,14 @@
         const flat = ground(tx - 1, ty) && ground(tx + 1, ty) && empty(tx - 1, ty - 1) && empty(tx + 1, ty - 1);
         let room = 0;
         while (room < 4 && empty(tx, ty - 1 - room)) room++;
+        if (castle) {
+          // ปราสาท: คบเพลิงบนผนัง ธง กระดูก เศษหิน
+          if (r < 10 && flat && room >= 4 && !busy.has(tx)) decor.push({ k: 'torch', x: x, y: y, back: true });
+          else if (r < 15 && flat && room >= 4) decor.push({ k: 'chain', x: x, y: y, back: true });
+          else if (r < 22) decor.push({ k: 'bones', x: x - 6 + (r % 12), y: y });
+          else if (r < 36) decor.push({ k: 'rubble', x: x - 8 + (r % 16), y: y });
+          continue;
+        }
         if (forest) {
           // ป่า: ต้นไม้ใหญ่ เฟิร์น เห็ด ตอไม้ หินมอส
           if (r < 11 && flat && room >= 4 && !busy.has(tx)) decor.push({ k: 'oak', x: x, y: y, s: 0.9 + (r % 4) * 0.08, back: true });
@@ -597,6 +789,10 @@
       }
     }
     if (lv.start) decor.push({ k: 'sign', x: (lv.start.tx + 3) * T + 16, y: (lv.start.ty + 1) * T, back: true });
+    if (lv.boss) {
+      // บัลลังก์ด้านหลังบอส
+      decor.push({ k: 'throne', x: (lv.boss.tx + 1.5) * T, y: (lv.boss.ty + 1) * T, back: true });
+    }
     this.decor = decor;
 
     this.pits = [];
@@ -732,6 +928,68 @@
           ellipse(ctx, d.x + sway, d.y - 10, 1.6, 1.6); ctx.fill();
           break;
         }
+        case 'torch': {
+          // คบเพลิงติดผนัง เปลวไฟสั่นไหว + แสงเรือง
+          const ty = d.y - 70, fl = Math.sin(time * 13 + d.x) * 1.2 + Math.sin(time * 7.3 + d.x * 0.3);
+          const glow = ctx.createRadialGradient(d.x, ty - 8, 2, d.x, ty - 8, 50);
+          glow.addColorStop(0, 'rgba(255,170,80,' + (0.3 + 0.06 * Math.sin(time * 9 + d.x)).toFixed(3) + ')');
+          glow.addColorStop(1, 'rgba(255,140,60,0)');
+          ctx.fillStyle = glow;
+          ellipse(ctx, d.x, ty - 8, 50, 50); ctx.fill();
+          ctx.fillStyle = '#4a4552';
+          ctx.fillRect(d.x - 6, ty + 10, 12, 4);
+          ctx.fillRect(d.x - 2, ty + 4, 4, 14);
+          ctx.fillStyle = '#6b4a2c';
+          ctx.beginPath(); ctx.moveTo(d.x - 5, ty - 2); ctx.lineTo(d.x + 5, ty - 2); ctx.lineTo(d.x + 2, ty + 8); ctx.lineTo(d.x - 2, ty + 8); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#ff7a1a';
+          ctx.beginPath(); ctx.moveTo(d.x - 6, ty - 2); ctx.quadraticCurveTo(d.x - 5 + fl, ty - 14, d.x + fl * 0.6, ty - 20 - fl); ctx.quadraticCurveTo(d.x + 6 + fl, ty - 10, d.x + 6, ty - 2); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#ffd36a';
+          ctx.beginPath(); ctx.moveTo(d.x - 3, ty - 2); ctx.quadraticCurveTo(d.x - 2 + fl * 0.5, ty - 9, d.x + fl * 0.4, ty - 13 - fl * 0.5); ctx.quadraticCurveTo(d.x + 3 + fl * 0.5, ty - 7, d.x + 3, ty - 2); ctx.closePath(); ctx.fill();
+          break;
+        }
+        case 'chain': {
+          // โซ่ห้อยจากที่สูง
+          ctx.strokeStyle = '#5c5868'; ctx.lineWidth = 2;
+          const top = d.y - 150, sw = Math.sin(time * 1.2 + d.x) * 1.5;
+          for (let yy = top; yy < d.y - 60; yy += 7) {
+            ellipse(ctx, d.x + sw * (yy - top) / 90, yy, 2.4, 4); ctx.stroke();
+          }
+          ctx.fillStyle = '#5c5868';
+          ctx.fillRect(d.x + sw - 5, d.y - 60, 10, 3);
+          break;
+        }
+        case 'bones':
+          ctx.fillStyle = '#e8e0cf';
+          ellipse(ctx, d.x, d.y - 4, 4.5, 4); ctx.fill();
+          ctx.fillRect(d.x - 3, d.y - 2, 6, 2);
+          ctx.fillStyle = '#2a2433';
+          ellipse(ctx, d.x - 1.6, d.y - 4.5, 1, 1.2); ctx.fill();
+          ellipse(ctx, d.x + 1.6, d.y - 4.5, 1, 1.2); ctx.fill();
+          ctx.strokeStyle = '#d6cdb9'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(d.x + 6, d.y - 1); ctx.lineTo(d.x + 13, d.y - 3); ctx.stroke();
+          break;
+        case 'rubble':
+          ctx.fillStyle = '#5f566e';
+          ellipse(ctx, d.x, d.y - 2, 5, 3); ctx.fill();
+          ellipse(ctx, d.x + 6, d.y - 1.5, 3, 2); ctx.fill();
+          ctx.fillStyle = '#7d738d';
+          ellipse(ctx, d.x - 1, d.y - 3, 2.4, 1.3); ctx.fill();
+          break;
+        case 'throne': {
+          // บัลลังก์หินขนาดใหญ่ของบอส
+          ctx.fillStyle = '#2b2236';
+          ctx.fillRect(d.x - 40, d.y - 150, 80, 150);
+          ctx.fillStyle = '#3a2f48';
+          ctx.fillRect(d.x - 34, d.y - 144, 68, 100);
+          ctx.fillStyle = '#6e1c2c';
+          ctx.fillRect(d.x - 26, d.y - 136, 52, 92);
+          ctx.fillStyle = '#c9a23a';
+          ctx.beginPath(); ctx.moveTo(d.x - 44, d.y - 150); ctx.lineTo(d.x - 32, d.y - 172); ctx.lineTo(d.x - 20, d.y - 150);
+          ctx.moveTo(d.x - 12, d.y - 150); ctx.lineTo(d.x, d.y - 180); ctx.lineTo(d.x + 12, d.y - 150);
+          ctx.moveTo(d.x + 20, d.y - 150); ctx.lineTo(d.x + 32, d.y - 172); ctx.lineTo(d.x + 44, d.y - 150); ctx.fill();
+          ctx.fillRect(d.x - 44, d.y - 152, 88, 5);
+          break;
+        }
         case 'tuft':
           ctx.strokeStyle = this.theme.tuft; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
           ctx.beginPath();
@@ -805,8 +1063,17 @@
     for (let i = 0; i < g.items.length; i++) if (!g.items[i].taken) this.drawItem(g.items[i], time);
     for (let i = 0; i < g.lv.platforms.length; i++) this.drawPlatform(g.lv.platforms[i]);
     for (let i = 0; i < g.enemies.length; i++) this.drawEnemy(g.enemies[i], time);
+    if (g.spawners) {
+      for (let i = 0; i < g.spawners.length; i++) this.drawSpawner(g.spawners[i], time);
+      for (let i = 0; i < g.rocks.length; i++) this.drawRock(g.rocks[i]);
+    }
+    if (g.boss) this.drawBoss(g.boss, time);
     if (g.deathAnim) this.drawHero(g.deathAnim, g, time, true);
     else if (!(g.player.invuln > 0 && Math.floor(time * 18) % 2 === 0)) this.drawHero(g.player, g, time, false);
+    if (g.shots) {
+      for (let i = 0; i < g.shots.length; i++) this.drawShot(g.shots[i], time);
+      for (let i = 0; i < g.fires.length; i++) this.drawShot(g.fires[i], time);
+    }
     this.drawParticles(g.particles);
 
     ctx.setTransform(S, 0, 0, S, 0, 0);
@@ -949,12 +1216,20 @@
 
   Renderer.prototype.drawCoin = function (c, time) {
     const ctx = this.ctx;
-    if (c.x + 20 < this.cx || c.x - 20 > this.cx + this.viewW) return;
+    if (c.hidden) return;
+    let x = c.x, y = c.y;
+    if (c.pop && c.pop.t < 0.6) {
+      // เหรียญจากบอส: กระเด็นเป็นวงโค้งจากตัวบอสไปยังที่วาง
+      const k = c.pop.t / 0.6;
+      x = c.pop.x0 + (c.x - c.pop.x0) * k;
+      y = c.pop.y0 + (c.y - c.pop.y0) * k - Math.sin(k * Math.PI) * 70;
+    }
+    if (x + 20 < this.cx || x - 20 > this.cx + this.viewW) return;
     const bob = Math.sin(time * 3 + c.phase) * 2.2;
     const spin = Math.cos(time * 3.4 + c.phase);
     const sx = Math.max(0.14, Math.abs(spin));
     ctx.save();
-    ctx.translate(c.x, c.y + bob);
+    ctx.translate(x, y + bob);
     ctx.fillStyle = 'rgba(255,214,70,0.22)';
     ellipse(ctx, 0, 0, 15, 15); ctx.fill();
     ctx.scale(sx, 1);
@@ -969,6 +1244,222 @@
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ellipse(ctx, -3.2, -3.6, 1.8, 2.6); ctx.fill();
     ctx.restore();
+  };
+
+  // ── Boss Stage ──────────────────────────────────────────────
+  /** หินที่ติดอยู่บนเพดาน: สั่นและมีฝุ่นร่วงก่อนหล่น หายไปครู่หนึ่งหลังหล่น */
+  Renderer.prototype.drawSpawner = function (sp, time) {
+    const ctx = this.ctx;
+    if (sp.x + 30 < this.cx || sp.x - 30 > this.cx + this.viewW) return;
+    // รอยร้าวบนเพดาน
+    ctx.strokeStyle = 'rgba(10,6,16,0.8)'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(sp.x - 16, sp.y - 1); ctx.lineTo(sp.x - 8, sp.y - 7); ctx.lineTo(sp.x - 2, sp.y - 3); ctx.lineTo(sp.x + 6, sp.y - 9); ctx.lineTo(sp.x + 15, sp.y - 2);
+    ctx.stroke();
+    if (sp.since < 0.5) return; // เพิ่งหล่นไป
+    const jx = sp.warn ? Math.sin(time * 60) * 1.6 : 0;
+    const grow = Math.min(1, (sp.since - 0.5) / 0.4);
+    ctx.save();
+    ctx.translate(sp.x + jx, sp.y);
+    ctx.scale(grow, grow);
+    this.rockShape(11, sp.warn);
+    ctx.restore();
+  };
+
+  Renderer.prototype.rockShape = function (r, hot) {
+    const ctx = this.ctx;
+    ctx.fillStyle = hot ? '#8f7f8f' : '#6f667e';
+    ctx.strokeStyle = '#2a2433'; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-r, -2); ctx.lineTo(-r * 0.6, -r); ctx.lineTo(r * 0.5, -r * 0.9); ctx.lineTo(r, -1); ctx.lineTo(r * 0.7, r * 0.8); ctx.lineTo(-r * 0.5, r);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.beginPath(); ctx.moveTo(-r * 0.6, -r * 0.6); ctx.lineTo(r * 0.3, -r * 0.65); ctx.lineTo(-r * 0.1, -r * 0.2); ctx.closePath(); ctx.fill();
+  };
+
+  Renderer.prototype.drawRock = function (rk) {
+    const ctx = this.ctx;
+    if (rk.x + 30 < this.cx || rk.x - 30 > this.cx + this.viewW) return;
+    ctx.save();
+    ctx.translate(rk.x + rk.w / 2, rk.y + rk.h / 2);
+    ctx.rotate(rk.rot);
+    this.rockShape(rk.w / 2, false);
+    ctx.restore();
+  };
+
+  /** กระสุน: light (Bobo), wind (Mew), fire (Aclaire), boss (ลูกไฟของบอส) */
+  Renderer.prototype.drawShot = function (s, time) {
+    const ctx = this.ctx;
+    if (s.x + 30 < this.cx || s.x - 30 > this.cx + this.viewW) return;
+    const r = s.r, dir = s.vx < 0 ? -1 : 1;
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    if (s.kind === 'light') {
+      ctx.fillStyle = 'rgba(255,250,190,0.35)';
+      ellipse(ctx, 0, 0, r * 2.2, r * 2.2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,240,150,0.5)';
+      ellipse(ctx, -dir * r * 1.4, 0, r * 1.3, r * 0.8); ctx.fill();
+      ctx.fillStyle = '#fff6b0';
+      ellipse(ctx, 0, 0, r, r); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ellipse(ctx, 0, 0, r * 0.55, r * 0.55); ctx.fill();
+    } else if (s.kind === 'wind') {
+      ctx.scale(dir, 1);
+      ctx.rotate(Math.sin(time * 30 + s.x * 0.05) * 0.08);
+      ctx.fillStyle = 'rgba(125,255,154,0.25)';
+      ellipse(ctx, -r, 0, r * 2.6, r * 1.3); ctx.fill();
+      ctx.strokeStyle = '#7dff9a'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(-r * 0.6, 0, r * 1.2, -1.2, 1.2); ctx.stroke();
+      ctx.strokeStyle = '#d6ffe0'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(-r * 1.6, 0, r * 0.9, -1.1, 1.1); ctx.stroke();
+      ctx.strokeStyle = 'rgba(125,255,154,0.6)'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(-r * 4, -r * 0.5); ctx.lineTo(-r * 1.5, -r * 0.5); ctx.moveTo(-r * 4.5, r * 0.5); ctx.lineTo(-r * 2, r * 0.5); ctx.stroke();
+    } else {
+      // ลูกไฟ (Aclaire สีส้มทอง / บอสสีแดงเข้ม ใหญ่กว่า)
+      const boss = s.kind === 'boss';
+      const fl = 1 + Math.sin(time * 40 + s.y) * 0.1;
+      const ang = Math.atan2(s.vy, s.vx);
+      ctx.rotate(ang);
+      ctx.fillStyle = boss ? 'rgba(255,60,30,0.3)' : 'rgba(255,140,40,0.3)';
+      ellipse(ctx, -r * 0.6, 0, r * 2.2 * fl, r * 1.7 * fl); ctx.fill();
+      ctx.fillStyle = boss ? '#c8261a' : '#ff6a1a';
+      ctx.beginPath();
+      ctx.moveTo(-r * 2.6 * fl, 0); ctx.quadraticCurveTo(-r, -r * 1.1, 0, -r); ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2); ctx.quadraticCurveTo(-r, r * 1.1, -r * 2.6 * fl, 0);
+      ctx.fill();
+      ctx.fillStyle = boss ? '#ff8a2a' : '#ffb03a';
+      ellipse(ctx, 0, 0, r * 0.7, r * 0.7); ctx.fill();
+      ctx.fillStyle = boss ? '#ffe680' : '#fff2b0';
+      ellipse(ctx, r * 0.15, 0, r * 0.35, r * 0.35); ctx.fill();
+    }
+    ctx.restore();
+  };
+
+  /**
+   * บอสเต่าปีศาจ: กระดองหนามสีม่วง หัวมีเขา ตาเรืองแสง
+   * sleep = หลับ (มี Z ลอย), windT > 0 = อ้าปากมีไฟเรือง, โกรธ (พลังเหลือไม่ถึงครึ่ง) = ตัวแดงขึ้น, flash = โดนยิง
+   */
+  Renderer.prototype.drawBoss = function (b, time) {
+    const ctx = this.ctx;
+    if (b.x + b.w + 60 < this.cx || b.x - 60 > this.cx + this.viewW) return;
+    if (b.dead && b.deadT > 1.6) return;
+    const angry = b.hp <= b.hpMax / 2;
+    const white = b.flash > 0 || (b.dead && Math.floor(b.deadT * 14) % 2 === 0);
+    const C = white ? {
+      skin: '#ffffff', skinD: '#f0e8f4', shell: '#ffffff', shellD: '#f2ecf6', rim: '#ffffff', spike: '#ffffff', horn: '#ffffff', line: '#d8cce0'
+    } : {
+      skin: angry ? '#7d6a3a' : '#6b7d3f', skinD: angry ? '#5a4a26' : '#4c5a2b',
+      shell: angry ? '#6a2a44' : '#4a2f5c', shellD: angry ? '#4a1a2e' : '#331f42',
+      rim: '#8a5a30', spike: '#ece2cc', horn: '#b8302a', line: '#1c1210'
+    };
+    let cx = b.x + b.w / 2;
+    const by = b.y + b.h;
+    if (b.dead) cx += Math.sin(time * 70) * 2;
+    ctx.save();
+    if (b.dead && b.deadT > 1.0) ctx.globalAlpha = Math.max(0, 1 - (b.deadT - 1.0) / 0.6);
+    ctx.translate(cx, by + (b.dead ? Math.max(0, b.deadT - 0.8) * 20 : 0));
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ellipse(ctx, 0, 0, 50, 6); ctx.fill();
+    ctx.scale(b.face < 0 ? -1 : 1, 1);
+    const sleep = b.state === 'sleep';
+    const ph = b.walk * 0.09;
+    const breath = sleep ? Math.sin(time * 2) * 1.5 : Math.sin(time * 4) * 0.8;
+    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = C.line;
+    ctx.lineJoin = 'round';
+    // หาง
+    ctx.fillStyle = C.skinD;
+    ctx.beginPath(); ctx.moveTo(-36, -18); ctx.lineTo(-54, -10); ctx.lineTo(-36, -8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // ขา 4 ข้าง
+    [-28, -12, 12, 28].forEach(function (lx, i) {
+      const lift = sleep ? 0 : Math.max(0, Math.sin(ph + (i % 2) * Math.PI)) * 4;
+      ctx.fillStyle = i % 2 ? C.skin : C.skinD;
+      rr(ctx, lx - 7, -20 - lift, 14, 20, 4); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = C.spike;
+      for (let k = -1; k <= 1; k++) {
+        ctx.beginPath(); ctx.moveTo(lx + k * 4 - 2, -lift); ctx.lineTo(lx + k * 4, 3 - lift); ctx.lineTo(lx + k * 4 + 2, -lift); ctx.closePath(); ctx.fill();
+      }
+    });
+    ctx.translate(0, breath);
+    // กระดอง
+    ctx.fillStyle = C.rim;
+    ellipse(ctx, -4, -22, 44, 9); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.shell;
+    ctx.beginPath();
+    ctx.moveTo(-46, -22);
+    ctx.bezierCurveTo(-46, -78, 38, -78, 38, -22);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // ลายกระดองหกเหลี่ยม
+    ctx.strokeStyle = C.shellD; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-26, -24); ctx.lineTo(-20, -44); ctx.lineTo(-4, -52); ctx.lineTo(12, -44); ctx.lineTo(18, -24);
+    ctx.moveTo(-20, -44); ctx.lineTo(-36, -40);
+    ctx.moveTo(-4, -52); ctx.lineTo(-4, -64);
+    ctx.moveTo(12, -44); ctx.lineTo(28, -40);
+    ctx.moveTo(-26, -24); ctx.lineTo(-4, -32); ctx.lineTo(18, -24);
+    ctx.stroke();
+    // หนามบนกระดอง
+    ctx.fillStyle = C.spike; ctx.strokeStyle = C.line; ctx.lineWidth = 1.6;
+    [[-34, -46, -0.6], [-18, -60, -0.25], [-2, -66, 0], [14, -60, 0.25], [28, -48, 0.6]].forEach(function (sp) {
+      ctx.save(); ctx.translate(sp[0], sp[1]); ctx.rotate(sp[2]);
+      ctx.beginPath(); ctx.moveTo(-5, 2); ctx.lineTo(0, -12); ctx.lineTo(5, 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    });
+    // คอและหัว
+    const open = b.windT > 0 ? Math.min(1, (0.6 - b.windT) / 0.25) : 0;
+    const hy = sleep ? -24 : -38;
+    ctx.lineWidth = 2.2;
+    ctx.fillStyle = C.skinD;
+    rr(ctx, 26, hy - 2, 18, 22, 6); ctx.fill(); ctx.stroke();
+    // เขา
+    ctx.fillStyle = C.horn;
+    ctx.beginPath(); ctx.moveTo(38, hy - 10); ctx.quadraticCurveTo(30, hy - 30, 18, hy - 32); ctx.quadraticCurveTo(28, hy - 22, 32, hy - 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(48, hy - 12); ctx.quadraticCurveTo(46, hy - 30, 38, hy - 36); ctx.quadraticCurveTo(42, hy - 24, 42, hy - 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // กรามล่าง (อ้าตอนพ่นไฟ)
+    ctx.save();
+    ctx.translate(40, hy + 6);
+    ctx.rotate(open * 0.5);
+    ctx.fillStyle = C.skinD;
+    rr(ctx, -4, -2, 22, 9, 4); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    if (open > 0 && !white) {
+      ctx.fillStyle = 'rgba(255,140,40,' + (0.5 + 0.3 * Math.sin(time * 40)).toFixed(3) + ')';
+      ellipse(ctx, 52, hy + 8, 6 + open * 6, 4 + open * 5); ctx.fill();
+    }
+    // หัว
+    ctx.fillStyle = C.skin;
+    ctx.beginPath();
+    ctx.moveTo(30, hy + 6);
+    ctx.bezierCurveTo(28, hy - 14, 56, hy - 16, 60, hy + 2);
+    ctx.lineTo(56, hy + 8);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // ฟัน
+    ctx.fillStyle = C.spike;
+    ctx.beginPath(); ctx.moveTo(48, hy + 6); ctx.lineTo(50, hy + 11); ctx.lineTo(52, hy + 6); ctx.moveTo(54, hy + 6); ctx.lineTo(55.5, hy + 10); ctx.lineTo(57, hy + 6); ctx.fill();
+    // ตา
+    if (sleep) {
+      ctx.strokeStyle = C.line; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(40, hy - 4); ctx.quadraticCurveTo(44, hy - 1, 48, hy - 4); ctx.stroke();
+    } else {
+      ctx.fillStyle = white ? '#ffffff' : '#ffe14d';
+      ellipse(ctx, 45, hy - 4, 5, 4); ctx.fill();
+      ctx.fillStyle = white ? '#ffffff' : angry ? '#ff1a1a' : '#d81b1b';
+      ellipse(ctx, 46.5, hy - 3.5, 2, 2.6); ctx.fill();
+      ctx.strokeStyle = C.line; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(38, hy - 11); ctx.lineTo(51, hy - 6); ctx.stroke();
+    }
+    ctx.restore();
+    if (sleep) {
+      // Z ลอยขึ้น
+      ctx.fillStyle = 'rgba(230,220,255,0.85)';
+      ctx.font = '800 14px Kanit, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      for (let k = 0; k < 3; k++) {
+        const t = (time * 0.6 + k / 3) % 1;
+        ctx.globalAlpha = Math.sin(t * Math.PI);
+        ctx.fillText('Z', cx + b.face * 40 + t * 18 * b.face, by - 72 - t * 34);
+      }
+      ctx.globalAlpha = 1;
+    }
   };
 
   Renderer.prototype.drawEnemy = function (e, time) {
@@ -1299,7 +1790,7 @@
     const pulse = 1 + Math.sin(time * 6) * 0.25;
     for (let i = 0; i < g.coins.length; i++) {
       const c = g.coins[i];
-      if (c.taken) continue;
+      if (c.taken || c.hidden) continue;
       ctx.fillStyle = '#ffd23f';
       ellipse(ctx, x + c.x * sx, y + c.y * sy, 2.2 * k * pulse, 2.2 * k * pulse);
       ctx.fill();
@@ -1316,6 +1807,16 @@
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+    }
+    const b = g.boss;
+    if (b && !b.dead) {
+      // บอส: สี่เหลี่ยมสีแดง
+      const bx = x + (b.x + b.w / 2) * sx, by = y + (b.y + b.h / 2) * sy, r3 = 3.4 * k;
+      ctx.fillStyle = '#ff3b3b';
+      ctx.strokeStyle = 'rgba(16,28,52,0.9)';
+      ctx.lineWidth = 1 * k;
+      ctx.fillRect(bx - r3, by - r3, r3 * 2, r3 * 2);
+      ctx.strokeRect(bx - r3, by - r3, r3 * 2, r3 * 2);
     }
     const p = g.deathAnim || g.player;
     ctx.fillStyle = CQ.getCharacter(p.ch).color;

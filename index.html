@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#4fa9f2">
-  <meta name="description" content="Coin Quest เกมแพลตฟอร์มเลื่อนฉากด้านข้าง ตามหาเหรียญทองที่สุ่มวางใหม่ทุกวัน 2 สเตจ (Grassland และ Forest) เลือกตัวละครได้ 3 ตัว แต่ละตัวมีความสามารถต่างกัน มีโหมดปกติและโหมดจับเวลา ไอเทมปีก เห็ด ดาว เล่นได้ทั้งคอมพิวเตอร์และมือถือ">
+  <meta name="description" content="Coin Quest เกมแพลตฟอร์มเลื่อนฉากด้านข้าง ตามหาเหรียญทองที่สุ่มวางใหม่ทุกวัน 3 สเตจ (Grassland, Forest และ Boss Stage ที่ต้องสู้กับบอส) เลือกตัวละครได้ 3 ตัว แต่ละตัวมีความสามารถต่างกัน มีโหมดปกติและโหมดจับเวลา ไอเทมปีก เห็ด ดาว เล่นได้ทั้งคอมพิวเตอร์และมือถือ">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta property="og:title" content="Coin Quest — ผจญภัยเก็บเหรียญทอง">
-  <meta property="og:description" content="เกมแพลตฟอร์มเลื่อนฉากด้านข้าง 2 สเตจ 3 ตัวละคร 2 โหมด เล่นบนเว็บได้ทันที รองรับมือถือ">
+  <meta property="og:description" content="เกมแพลตฟอร์มเลื่อนฉากด้านข้าง 3 สเตจ (มีบอส) 3 ตัวละคร 2 โหมด เล่นบนเว็บได้ทันที รองรับมือถือ">
   <title>Coin Quest — ผจญภัยเก็บเหรียญทอง</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,6 +52,11 @@
       </button>
     </div>
     <div class="pad pad-right">
+      <!-- ปุ่มยิงพลัง แสดงเฉพาะ Boss Stage (body.boss-stage) -->
+      <button class="tbtn tbtn-fire" data-btn="fire" type="button" tabindex="-1">
+        <svg viewBox="0 0 24 24"><circle cx="13" cy="12" r="4.5" fill="currentColor"/><path d="M3 9h4M2 12h5M3 15h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>ยิง</span>
+      </button>
       <button class="tbtn tbtn-jump" data-btn="jump" type="button" tabindex="-1">
         <svg viewBox="0 0 24 24"><path d="M5 14.5 12 7.5l7 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>กระโดด</span>
@@ -128,6 +133,7 @@
             <li><kbd>←</kbd><kbd>→</kbd> หรือ <kbd>A</kbd><kbd>D</kbd> เดิน</li>
             <li><kbd>Space</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> กระโดด</li>
             <li><kbd>P</kbd> / <kbd>Esc</kbd> หยุดเกม</li>
+            <li><kbd>X</kbd> / <kbd>J</kbd> ยิงพลัง (Boss Stage)</li>
           </ul>
         </div>
         <div class="help-col only-touch">
@@ -136,6 +142,7 @@
             <li>ปุ่ม ◀ ▶ มุมซ้ายล่าง เดิน</li>
             <li>ปุ่ม กระโดด มุมขวาล่าง</li>
             <li>ลากนิ้วสลับปุ่มซ้าย-ขวาได้</li>
+            <li>ปุ่ม ยิง ใน Boss Stage</li>
           </ul>
         </div>
         <div class="help-col">
@@ -146,6 +153,7 @@
             <li>เหยียบหมูป่าให้สลบ 5 วินาที</li>
             <li>ไอเทมทุกชนิดมีผล 10 วินาที</li>
             <li>แตะธงเพื่อบันทึกเช็กพอยต์</li>
+            <li>Boss Stage: มีพลังชีวิต 5 ขีด</li>
           </ul>
         </div>
       </div>
@@ -245,7 +253,9 @@
 
   <script src="js/level.js"></script>
   <script src="js/stage-forest.js"></script>
+  <script src="js/stage-castle.js"></script>
   <script src="js/world.js"></script>
+  <script src="js/boss.js"></script>
   <script src="js/characters.js"></script>
   <script src="js/spawn.js"></script>
   <script src="js/audio.js"></script>

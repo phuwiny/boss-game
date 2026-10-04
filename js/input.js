@@ -8,11 +8,12 @@
   const KEYMAP = {
     ArrowLeft: 'left', KeyA: 'left',
     ArrowRight: 'right', KeyD: 'right',
-    Space: 'jump', ArrowUp: 'jump', KeyW: 'jump', KeyZ: 'jump', KeyK: 'jump'
+    Space: 'jump', ArrowUp: 'jump', KeyW: 'jump', KeyZ: 'jump', KeyK: 'jump',
+    KeyX: 'fire', KeyJ: 'fire', KeyF: 'fire' // ยิงพลัง (Boss Stage)
   };
 
-  const keys = { left: false, right: false, jump: false };
-  const touch = { left: false, right: false, jump: false };
+  const keys = { left: false, right: false, jump: false, fire: false };
+  const touch = { left: false, right: false, jump: false, fire: false };
   const pointers = new Map();
   const listeners = { confirm: [], pause: [], firsttouch: [] };
   let jumpQueued = false;
@@ -51,7 +52,7 @@
   }
 
   function refreshTouch() {
-    touch.left = touch.right = touch.jump = false;
+    touch.left = touch.right = touch.jump = touch.fire = false;
     pointers.forEach(function (btn) { if (btn) touch[btn] = true; });
     document.querySelectorAll('[data-btn]').forEach(function (el) {
       el.classList.toggle('active', touch[el.getAttribute('data-btn')]);
@@ -94,7 +95,7 @@
 
   // ── Gamepad ───────────────────────────────────────────────────
   function readPad() {
-    const out = { left: false, right: false, jump: false, start: false };
+    const out = { left: false, right: false, jump: false, fire: false, start: false };
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
     for (let i = 0; i < pads.length; i++) {
       const gp = pads[i];
@@ -104,6 +105,7 @@
       out.left = out.left || ax < -0.4 || b(14);
       out.right = out.right || ax > 0.4 || b(15);
       out.jump = out.jump || b(0) || b(1) || b(12);
+      out.fire = out.fire || b(2) || b(3) || b(5) || b(7);
       out.start = out.start || b(9);
     }
     return out;
@@ -124,14 +126,15 @@
       left: keys.left || touch.left || pad.left,
       right: keys.right || touch.right || pad.right,
       jump: jump,
-      jumpPressed: jumpQueued
+      jumpPressed: jumpQueued,
+      fire: keys.fire || touch.fire || pad.fire
     };
     jumpQueued = false;
     return state;
   }
 
   function reset() {
-    keys.left = keys.right = keys.jump = false;
+    keys.left = keys.right = keys.jump = keys.fire = false;
     pointers.clear();
     refreshTouch();
     jumpQueued = false;

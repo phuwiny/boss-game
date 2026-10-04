@@ -11,6 +11,7 @@
   const Sound = CQ.Audio;
   const Input = CQ.Input;
   const Spawn = CQ.Spawn;
+  const Boss = CQ.Boss;
   const CHAR_KEY = 'coinquest.char';  // ตัวละครที่เลือกไว้
   const MODE_KEY = 'coinquest.mode';  // โหมดที่เล่นล่าสุด
   const STAGE_KEY = 'coinquest.stage'; // สเตจที่เลือกไว้
@@ -18,7 +19,15 @@
   const ITEM_INFO = {
     wing: { name: 'ปีก', toast: 'ได้ปีก! กระโดด 2 ชั้นได้ 10 วินาที', colors: ['#ffffff', '#bfe6ff', '#7fc4f5'] },
     mush: { name: 'เห็ด', toast: 'ได้เห็ด! วิ่งเร็วขึ้น 10 วินาที', colors: ['#ff5a7a', '#ffffff', '#ffc2cd'] },
-    star: { name: 'ดาว', toast: 'ได้ดาว! อมตะ 10 วินาที ชนศัตรูได้เลย', colors: ['#ffd23f', '#fff3a0', '#ff9df5'] }
+    star: { name: 'ดาว', toast: 'ได้ดาว! อมตะ 10 วินาที ชนศัตรูได้เลย', colors: ['#ffd23f', '#fff3a0', '#ff9df5'] },
+    heart: { name: 'หัวใจ', toast: 'ได้หัวใจ! พลังชีวิต +1', colors: ['#ff4d6a', '#ffffff', '#ffc2cd'] }
+  };
+  // สีอนุภาคของกระสุนแต่ละแบบ (ตอนชนกำแพง/ศัตรู)
+  const SHOT_COLORS = {
+    light: ['#ffffff', '#fff6b0', '#ffe066'],
+    wind: ['#c9ffd4', '#7dff9a', '#2ecc71'],
+    fire: ['#ffe08a', '#ff9b3a', '#ff5a1a'],
+    boss: ['#fff0a0', '#ff9b3a', '#e8361e']
   };
 
   const $ = function (id) { return document.getElementById(id); };
@@ -111,16 +120,25 @@
     }
     const seedInfo = currentSeed();
     const rng = Spawn.makeRng(Spawn.modeSeed(seedInfo.seed, timed ? 'timed' : 'normal', stage.id));
-    const picked = Spawn.pick(getPool(stage), lv.w, rng, { coins: timed ? Spawn.TIMED_COINS : Spawn.COINS });
+    const picked = Spawn.pick(getPool(stage), lv.w, rng, { coins: Spawn.coinsFor(stage, timed ? 'timed' : 'normal'), items: Spawn.itemsFor(stage) });
     const center = function (o) { return { tx: o.tx, ty: o.ty, x: o.tx * T + T / 2, y: o.ty * T + T / 2 }; };
     const coins = lv.coins.map(center).concat(picked.coins.map(center));
+    // Boss Stage: เหรียญจากบอส ซ่อนไว้จนกว่าจะชนะบอส (นับรวมในเป้าหมาย)
+    if (lv.boss) {
+      for (let i = 0; i < (stage.bossCoins || 0); i++) {
+        const c = center(lv.boss);
+        c.hidden = true;
+        c.boss = true;
+        coins.push(c);
+      }
+    }
     g = {
       lv: lv,
       mode: timed ? 'timed' : 'normal',
       stage: stage,
       char: ch,
       seedInfo: seedInfo,
-      player: W.makePlayer(lv.start.tx, lv.start.ty, ch),
+      player: W.makePlayer(lv.start.tx, lv.start.ty, ch, stage.hp),
       coins: coins.map(function (c, i) { c.taken = false; c.phase = i * 0.83; return c; }),
       items: picked.items.map(function (it, i) { const o = center(it); o.type = it.type; o.taken = false; o.phase = i * 1.7; return o; }),
       enemies: lv.enemies.map(W.makeEnemy),
@@ -143,8 +161,17 @@
       runPhase: 0,
       deathAnim: null,
       clearT: 0,
-      showMinimap: false
+      showMinimap: false,
+      // Boss Stage
+      boss: lv.boss ? Boss.makeBoss(lv) : null,
+      bossDefeated: false, // ชนะบอสแล้ว: บอสไม่กลับมาอีกจนจบด่าน แม้จะพลาด
+      shots: [],           // กระสุนพลังของผู้เล่น
+      fires: [],           // ลูกไฟของบอส
+      rocks: [],           // หินที่กำลังหล่น
+      spawners: lv.rocks.map(Boss.makeSpawner),
+      shotCD: 0
     };
+    document.body.classList.toggle('boss-stage', !!stage.boss);
     renderer.setLevel(lv, stage.theme);
     renderer.prepareHero(ch.id);
     renderer.look = 0;
@@ -219,6 +246,8 @@
     const R = P.COIN_R;
     for (let i = 0; i < g.coins.length; i++) {
       const c = g.coins[i];
+      if (c.pop && c.pop.t < 0.6) c.pop.t += dt;
+      if (c.hidden || (c.pop && c.pop.t < 0.6)) continue;
       if (!c.taken && W.overlap(p.x, p.y, p.w, p.h, c.x - R, c.y - R, R * 2, R * 2)) {
         collectCoin(c);
         if (state !== 'playing') return;
@@ -228,6 +257,7 @@
     const IR = P.COIN_R + 1;
     for (let i = 0; i < g.items.length; i++) {
       const it = g.items[i];
+      if (it.type === 'heart' && p.hp >= p.hpMax) continue; // พลังชีวิตเต็ม: เก็บหัวใจไว้ใช้ทีหลัง
       if (!it.taken && W.overlap(p.x, p.y, p.w, p.h, it.x - IR, it.y - IR, IR * 2, IR * 2)) collectItem(it, p);
     }
 
@@ -253,9 +283,10 @@
         if (stomping) { stomp(e, p, inp); continue; }
       }
       if (p.invuln > 0) continue;
-      if (W.hurt(p, null, 'enemy')) { kill(); return; }
-      guarded(p, e);
+      if (hurtPlayer(p, e, 'enemy')) return;
     }
+
+    if (g.stage.boss && stepBossStage(p, inp, dt)) return;
 
     for (let i = 0; i < g.checkpoints.length; i++) {
       const cp = g.checkpoints[i];
@@ -297,7 +328,14 @@
         Sound.sfx.float();
         break;
       case 'guard':
-        guarded(p, null);
+        guarded(p);
+        break;
+      case 'hurt':
+        hurtFx(p);
+        break;
+      case 'fell':
+        hurtFx(p);
+        toast('ตกเหว! พลังชีวิต -1');
         break;
       case 'spring': {
         Sound.sfx.spring();
@@ -328,6 +366,14 @@
   function collectItem(it, p) {
     const info = ITEM_INFO[it.type];
     it.taken = true;
+    if (it.type === 'heart') {
+      p.hp = Math.min(p.hpMax, p.hp + 1);
+      Sound.sfx.heart();
+      burst(it.x, it.y, 12, info.colors, 150, 'star');
+      spawn({ kind: 'text', text: '+1', x: it.x, y: it.y - 16, vx: 0, vy: -45, g: 0, color: '#ff8fa0', life: 1 });
+      toast(info.toast + ' (' + p.hp + '/' + p.hpMax + ')');
+      return;
+    }
     p.pw[it.type] = P.POWER_TIME;
     if (it.type === 'wing') p.airJumps = Math.min(p.airJumps + 1, p.airJumpsMax + 1); // ปีกเพิ่มกระโดดกลางอากาศ 1 ครั้ง
     Sound.sfx.powerup();
@@ -396,9 +442,33 @@
     burst(e.x + e.w / 2, e.y + 4, 8, ['#ffd23f', '#ffffff', '#c98b55'], 130, 'star');
   }
 
-  /** Aclaire กันตายได้: ผลักตัวออกจากศัตรู (from = null คือหนาม) แล้วอมตะชั่วคราว */
-  function guarded(p, from) {
-    if (from) p.vx = (p.x + p.w / 2 < from.x + from.w / 2 ? -1 : 1) * 230;
+  /**
+   * ผู้เล่นโดนศัตรู/บอส/ลูกไฟ/หิน (from = สิ่งที่ชน ใช้หาทิศที่กระเด็น)
+   * สเตจปกติพลาดทันที (ยกเว้นกันตายของ Aclaire) Boss Stage เสียพลังชีวิต 1 ขีด คืนค่า true ถ้าพลาด
+   */
+  function hurtPlayer(p, from, cause) {
+    const evs = [];
+    if (W.hurt(p, evs, cause)) { kill(); return true; }
+    if (from) {
+      const fx = from.w != null ? from.x + from.w / 2 : from.x;
+      p.vx = (p.x + p.w / 2 < fx ? -1 : 1) * 230;
+    }
+    for (let i = 0; i < evs.length; i++) handleEvent(evs[i], p);
+    return false;
+  }
+
+  /** Boss Stage: เสียพลังชีวิต 1 ขีด */
+  function hurtFx(p) {
+    g.shake = Math.max(g.shake, 5);
+    g.flash = Math.max(g.flash, 0.6);
+    Sound.sfx.hurt();
+    burst(p.x + p.w / 2, p.y + p.h / 2, 10, ['#ff4d6a', '#ffc2cd', '#ffffff'], 150, 'star');
+    spawn({ kind: 'text', text: '-1', x: p.x + p.w / 2, y: p.y - 6, vx: 0, vy: -50, g: 0, color: '#ff6a7a', life: 0.9 });
+    if (p.hp === 1) toast('เหลือพลังชีวิต 1 ขีด! ระวังนะ');
+  }
+
+  /** Aclaire กันตายได้: กระเด็นออก (hurtPlayer ผลักตัวให้แล้ว) และอมตะชั่วคราว */
+  function guarded(p) {
     g.shake = Math.max(g.shake, 5);
     g.flash = Math.max(g.flash, 0.5);
     Sound.sfx.guard();
@@ -421,16 +491,184 @@
     g.deathAnim = { x: p.x, y: p.y, startY: p.y, w: p.w, h: p.h, vx: 0, vy: -430, face: p.face, rot: 0, t: 0, onGround: false, ch: p.ch };
     g.shake = 7;
     g.flash = 1;
+    g.shots.length = 0;
+    g.fires.length = 0;
+    g.rocks.length = 0;
     Sound.sfx.die();
     burst(p.x + p.w / 2, p.y + p.h / 2, 10, ['#ff6a3d', '#ffd3ad', '#ffffff'], 160, 'circle');
   }
 
   function respawn() {
     const r = g.respawn;
-    g.player = W.makePlayer(r.tx, r.ty, g.char);
+    g.player = W.makePlayer(r.tx, r.ty, g.char, g.stage.hp);
     g.player.invuln = 1.5;
     g.deathAnim = null;
     pendingJump = false;
+    // Boss Stage: บอสที่ยังไม่แพ้กลับมาพลังเต็มที่เดิม (แพ้แล้วไม่กลับมาอีก)
+    if (g.boss && !g.bossDefeated) g.boss = Boss.makeBoss(g.lv);
+  }
+
+  // ── Boss Stage: ยิงพลัง บอส ลูกไฟ หินหล่น ─────────────────────────
+  /** คืนค่า true ถ้าผู้เล่นพลาด (หยุดสเต็ปนี้) */
+  function stepBossStage(p, inp, dt) {
+    const lv = g.lv;
+
+    // ยิงพลัง: กดค้างได้ ยิงได้เมื่อกระสุนบนจอยังไม่ครบจำนวนของตัวละคร
+    const w = g.char.shot;
+    if (g.shotCD > 0) g.shotCD -= dt;
+    if (w && inp.fire && g.shotCD <= 0 && g.shots.length < w.max) {
+      g.shots.push(Boss.makeShot(p, w));
+      g.shotCD = w.cooldown;
+      Sound.sfx.shoot(w.kind);
+    }
+    for (let i = g.shots.length - 1; i >= 0; i--) {
+      const s = g.shots[i];
+      const res = Boss.stepShot(s, lv, dt) || shotHit(s, p);
+      if (!res) continue;
+      g.shots.splice(i, 1);
+      if (res !== 'expire') burst(s.x, s.y, 6, SHOT_COLORS[s.kind], 110, 'circle');
+    }
+
+    // บอส
+    const b = g.boss;
+    if (b) {
+      const evs = [];
+      Boss.stepBoss(b, p, dt, g.fires, evs);
+      for (let i = 0; i < evs.length; i++) bossEvent(evs[i], b);
+      if (b.dead) bossDying(b, dt);
+      else if (b.state !== 'sleep' && !(p.invuln > 0) && !(p.pw.star > 0)) {
+        const box = Boss.bossTouchBox(b);
+        if (W.overlap(p.x + 2, p.y + 3, p.w - 4, p.h - 3, box.x, box.y, box.w, box.h) && hurtPlayer(p, b, 'boss')) return true;
+      }
+    }
+
+    // ลูกไฟของบอส
+    for (let i = g.fires.length - 1; i >= 0; i--) {
+      const f = g.fires[i];
+      if (Boss.stepShot(f, lv, dt)) {
+        g.fires.splice(i, 1);
+        burst(f.x, f.y, 6, SHOT_COLORS.boss, 100, 'circle');
+        continue;
+      }
+      if (!Boss.shotHits(f, { x: p.x + 3, y: p.y + 4, w: p.w - 6, h: p.h - 4 })) continue;
+      if (p.invuln > 0) continue;
+      g.fires.splice(i, 1);
+      burst(f.x, f.y, 10, SHOT_COLORS.boss, 140, 'circle');
+      if (p.pw.star > 0) continue;
+      if (hurtPlayer(p, f, 'fire')) return true;
+    }
+
+    // หินหล่นจากเพดาน
+    for (let i = 0; i < g.spawners.length; i++) {
+      const sp = g.spawners[i];
+      if (Boss.stepSpawner(sp, p, dt)) {
+        g.rocks.push(Boss.makeRock(sp));
+        Sound.sfx.rockCrack();
+      } else if (sp.warn && Math.random() < dt * 14) {
+        spawn({ kind: 'circle', x: sp.x + (Math.random() - 0.5) * 22, y: sp.y + 2, vx: 0, vy: 30 + Math.random() * 40, g: 300, size: 1.5 + Math.random() * 1.5, color: 'rgba(190,180,200,0.9)', life: 0.6 });
+      }
+    }
+    for (let i = g.rocks.length - 1; i >= 0; i--) {
+      const rk = g.rocks[i];
+      const res = Boss.stepRock(rk, lv, dt);
+      if (res) {
+        g.rocks.splice(i, 1);
+        if (res === 'break') breakRock(rk);
+        continue;
+      }
+      if (p.invuln > 0 || !W.overlap(p.x + 2, p.y + 2, p.w - 4, p.h - 2, rk.x + 2, rk.y + 2, rk.w - 4, rk.h - 4)) continue;
+      g.rocks.splice(i, 1);
+      breakRock(rk);
+      if (p.pw.star > 0) continue;
+      if (hurtPlayer(p, rk, 'rock')) return true;
+    }
+    return false;
+  }
+
+  /** กระสุนผู้เล่นโดนบอส/ศัตรู/หิน คืน 'hit' ถ้าโดน */
+  function shotHit(s, p) {
+    const b = g.boss;
+    if (b && !b.dead && Boss.shotHits(s, Boss.bossBox(b))) {
+      const evs = [];
+      Boss.hitBoss(b, s.dmg, evs);
+      for (let i = 0; i < evs.length; i++) bossEvent(evs[i], b, s);
+      return 'hit';
+    }
+    for (let i = 0; i < g.enemies.length; i++) {
+      const e = g.enemies[i];
+      if (e.dead || !Boss.shotHits(s, e)) continue;
+      if (e.kind === 'boar') stunBoar(e, p, false); // หมูป่าไม่มีวันตาย: สลบแทน
+      else knockOut(e, { x: s.x, w: 0, face: Math.sign(s.vx) });
+      return 'hit';
+    }
+    for (let i = 0; i < g.rocks.length; i++) {
+      const rk = g.rocks[i];
+      if (!Boss.shotHits(s, rk)) continue;
+      g.rocks.splice(i, 1);
+      breakRock(rk);
+      return 'hit';
+    }
+    return null;
+  }
+
+  function breakRock(rk) {
+    Sound.sfx.rockBreak();
+    g.shake = Math.max(g.shake, 2);
+    burst(rk.x + rk.w / 2, rk.y + rk.h / 2, 9, ['#8a8199', '#b3aac2', '#5a5268'], 130, 'circle');
+  }
+
+  /** เหตุการณ์ของบอส (s = กระสุนที่ยิงโดน) */
+  function bossEvent(ev, b, s) {
+    switch (ev.type) {
+      case 'wake':
+        Sound.sfx.roar();
+        g.shake = Math.max(g.shake, 8);
+        toast('บอสเต่าปีศาจตื่นแล้ว! กดยิงพลังใส่มัน');
+        break;
+      case 'wind':
+        Sound.sfx.bossWind();
+        break;
+      case 'fire':
+        Sound.sfx.bossFire();
+        break;
+      case 'hit':
+        Sound.sfx.bossHit();
+        spawn({ kind: 'text', text: '-' + ev.dmg, x: s.x, y: s.y - 10, vx: (Math.random() - 0.5) * 30, vy: -60, g: 0, color: '#ffffff', life: 0.6 });
+        if (b.hp <= b.hpMax / 2 && b.hp + ev.dmg > b.hpMax / 2) toast('บอสโกรธแล้ว! โจมตีเร็วขึ้น');
+        break;
+      case 'down':
+        Sound.sfx.bossDown();
+        g.shake = Math.max(g.shake, 10);
+        g.bossDefeated = true;
+        g.fires.length = 0;
+        toast('ปราบบอสได้แล้ว!');
+        break;
+    }
+  }
+
+  /** บอสระเบิดทีละจุด แล้วเหรียญ 5 เหรียญกระเด็นออกมาให้เก็บ */
+  function bossDying(b, dt) {
+    if (b.deadT < 1.3 && Math.random() < dt * 16) {
+      const x = b.x + Math.random() * b.w, y = b.y + Math.random() * b.h;
+      burst(x, y, 8, ['#fff0a0', '#ff9b3a', '#e8361e', '#ffffff'], 160, 'circle');
+      g.shake = Math.max(g.shake, 3);
+    }
+    if (b.dropped || b.deadT < 1.0) return;
+    b.dropped = true;
+    const list = g.coins.filter(function (c) { return c.boss; });
+    const n = list.length;
+    const ground = b.y + b.h;
+    const cx = Math.max(b.minX + b.w / 2, Math.min(b.x + b.w / 2, g.lv.w * T - 30 - (n - 1) * 20));
+    list.forEach(function (c, i) {
+      const k = i - (n - 1) / 2;
+      c.x = cx + k * 40;
+      c.y = ground - 18 - (i % 2 ? 34 : 0);
+      c.hidden = false;
+      c.pop = { x0: b.x + b.w / 2, y0: b.y + b.h / 2, t: 0 };
+    });
+    burst(b.x + b.w / 2, b.y + b.h / 2, 24, ['#ffd23f', '#fff3a0', '#ffffff'], 220, 'star');
+    Sound.sfx.powerup();
+    toast('ได้เหรียญจากบอส ' + n + ' เหรียญ! เก็บให้ครบ');
   }
 
   function clearGame() {
@@ -516,6 +754,12 @@
     ui.titleDay.textContent = info.label;
     ui.titleCharName.textContent = ch.name;
     ui.titleCharTag.textContent = ch.tagline;
+    const stage = CQ.getStage(stageId);
+    const extra = stage.bossCoins || 0;
+    const nNormal = Spawn.coinsFor(stage, 'normal') + extra;
+    ui.descNormal.textContent = stage.boss ? 'ชนะบอสและเก็บครบ ' + nNormal + ' เหรียญ' : 'เก็บให้ครบทั้ง ' + nNormal + ' เหรียญในฉาก';
+    ui.descTimed.textContent = 'เก็บให้มากที่สุดใน ' + Spawn.TIMED_TIME + ' วินาที';
+    ui.btnTimed.title = 'มีเหรียญ ' + (Spawn.coinsFor(stage, 'timed') + extra) + ' เหรียญในฉาก มากกว่าโหมดปกติ';
     stageBtns.forEach(function (b) {
       const on = b.id === stageId;
       b.btn.classList.toggle('selected', on);
@@ -549,12 +793,14 @@
         '<b class="char-name"></b><span class="char-tag"></span><span class="char-desc"></span>' +
         statRow('ความเร็ว', ch.bars.speed) + statRow('กระโดด', ch.bars.jump) +
         '<span class="char-skill"></span>' +
+        '<span class="char-shot"></span>' +
         '<span class="char-best"></span>' +
         '</span>';
       btn.querySelector('.char-name').textContent = ch.name;
       btn.querySelector('.char-tag').textContent = ch.tagline;
       btn.querySelector('.char-desc').textContent = ch.desc;
       btn.querySelector('.char-skill').textContent = ch.skill;
+      btn.querySelector('.char-shot').textContent = ch.shot ? ch.shot.desc : '';
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         Sound.unlock();
@@ -713,7 +959,7 @@
     state = 'playing';
     g.showMinimap = true;
     setScreen(null);
-    toast(stageLabel(g.stage) + (g.mode === 'timed' ? ' · โหมดจับเวลา' : ''));
+    toast(stageLabel(g.stage) + (g.mode === 'timed' ? ' · โหมดจับเวลา' : '') + (g.stage.boss ? ' · กด X หรือปุ่มยิง เพื่อยิงพลัง' : ''));
     ui.hud.hidden = false;
     document.body.classList.add('in-game');
     layoutHud();
@@ -769,7 +1015,7 @@
       ui.winLabel.textContent = 'เหรียญที่เก็บได้';
     } else {
       ui.winHeading.textContent = 'ภารกิจสำเร็จ!';
-      ui.winSub.textContent = stageLabel(g.stage) + ' · เก็บครบทั้ง ' + g.goal + ' เหรียญ · ' + g.char.name + ' · ' + deaths;
+      ui.winSub.textContent = stageLabel(g.stage) + (g.stage.boss ? ' · ปราบบอส' : '') + ' · เก็บครบทั้ง ' + g.goal + ' เหรียญ · ' + g.char.name + ' · ' + deaths;
       ui.winLabel.textContent = 'เวลา';
     }
     ui.winTime.textContent = fmtRecord(mode, result);
@@ -892,6 +1138,7 @@
     let wantTempo = 1;
     if (state === 'playing' && !g.deathAnim && g.player.pw.star > 0) wantTempo = 1.3;
     else if (state === 'playing' && g.limit && g.limit - g.time < 10) wantTempo = 1.15;
+    else if (state === 'playing' && g.boss && g.boss.state !== 'sleep' && !g.boss.dead) wantTempo = 1.12;
     if (wantTempo !== tempo) { tempo = wantTempo; Sound.setTempo(tempo); }
 
     updateEffects(dt);
@@ -988,9 +1235,6 @@
       else if (state === 'rps') openMinigames();
     });
 
-    ui.descNormal.textContent = 'เก็บให้ครบทั้ง ' + Spawn.COINS + ' เหรียญในฉาก';
-    ui.descTimed.textContent = 'เก็บให้มากที่สุดใน ' + Spawn.TIMED_TIME + ' วินาที';
-    ui.btnTimed.title = 'มีเหรียญ ' + Spawn.TIMED_COINS + ' เหรียญในฉาก มากกว่าโหมดปกติ';
     buildCharCards();
     buildStageButtons();
 
