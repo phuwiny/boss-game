@@ -130,7 +130,7 @@
       respawn: { tx: lv.start.tx, ty: lv.start.ty },
       collected: 0,
       total: coins.length,
-      goal: timed ? coins.length : Math.min(Spawn.GOAL, coins.length),
+      goal: coins.length, // ทุกโหมด: เก็บครบทุกเหรียญในฉาก = จบ
       limit: timed ? Spawn.TIMED_TIME : 0, // โหมดจับเวลา: เวลาที่มี (วินาที) / 0 = ไม่จำกัด
       time: 0,
       deaths: 0,
@@ -439,7 +439,7 @@
     Sound.stopMusic();
     Sound.sfx.win();
     confetti(140);
-    toast(g.mode === 'timed' ? 'เก็บครบทุกเหรียญแล้ว!' : 'เก็บครบ ' + g.goal + ' เหรียญแล้ว!');
+    toast('เก็บครบทุกเหรียญแล้ว!');
   }
 
   /** โหมดจับเวลา: หมดเวลา */
@@ -454,17 +454,20 @@
 
   // ── บันทึกสถิติ (แยกตามสเตจ โหมด และตัวละคร: ตลอดกาล + ของด่านวันนี้) ─────
   /**
-   * สเตจ 1 ใช้ key เดิม (Bobo โหมดปกติใช้ key ตั้งแต่ก่อนมีหลายตัวละคร) สถิติที่ทำไว้จึงไม่หาย
-   * สเตจอื่นใช้ coinquest.<สเตจ>.{best|daily}.v1.<โหมด>.<ตัวละคร>
+   * สเตจ 1 โหมดจับเวลาใช้ key เดิม สถิติที่ทำไว้จึงไม่หาย
+   * สเตจอื่นใช้ coinquest.<สเตจ>.{best|daily}.<v>.<โหมด>.<ตัวละคร>
+   * โหมดปกติขึ้นเวอร์ชัน key ใหม่ (สเตจ 1: v3, สเตจอื่น: v2) ตั้งแต่เปลี่ยนเป้าหมายจากเก็บ 20 เหรียญเป็นเก็บครบทั้งฉาก
+   * เพราะเวลาแบบเดิมเทียบกันไม่ได้ (key เก่ายังอยู่ใน localStorage ไม่ได้ลบ)
    */
   function recordKeys(stage, mode, id) {
     if (stage !== 'grassland') {
       const k = 'coinquest.' + stage;
-      return { all: k + '.best.v1.' + mode + '.' + id, day: k + '.daily.v1.' + mode + '.' + id };
+      const v = mode === 'timed' ? '.v1.' : '.v2.';
+      return { all: k + '.best' + v + mode + '.' + id, day: k + '.daily' + v + mode + '.' + id };
     }
     if (mode === 'timed') return { all: 'coinquest.timed.best.v1.' + id, day: 'coinquest.timed.daily.v1.' + id };
     const sfx = id === 'bobo' ? '' : '.' + id;
-    return { all: 'coinquest.best.v2' + sfx, day: 'coinquest.daily.v2' + sfx };
+    return { all: 'coinquest.best.v3' + sfx, day: 'coinquest.daily.v3' + sfx };
   }
 
   function readRecord(key, mode) {
@@ -766,7 +769,7 @@
       ui.winLabel.textContent = 'เหรียญที่เก็บได้';
     } else {
       ui.winHeading.textContent = 'ภารกิจสำเร็จ!';
-      ui.winSub.textContent = stageLabel(g.stage) + ' · เก็บครบ ' + g.goal + ' เหรียญ · ' + g.char.name + ' · ' + deaths;
+      ui.winSub.textContent = stageLabel(g.stage) + ' · เก็บครบทั้ง ' + g.goal + ' เหรียญ · ' + g.char.name + ' · ' + deaths;
       ui.winLabel.textContent = 'เวลา';
     }
     ui.winTime.textContent = fmtRecord(mode, result);
@@ -985,7 +988,7 @@
       else if (state === 'rps') openMinigames();
     });
 
-    ui.descNormal.textContent = 'เก็บให้ครบ ' + Spawn.GOAL + ' จาก ' + Spawn.COINS + ' เหรียญ';
+    ui.descNormal.textContent = 'เก็บให้ครบทั้ง ' + Spawn.COINS + ' เหรียญในฉาก';
     ui.descTimed.textContent = 'เก็บให้มากที่สุดใน ' + Spawn.TIMED_TIME + ' วินาที';
     ui.btnTimed.title = 'มีเหรียญ ' + Spawn.TIMED_COINS + ' เหรียญในฉาก มากกว่าโหมดปกติ';
     buildCharCards();
