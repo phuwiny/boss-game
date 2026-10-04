@@ -14,7 +14,7 @@
       id: 'bobo',
       name: 'Bobo',
       tagline: 'สมดุลทุกด้าน',
-      desc: 'ก้อนกลมสีส้ม คาดผ้าสีฟ้า',
+      desc: 'ตัวก้อนกลมทั่วไป',
       stats: { run: 1, accel: 1, jump: 1 },
       bars: { speed: 3, jump: 3 },
       color: '#ff5a3d'
@@ -23,7 +23,7 @@
       id: 'mew',
       name: 'Mew',
       tagline: 'วิ่งไวที่สุด',
-      desc: 'ผมยาวสีเหลือง ตาสีเขียว หมวกเบเร่สีดำ',
+      desc: 'สาวน้อยสุดร่าเริง มีพลังล้นเหลือ',
       stats: { run: 1.25, accel: 1.2, jump: 1 },
       bars: { speed: 5, jump: 3 },
       color: '#5b8cff'
@@ -32,7 +32,7 @@
       id: 'aclaire',
       name: 'Aclaire',
       tagline: 'กระโดดสูงที่สุด',
-      desc: 'ผมสั้นสีส้มหางม้า ตาสีฟ้า เสื้อสีชมพู',
+      desc: 'สาวน้อยนักกีฬา ร่างกายแข็งแรง',
       stats: { run: 1, accel: 1, jump: 1.14 },
       bars: { speed: 3, jump: 5 },
       color: '#ff8fc0'
