@@ -45,9 +45,13 @@
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
 
-  /** seed ของแต่ละโหมด โหมดจับเวลาต่อท้ายเพื่อให้ตำแหน่งของต่างจากโหมดปกติในวันเดียวกัน */
-  function modeSeed(seed, mode) {
-    return mode === 'timed' ? seed + '|timed' : seed;
+  /**
+   * seed ของแต่ละสเตจและโหมด: ต่อท้ายเพื่อให้ตำแหน่งของต่างกันในวันเดียวกัน
+   * สเตจแรก (grassland) ไม่ต่อชื่อสเตจ เพื่อให้ได้ตำแหน่งเหมือนก่อนมีหลายสเตจ
+   */
+  function modeSeed(seed, mode, stage) {
+    const s = stage && stage !== 'grassland' ? seed + '|' + stage : seed;
+    return mode === 'timed' ? s + '|timed' : s;
   }
 
   /**

@@ -272,7 +272,7 @@ h1 {
 .btn-ghost { background: transparent; box-shadow: none; color: var(--muted); min-height: 42px; }
 .btn:disabled { cursor: not-allowed; filter: none; transform: none; }
 
-/* ── หน้าแรก: ตัวละคร / โหมด / มินิเกม ─────────────────── */
+/* ── หน้าแรก: ตัวละคร / สเตจ / โหมด / มินิเกม ─────────────────── */
 .char-pick {
   display: flex;
   align-items: center;
@@ -314,6 +314,51 @@ h1 {
   color: var(--orange-dark);
 }
 .char-pick-change svg { width: 18px; height: 18px; }
+
+.stages {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  max-width: 460px;
+  margin: 0 auto 10px;
+  padding: 4px;
+  border-radius: 16px;
+  background: #f4f6fa;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.06);
+}
+.stage-btn {
+  --swatch: #ccc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 4px 10px 4px 6px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--navy);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, transform 0.1s;
+}
+.stage-btn::before {
+  content: '';
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--swatch);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+}
+.stage-btn:hover { background: #eaf0f8; }
+.stage-btn:active { transform: translateY(1px); }
+.stage-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.stage-btn.selected { background: #fff; border-color: var(--orange); box-shadow: 0 4px 10px rgba(16, 28, 52, 0.12); }
+.stage-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.stage-no { font-size: 12.5px; color: var(--muted); }
+.stage-name { font-size: 17px; font-weight: 800; }
+.stage-grassland { --swatch: linear-gradient(#8fd3ff 0 45%, #5cc451 45% 62%, #8d5b34 62%); }
+.stage-forest { --swatch: linear-gradient(#2f6b55 0 45%, #3f8a3a 45% 62%, #5a3a22 62%); }
 
 .modes {
   display: grid;
@@ -698,6 +743,16 @@ body.touch .rps-key { display: none; }
 .dots { display: inline-flex; gap: 3px; }
 .dots i { width: 9px; height: 9px; border-radius: 50%; background: #d5dbe5; }
 .dots i.on { background: var(--accent); box-shadow: inset 0 -1.5px 0 rgba(0, 0, 0, 0.15); }
+.char-skill {
+  margin-top: 2px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #3a4456;
+}
+.char-skill::before { content: 'ความสามารถ: '; font-weight: 600; color: var(--navy); }
 .char-best { margin-top: 2px; font-size: 12px; font-weight: 600; color: #a06a00; }
 
 
@@ -818,6 +873,10 @@ body.touch .only-desktop { display: none; }
   .char-pick { margin-bottom: 6px; padding: 4px 12px 4px 6px; }
   .char-pick-preview { width: 42px; height: 42px; }
   .char-pick-text b { font-size: 17px; }
+  .stages { margin-bottom: 6px; }
+  .stage-btn { min-height: 38px; }
+  .stage-btn::before { width: 24px; height: 24px; }
+  .stage-name { font-size: 15px; }
   .mode-btn { min-height: 66px; padding: 6px 8px 8px; }
   .mode-name { font-size: 17px; }
   .mode-desc { font-size: 12.5px; }

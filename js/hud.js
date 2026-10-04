@@ -2,7 +2,8 @@
  * Coin Quest — HUD แบบเกมคลาสสิก (pixel art) วาดลง canvas ของเกม ไม่ใช้ฟอนต์หรือไฟล์ภาพภายนอก
  *
  * ทุกอย่างวัดเป็น "พิกเซล HUD" แล้วขยายด้วย P (จำนวน device px ต่อ 1 พิกเซล HUD เป็นจำนวนเต็ม ภาพจึงคม)
- * กรอบเหรียญและเวลาอยู่มุมซ้ายบน แถบไอเทมอยู่ใต้กรอบ ส่วนปุ่มมุมขวาบนเป็นปุ่ม DOM ที่แต่งให้เข้าชุด (css/style.css)
+ * กรอบเหรียญและเวลาอยู่มุมซ้ายบน แถบความสามารถของตัวละครและแถบไอเทมอยู่ใต้กรอบ
+ * ส่วนปุ่มมุมขวาบนเป็นปุ่ม DOM ที่แต่งให้เข้าชุด (css/style.css)
  */
 (function (root) {
   'use strict';
@@ -37,9 +38,13 @@
     clock: { m: { k: K, w: '#ffffff', W: '#c9c2e6' }, r: ['..kkkkk..', '.kwwwwwk.', 'kwwwkwwwk', 'kwwwkwwwk', 'kwwwkkwwk', 'kwwwwwwwk', 'kwwwwwwWk', '.kWWWWWk.', '..kkkkk..'] },
     star: { m: { k: K, y: '#ffd23f', L: '#fff3a0', Y: '#e09b00' }, r: ['....k....', '...kyk...', 'kkkkLykkk', 'kyLyyyyYk', '.kyyyyYk.', '..kyyyk..', '.kyyYyyk.', '.kyk.kYk.', '.kk...kk.'] },
     mush: { m: { k: K, r: '#ff4d6a', w: '#ffffff', s: '#f7e7c6', S: '#d9bf92' }, r: ['..kkkkk..', '.krrwrrk.', 'krwwrrwrk', 'krrrrrrrk', '.kkkkkkk.', '..kssSk..', '..kssSk..', '..kkkkk..', '.........'] },
-    wing: { m: { k: K, w: '#ffffff', W: '#a9d4f5', y: '#ffd23f' }, r: ['.........', 'kk.....kk', 'kwk...kwk', 'kwWk.kWwk', 'kwwWkWwwk', '.kwwywwk.', '..kWWWk..', '...kkk...', '.........'] }
+    wing: { m: { k: K, w: '#ffffff', W: '#a9d4f5', y: '#ffd23f' }, r: ['.........', 'kk.....kk', 'kwk...kwk', 'kwWk.kWwk', 'kwwWkWwwk', '.kwwywwk.', '..kWWWk..', '...kkk...', '.........'] },
+    // ความสามารถของตัวละคร: ลอยตัว (Mew) และโล่กันตาย (Aclaire)
+    float: { m: { k: K, w: '#ffffff', W: '#b9d0ff', b: '#7fb0ff' }, r: ['.........', '...kkk...', '.kkwwwkk.', 'kwwwwwwwk', 'kwwwwwwWk', 'kWwwwwWWk', '.kkkkkkk.', '..b...b..', '.b..b..b.'] },
+    guard: { m: { k: K, p: '#ff8fc0', P: '#d9467f', L: '#ffd3e6' }, r: ['kkkkkkkkk', 'kLLppppPk', 'kLppppPPk', 'kLppppPPk', 'kpppppPPk', '.kppppPk.', '.kpppPPk.', '..kpPPk..', '...kkk...'] }
   };
-  const POWER_COLOR = { wing: ['#bfe6ff', '#6fb8ef'], mush: ['#ff9db0', '#ff4d6a'], star: ['#fff3a0', '#ffc21a'] };
+  const POWER_COLOR = { wing: ['#bfe6ff', '#6fb8ef'], mush: ['#ff9db0', '#ff4d6a'], star: ['#fff3a0', '#ffc21a'], float: ['#e2edff', '#7fb0ff'], guard: ['#ffd3e6', '#ff6fa8'] };
+  const DIM = '#5a5078';
   const POWERS = ['wing', 'mush', 'star'];
 
   function textW(str) {
@@ -108,11 +113,15 @@
     this.px(x + 3, y + 3, w - 6, h - 6, FILL);
     this.px(x + 3, y + 3, w - 6, 1, FILL2);
   };
-  Painter.prototype.icon = function (name, x, y) {
+  /** dim = วาดเป็นสีจาง (เช่น โล่ที่ใช้ไปแล้ว) */
+  Painter.prototype.icon = function (name, x, y, dim) {
     const ic = ICONS[name];
     for (let r = 0; r < ic.r.length; r++) {
       const row = ic.r[r];
-      for (let c = 0; c < row.length; c++) if (row[c] !== '.') this.px(x + c, y + r, 1, 1, ic.m[row[c]]);
+      for (let c = 0; c < row.length; c++) {
+        if (row[c] === '.') continue;
+        this.px(x + c, y + r, 1, 1, dim && row[c] !== 'k' ? DIM : ic.m[row[c]]);
+      }
     }
   };
   /** ตัวเลขพิกเซลพร้อมเงาเข้มด้านล่างขวา คืนตำแหน่ง x ถัดไป */
@@ -177,10 +186,29 @@
       const frac = left / g.limit;
       pt.bar(L.timeX + 4, ty + 15, TIME_W - 8, 5, frac, timeColors(frac));
     }
-    // ไอเทมที่ใช้งานอยู่ (กะพริบช่วง 2 วินาทีสุดท้าย)
     if (g.deathAnim) return;
-    const pw = g.player.pw;
+    const p = g.player;
     let y = L.powersY;
+    // ความสามารถของตัวละคร
+    if (p.floatMax > 0 && p.floatT < p.floatMax) {
+      // Mew: เวลาลอยตัวที่เหลือ (แสดงเมื่อเริ่มใช้ แตะพื้นแล้วเต็มและซ่อน)
+      pt.panel(0, y, POWER_W, POWER_H);
+      pt.icon('float', 3, y + 3, p.floatT <= 0);
+      pt.bar(14, y + 5, POWER_W - 18, 5, p.floatT / p.floatMax, POWER_COLOR.float);
+      y += POWER_H + 1;
+    }
+    if (p.guardMax > 0) {
+      // Aclaire: โล่พร้อม = แถบเต็ม, กำลังอมตะ = แถบลดลง, ใช้แล้ว = ไอคอนจาง
+      const broken = p.guard <= 0;
+      const left = broken ? Math.max(0, p.invuln) : 0;
+      const blink = broken && left > 0 && left < 2 && Math.floor(time * 8) % 2 === 0;
+      pt.panel(0, y, POWER_W, POWER_H);
+      pt.icon('guard', 3, y + 3, broken && left <= 0);
+      if (!blink) pt.bar(14, y + 5, POWER_W - 18, 5, broken ? left / CQ.PHYS.GUARD_TIME : 1, POWER_COLOR.guard);
+      y += POWER_H + 1;
+    }
+    // ไอเทมที่ใช้งานอยู่ (กะพริบช่วง 2 วินาทีสุดท้าย)
+    const pw = p.pw;
     for (let i = 0; i < POWERS.length; i++) {
       const k = POWERS[i], t = pw[k];
       if (!(t > 0)) continue;

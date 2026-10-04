@@ -32,6 +32,12 @@
     SLIME_W: 26,
     SLIME_H: 18,
     SLIME_SPEED: 42,
+    BOAR_W: 30,
+    BOAR_H: 20,
+    BOAR_SPEED: 55,        // เร็วกว่าสไลม์เล็กน้อย
+    STUN_TIME: 5,          // หมูป่าสลบหลังโดนเหยียบ (วินาที)
+    GUARD_TIME: 5,         // อมตะหลังกันตาย (ความสามารถของ Aclaire)
+    HURT_BOUNCE: 380,      // แรงเด้งตอนกันตายได้
     COIN_R: 10
   };
 
@@ -129,6 +135,7 @@
 
   /** ch = ตัวละครจาก CQ.CHARACTERS (ไม่ใส่ = ค่าพื้นฐาน) */
   function makePlayer(tx, ty, ch) {
+    const ab = (ch && ch.ability) || {};
     return {
       x: tx * T + (T - P.PW) / 2,
       y: (ty + 1) * T - P.PH,
@@ -142,8 +149,41 @@
       airJumps: 0,
       ch: ch ? ch.id : 'bobo',
       st: ch ? ch.stats : DEFAULT_STATS, // ตัวคูณความเร็ว/ความเร่ง/แรงกระโดดของตัวละคร
+      // ความสามารถของตัวละคร
+      airJumpsMax: ab.airJumps || 0,     // กระโดดกลางอากาศได้กี่ครั้ง (ไม่รวมปีก)
+      floatMax: ab.float || 0,           // ลอยตัวได้กี่วินาทีต่อการอยู่กลางอากาศหนึ่งช่วง
+      floatT: ab.float || 0,
+      floating: false,
+      guard: ab.guard || 0,              // กันตายได้อีกกี่ครั้ง (ได้คืนเมื่อเกิดใหม่)
+      guardMax: ab.guard || 0,
       pw: { wing: 0, mush: 0, star: 0 } // เวลาที่เหลือของไอเทมแต่ละชนิด (วินาที)
     };
+  }
+
+  /** เติมจำนวนกระโดดกลางอากาศ (ของตัวละคร + ปีก 1 ครั้ง) */
+  function refillAirJumps(p) {
+    p.airJumps = (p.airJumpsMax || 0) + (p.pw && p.pw.wing > 0 ? 1 : 0);
+  }
+
+  /**
+   * ผู้เล่นโดนหนามหรือศัตรู: ถ้ามีกันตาย (Aclaire) จะไม่ตาย เด้งตัวและอมตะชั่วคราว
+   * คืนค่า true ถ้าตาย
+   */
+  function hurt(p, ev, cause) {
+    if (p.guard > 0) {
+      p.guard--;
+      p.invuln = P.GUARD_TIME;
+      p.vy = -P.HURT_BOUNCE;
+      p.jumping = false;
+      p.onGround = false;
+      p.ride = null;
+      p.coyote = 0;
+      if (ev) ev.push({ type: 'guard', cause: cause });
+      return false;
+    }
+    p.dead = true;
+    if (ev) ev.push({ type: 'die', cause: cause });
+    return true;
   }
 
   /**
@@ -158,7 +198,6 @@
 
     const pw = p.pw;
     const st = p.st || DEFAULT_STATS;
-    const hasWing = !!pw && pw.wing > 0;
     const speedMul = pw && pw.mush > 0 ? P.MUSH_SPEED : 1;
     const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
     if (dir !== 0) p.face = dir;
@@ -169,7 +208,10 @@
 
     p.coyote = p.onGround ? P.COYOTE : Math.max(0, p.coyote - dt);
     p.buffer = inp.jumpPressed ? P.BUFFER : Math.max(0, p.buffer - dt);
-    if (p.onGround) p.airJumps = hasWing ? 1 : 0;
+    if (p.onGround) {
+      refillAirJumps(p);
+      p.floatT = p.floatMax;
+    }
 
     if (p.buffer > 0 && p.coyote > 0) {
       p.vy = -P.JUMP_V * st.jump;
@@ -180,14 +222,15 @@
       p.ride = null;
       p.jumping = true;
       if (ev) ev.push({ type: 'jump' });
-    } else if (inp.jumpPressed && hasWing && p.airJumps > 0 && !p.onGround) {
-      // กระโดดชั้นที่ 2 กลางอากาศ (ต้องกดใหม่ ไม่ใช้ jump buffer)
+    } else if (inp.jumpPressed && p.airJumps > 0 && !p.onGround) {
+      // กระโดดกลางอากาศ (ต้องกดใหม่ ไม่ใช้ jump buffer) ใช้ของตัวละครก่อน ครั้งสุดท้ายเป็นของปีก
+      const wing = !!pw && pw.wing > 0 && p.airJumps <= 1;
       p.vy = -P.AIR_JUMP_V * st.jump;
       p.airJumps--;
       p.buffer = 0;
       p.ride = null;
       p.jumping = true;
-      if (ev) ev.push({ type: 'airjump' });
+      if (ev) ev.push({ type: 'airjump', wing: wing });
     }
     if (p.jumping && !inp.jump && p.vy < 0) {
       p.vy *= P.JUMP_CUT;
@@ -196,6 +239,16 @@
 
     p.vy = Math.min(p.vy + P.GRAVITY * dt, P.MAX_FALL);
     if (p.vy >= 0) p.jumping = false;
+
+    // ลอยตัว (Mew): กดกระโดดค้างกลางอากาศตอนเริ่มตก = ลอยนิ่งที่ความสูงเดิม จนกว่าเวลาลอยจะหมด
+    const wasFloating = p.floating;
+    p.floating = false;
+    if (p.floatMax > 0 && !p.onGround && inp.jump && p.vy >= 0 && p.floatT > 0) {
+      p.vy = 0;
+      p.floatT = Math.max(0, p.floatT - dt);
+      p.floating = true;
+      if (!wasFloating && ev) ev.push({ type: 'float' });
+    }
 
     if (moveX(p, p.vx * dt, lv)) p.vx = 0;
 
@@ -215,11 +268,9 @@
       for (let tx = tx0; tx <= tx1; tx++) {
         const t = tileAt(lv, tx, ty);
         if (t === TILE.SPIKE) {
-          if (pw && pw.star > 0) continue; // ดาว: หนามทำอะไรไม่ได้
+          if ((pw && pw.star > 0) || p.invuln > 0) continue; // ดาว/ช่วงอมตะ: หนามทำอะไรไม่ได้
           if (overlap(p.x + 3, p.y + 4, p.w - 6, p.h - 4, tx * T + 4, ty * T + 16, 24, 16)) {
-            p.dead = true;
-            if (ev) ev.push({ type: 'die', cause: 'spike' });
-            return;
+            if (hurt(p, ev, 'spike')) return;
           }
         } else if (t === TILE.SPRING && p.vy >= 0) {
           const top = ty * T + 18;
@@ -230,7 +281,7 @@
             p.onGround = false;
             p.ride = null;
             p.coyote = 0;
-            p.airJumps = hasWing ? 1 : 0;
+            refillAirJumps(p);
             if (ev) ev.push({ type: 'spring', tx: tx, ty: ty });
           }
         }
@@ -245,21 +296,44 @@
 
   function makeSlime(tx, ty) {
     return {
+      kind: 'slime',
       x: tx * T + (T - P.SLIME_W) / 2,
       y: (ty + 1) * T - P.SLIME_H,
       w: P.SLIME_W, h: P.SLIME_H,
-      vx: 0, vy: 0, dir: -1,
+      vx: 0, vy: 0, dir: -1, speed: P.SLIME_SPEED,
       onGround: false, ride: null,
       dead: false, deadT: 0, t: (tx * 0.37) % 1
     };
   }
 
-  function stepSlime(e, lv, dt) {
+  /** หมูป่า: เดินเร็วกว่าสไลม์ เหยียบแล้วสลบ STUN_TIME วินาที ไม่มีวันตาย */
+  function makeBoar(tx, ty) {
+    return {
+      kind: 'boar',
+      x: tx * T + (T - P.BOAR_W) / 2,
+      y: (ty + 1) * T - P.BOAR_H,
+      w: P.BOAR_W, h: P.BOAR_H,
+      vx: 0, vy: 0, dir: -1, speed: P.BOAR_SPEED,
+      onGround: false, ride: null,
+      dead: false, deadT: 0, t: (tx * 0.37) % 1,
+      stunT: 0,     // เวลาสลบที่เหลือ
+      walk: 0,      // ระยะที่เดินไป (ใช้ขยับขาตอนวาด)
+      safe: false   // ตื่นขณะทับตัวผู้เล่น: ยังไม่ทำร้ายจนกว่าจะแยกกัน
+    };
+  }
+
+  /** e = { tx, ty, kind } จาก parseLevel */
+  function makeEnemy(e) {
+    return e.kind === 'boar' ? makeBoar(e.tx, e.ty) : makeSlime(e.tx, e.ty);
+  }
+
+  function stepEnemy(e, lv, dt) {
     e.t += dt;
     if (e.dead) { e.deadT += dt; return; }
+    if (e.stunT > 0) e.stunT = Math.max(0, e.stunT - dt);
     e.vy = Math.min(e.vy + P.GRAVITY * dt, P.MAX_FALL);
-    if (e.onGround) {
-      const nx = e.x + e.dir * P.SLIME_SPEED * dt;
+    if (e.onGround && !(e.stunT > 0)) {
+      const nx = e.x + e.dir * e.speed * dt;
       const front = e.dir > 0 ? nx + e.w - EPS : nx;
       const ftx = Math.floor(front / T);
       const feet = Math.floor((e.y + e.h - EPS) / T);
@@ -267,7 +341,10 @@
       const blocked = isSolid(lv, ftx, feet) || ft === TILE.SPIKE || ft === TILE.SPRING;
       const noFloor = !isSolid(lv, ftx, feet + 1) && !isOneWay(lv, ftx, feet + 1);
       if (blocked || noFloor) e.dir = -e.dir;
-      else e.x = nx;
+      else {
+        e.x = nx;
+        if (e.walk !== undefined) e.walk += e.speed * dt;
+      }
     }
     moveY(e, e.vy * dt, lv, null);
     if (e.y > lv.h * T + 40) e.dead = true;
@@ -297,8 +374,12 @@
     moveY: moveY,
     makePlayer: makePlayer,
     stepPlayer: stepPlayer,
+    refillAirJumps: refillAirJumps,
+    hurt: hurt,
     makeSlime: makeSlime,
-    stepSlime: stepSlime,
+    makeBoar: makeBoar,
+    makeEnemy: makeEnemy,
+    stepEnemy: stepEnemy,
     stepPlatform: stepPlatform
   };
 })(typeof window !== 'undefined' ? window : globalThis);
