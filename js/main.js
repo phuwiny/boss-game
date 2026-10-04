@@ -33,6 +33,8 @@
     chars: $('screen-chars'),
     pause: $('screen-pause'),
     win: $('screen-win'),
+    minigames: $('screen-minigames'),
+    rps: $('screen-rps'),
     titleDay: $('title-day'),
     titleCharPreview: $('title-char-preview'),
     titleCharName: $('title-char-name'),
@@ -58,7 +60,7 @@
   };
 
   let g = null;
-  let state = 'title'; // title | chars | playing | paused | cleared | won
+  let state = 'title'; // title | chars | minigames | rps | playing | paused | cleared | won
   let pendingJump = false;
   let lastTime = performance.now();
   let acc = 0;
@@ -662,16 +664,38 @@
     setScreen(ui.title);
   }
 
+  // ── มินิเกม ──────────────────────────────────────────────────
+  function openMinigames() {
+    if (state !== 'title' && state !== 'rps') return;
+    if (state === 'rps') CQ.RPS.stop();
+    state = 'minigames';
+    setScreen(ui.minigames);
+  }
+
+  function closeMinigames() {
+    if (state !== 'minigames') return;
+    state = 'title';
+    refreshTitle();
+    setScreen(ui.title);
+  }
+
+  function startRps() {
+    if (state !== 'minigames') return;
+    state = 'rps';
+    setScreen(ui.rps);
+    CQ.RPS.start(charId);
+  }
+
   // ── หน้าจอและสถานะ ─────────────────────────────────────────────
   function setScreen(el) {
-    [ui.title, ui.chars, ui.pause, ui.win].forEach(function (s) { s.hidden = s !== el; });
+    [ui.title, ui.chars, ui.minigames, ui.rps, ui.pause, ui.win].forEach(function (s) { s.hidden = s !== el; });
     document.body.classList.toggle('overlay', !!el);
     const focusBtn = el && el.querySelector('.btn-primary');
     if (focusBtn) setTimeout(function () { try { focusBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 30);
   }
 
   function currentScreen() {
-    return [ui.title, ui.chars, ui.pause, ui.win].find(function (s) { return !s.hidden; }) || null;
+    return [ui.title, ui.chars, ui.minigames, ui.rps, ui.pause, ui.win].find(function (s) { return !s.hidden; }) || null;
   }
 
   /** mode = 'normal' | 'timed' ไม่ระบุ = เล่นโหมดเดิมซ้ำ */
@@ -817,6 +841,8 @@
       }
     } else if (state === 'title') {
       CQ.drawCharPreview(ui.titleCharPreview, charId, clock, false);
+    } else if (state === 'rps') {
+      CQ.drawCharPreview(CQ.RPS.avatar, charId, clock, false);
     }
   }
 
@@ -943,7 +969,7 @@
     Input.bindTouch($('touch'));
     // Space / Enter / ปุ่ม A ของจอย: กดปุ่มที่ focus อยู่ ถ้าไม่มีกดปุ่มหลักของหน้านั้น
     Input.on('confirm', function () {
-      if (state !== 'title' && state !== 'chars' && state !== 'won') return;
+      if (state !== 'title' && state !== 'chars' && state !== 'minigames' && state !== 'rps' && state !== 'won') return;
       if (state === 'won' && clock - winShownAt < 0.8) return;
       const scr = currentScreen();
       if (!scr) return;
@@ -955,6 +981,8 @@
       if (state === 'playing') pauseGame();
       else if (state === 'paused') resumeGame();
       else if (state === 'chars') closeChars();
+      else if (state === 'minigames') closeMinigames();
+      else if (state === 'rps') openMinigames();
     });
 
     ui.descNormal.textContent = 'เก็บให้ครบ ' + Spawn.GOAL + ' จาก ' + Spawn.COINS + ' เหรียญ';
@@ -967,6 +995,11 @@
     bindButton('btn-timed', function () { startGame('timed'); });
     bindButton('btn-char', openChars);
     bindButton('btn-chars-ok', closeChars);
+    bindButton('btn-minigames', openMinigames);
+    bindButton('btn-mg-back', closeMinigames);
+    bindButton('btn-mg-rps', startRps);
+    bindButton('btn-rps-exit', openMinigames);
+    CQ.RPS.init({ onExit: openMinigames });
     bindButton('btn-again', function () { startGame(); });
     bindButton('btn-win-home', goTitle);
     bindButton('btn-resume', resumeGame);

@@ -101,11 +101,10 @@
         </button>
       </div>
 
-      <!-- เมนูมินิเกมอื่นๆ: ยังไม่เปิดให้เล่น เมื่อมีมินิเกมพร้อมให้เอา disabled ออกแล้วผูกปุ่มใน js/main.js -->
-      <button class="btn btn-soon" id="btn-minigames" type="button" disabled aria-disabled="true" title="กำลังพัฒนา">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>
+      <button class="btn btn-minigames" id="btn-minigames" type="button">
+        <span class="mg-icons" aria-hidden="true">✊✋✌️</span>
         มินิเกมอื่นๆ
-        <span class="soon-badge">เร็วๆ นี้</span>
+        <span class="new-badge">ใหม่</span>
       </button>
 
       <div class="items-help" aria-label="ไอเทมในเกม">
@@ -192,6 +191,56 @@
     </div>
   </section>
 
+  <!-- เมนูมินิเกม -->
+  <section class="screen" id="screen-minigames" hidden aria-labelledby="minigames-heading">
+    <div class="card card-sm">
+      <h2 class="screen-title" id="minigames-heading">มินิเกม</h2>
+      <button class="btn mg-btn btn-primary" id="btn-mg-rps" type="button">
+        <span class="mg-btn-icon" aria-hidden="true">✊✋✌️</span>
+        <span class="mg-btn-text">
+          <b>เป่า-ยิ้ง-ฉุบ Battle</b>
+          <span>ดวลกับ COM ฝ่ายละ 3 หัวใจ ชนะเป่าได้เลือกท่าก่อน</span>
+        </span>
+      </button>
+      <button class="btn btn-ghost" id="btn-mg-back" type="button">กลับหน้าแรก</button>
+    </div>
+  </section>
+
+  <!-- มินิเกม: เป่า-ยิ้ง-ฉุบ Battle (js/rps.js) -->
+  <section class="screen" id="screen-rps" hidden aria-labelledby="rps-heading">
+    <div class="card card-rps">
+      <div class="rps-top">
+        <button class="rps-exit" id="btn-rps-exit" type="button" aria-label="ออกจากมินิเกม">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>ออก
+        </button>
+        <h2 class="rps-title" id="rps-heading">เป่า-ยิ้ง-ฉุบ Battle</h2>
+        <span class="rps-round" id="rps-round">รอบ 1</span>
+      </div>
+      <ol class="rps-phases" id="rps-phases" aria-label="เฟสของรอบ">
+        <li>เป่ายิ้งฉุบ</li><li>ต่อสู้</li><li>สรุปผล</li>
+      </ol>
+      <div class="rps-arena">
+        <div class="fighter fighter-me" id="rps-me"></div>
+        <div class="rps-vs" aria-hidden="true">VS</div>
+        <div class="fighter fighter-com" id="rps-com"></div>
+      </div>
+      <p class="rps-msg" id="rps-msg" role="status" aria-live="polite"></p>
+      <div class="rps-controls" id="rps-controls"></div>
+      <details class="rps-rules">
+        <summary>กติกา</summary>
+        <ul>
+          <li>กรรไกร ชนะ กระดาษ · กระดาษ ชนะ ค้อน · ค้อน ชนะ กรรไกร (เสมอ = เป่าใหม่)</li>
+          <li>ผู้ชนะเป่าเลือก action ก่อนโดยคว่ำการ์ดไว้ ผู้แพ้เลือกตามแล้วเปิดพร้อมกัน</li>
+          <li>ผู้แพ้เป่าครั้งแรกของเกมจะเลือก <b>โจมตี</b> ไม่ได้</li>
+          <li><b>โจมตี</b> ศัตรู −1 HP ถ้าศัตรูป้องกันเหลือ −0.5 ถ้าโจมตีทั้งคู่ −0 ทั้งสองฝ่าย</li>
+          <li><b>ชาร์จพลัง</b> โจมตีหรือฟื้นพลังครั้งถัดไป +0.5 ต่อการชาร์จ สะสมได้ 3 ครั้ง ใช้หมดเมื่อโจมตีหรือฟื้นพลัง</li>
+          <li><b>ฟื้นพลัง</b> +1 HP (ไม่เกิน 3) ใช้ติดกันไม่ได้ ต้องเว้น 1 เทิร์น</li>
+          <li>ทำให้ COM หมด HP ก่อนเป็นผู้ชนะ</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
   <noscript><p class="noscript">เกมนี้ต้องเปิดใช้งาน JavaScript</p></noscript>
 
   <script src="js/level.js"></script>
@@ -204,6 +253,8 @@
   <script src="js/sprites.js"></script>
   <script src="js/hud.js"></script>
   <script src="js/render.js"></script>
+  <script src="js/rps-rules.js"></script>
+  <script src="js/rps.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
