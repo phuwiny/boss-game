@@ -11,8 +11,7 @@
   const CQ = root.CQ = root.CQ || {};
   const TILE = CQ.TILE;
 
-  const COINS = 40;        // จำนวนเหรียญในฉาก
-  const GOAL = 20;         // เก็บครบเท่านี้ = ชนะ
+  const COINS = 40;        // จำนวนเหรียญในฉาก (โหมดปกติ: เก็บครบทุกเหรียญ = ชนะ)
   const ITEMS = ['wing', 'wing', 'mush', 'mush', 'star', 'star'];
   const TIMED_COINS = 80;  // โหมดจับเวลา: จำนวนเหรียญในฉาก
   const TIMED_TIME = 120;  // โหมดจับเวลา: เวลาที่มี (วินาที)
@@ -165,7 +164,6 @@
 
   CQ.Spawn = {
     COINS: COINS,
-    GOAL: GOAL,
     ITEMS: ITEMS,
     TIMED_COINS: TIMED_COINS,
     TIMED_TIME: TIMED_TIME,

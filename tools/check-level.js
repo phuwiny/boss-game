@@ -78,8 +78,7 @@ function checkStage(stage) {
 
   const pool = Spawn.buildPool(lv);
   const totalCoins = lv.coins.length + Spawn.COINS;
-  console.log('จุดที่สุ่มวางได้: ' + pool.length + ' จุด | เหรียญในฉาก ' + totalCoins + ' (ตายตัว ' + lv.coins.length + ') | เป้าหมาย ' + Spawn.GOAL);
-  if (totalCoins < Spawn.GOAL) fail('เหรียญในฉากน้อยกว่าเป้าหมาย');
+  console.log('จุดที่สุ่มวางได้: ' + pool.length + ' จุด | เหรียญในฉาก ' + totalCoins + ' (ตายตัว ' + lv.coins.length + ') | เป้าหมาย: เก็บครบทุกเหรียญ');
   if (pool.length < (Spawn.COINS + Spawn.ITEMS.length) * 2) fail('จุดที่สุ่มวางได้น้อยเกินไป');
   if (pool.length < (Spawn.TIMED_COINS + Spawn.ITEMS.length) * 2) fail('จุดที่สุ่มวางได้น้อยเกินไปสำหรับโหมดจับเวลา');
 
