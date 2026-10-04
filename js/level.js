@@ -11,6 +11,7 @@
  *   ^  หนามแหลม              S  สปริง                    o  เหรียญแบบวางตายตัว (ไม่บังคับ)
  *   P  จุดเริ่มต้นผู้เล่น      C  จุดเช็กพอยต์              s  สไลม์ (ศัตรู)
  *   h  หมูป่า (ศัตรู เหยียบแล้วสลบ ไม่ตาย)
+ *   R  จุดหินหล่นจากเพดาน (Boss Stage)   X  บอส (Boss Stage วางที่มุมซ้ายล่างของตัวบอส)
  *
  * เหรียญและไอเทมส่วนใหญ่ถูกสุ่มวางทุกวันโดย js/spawn.js จากจุดที่ยืนยันแล้วว่าเก็บได้
  *
@@ -259,8 +260,8 @@
     const tiles = new Uint8Array(w * h);
     const lv = {
       w: w, h: h, tiles: tiles,
-      coins: [], enemies: [], checkpoints: [], platforms: [], tracks: [],
-      start: null, errors: errors
+      coins: [], enemies: [], checkpoints: [], platforms: [], tracks: [], rocks: [],
+      start: null, boss: null, errors: errors
     };
 
     for (let ty = 0; ty < h; ty++) {
@@ -285,6 +286,11 @@
           case 's': lv.enemies.push({ tx: tx, ty: ty, kind: 'slime' }); break;
           case 'h': lv.enemies.push({ tx: tx, ty: ty, kind: 'boar' }); break;
           case 'C': lv.checkpoints.push({ tx: tx, ty: ty }); break;
+          case 'R': lv.rocks.push({ tx: tx, ty: ty }); break;
+          case 'X':
+            if (lv.boss) errors.push('พบบอส X มากกว่า 1 ตัว');
+            lv.boss = { tx: tx, ty: ty };
+            break;
           case 'P':
             if (lv.start) errors.push('พบจุดเริ่มต้น P มากกว่า 1 จุด');
             lv.start = { tx: tx, ty: ty };

@@ -3,13 +3,14 @@
  * ตรวจด่าน Coin Quest (ทุกสเตจ)
  *   node tools/check-level.js
  *
- * 1) ตรวจรูปแบบข้อมูลด่าน (ความกว้างแถว, สัญลักษณ์, ตำแหน่งศัตรู/เช็กพอยต์, สเตจที่ห้ามมีเหว)
+ * 1) ตรวจรูปแบบข้อมูลด่าน (ความกว้างแถว, สัญลักษณ์, ตำแหน่งศัตรู/เช็กพอยต์/บอส/หินหล่น, สเตจที่ห้ามมีเหว)
  * 2) จำลองการเล่นด้วยฟิสิกส์จริงของเกม (BFS จากจุดเริ่มต้น เดิน/กระโดดทุกรูปแบบ ไม่ใช้ไอเทม) ทีละตัวละคร
  *    เพื่อยืนยันว่า "ทุกจุด" ที่ระบบสุ่มอาจวางเหรียญ/ไอเทม (spawn pool) เก็บได้จริงด้วยทุกตัวละคร
  *    - ไม่กดกระโดดกลางอากาศ (ไม่ใช้กระโดด 2 ชั้น) และปิดการกันตาย จึงเป็นการตรวจแบบระมัดระวัง
  *    - กดกระโดดค้างได้ ตัวละครที่ลอยตัวได้จึงใช้การลอยในบางเส้นทาง
  * 3) ลองสุ่มวางแบบรายวันล่วงหน้า 1 ปี ทั้งโหมดปกติและโหมดจับเวลา เพื่อยืนยันว่าทุกวันได้เหรียญและไอเทมครบ ไม่ซ้อนกัน
- *    หมายเหตุ: รางแพลตฟอร์มเคลื่อนที่ถูกจำลองเป็นแผ่นไม้นิ่งตลอดแนวราง และไม่คิดศัตรู
+ *    หมายเหตุ: รางแพลตฟอร์มเคลื่อนที่ถูกจำลองเป็นแผ่นไม้นิ่งตลอดแนวราง และไม่คิดศัตรู บอส และหินหล่น
+ *    Boss Stage ตรวจเพิ่มว่าจุดที่เหรียญจากบอสอาจตกลงมา (เขตที่บอสเดิน) เก็บได้ทุกจุด
  *
  * ตรวจเฉพาะบางสเตจ/ตัวละครได้ เช่น  node tools/check-level.js forest mew aclaire
  */
@@ -22,7 +23,7 @@ const ROOT = path.resolve(__dirname, '..');
 const sandbox = { console: console };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
-['js/level.js', 'js/stage-forest.js', 'js/world.js', 'js/characters.js', 'js/spawn.js'].forEach(function (f) {
+['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/characters.js', 'js/spawn.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 });
 
@@ -69,6 +70,19 @@ function checkStage(stage) {
   lv.enemies.forEach(function (e) { onFloor(e, ENEMY_NAME[e.kind]); });
   lv.checkpoints.forEach(function (c) { onFloor(c, 'เช็กพอยต์'); });
   onFloor(lv.start, 'จุดเริ่มต้น');
+  if (stage.boss && !lv.boss) fail(label + ' เป็น Boss Stage แต่ไม่มีบอส X');
+  if (lv.boss) {
+    onFloor(lv.boss, 'บอส');
+    for (let tx = lv.boss.tx - 8; tx <= lv.boss.tx + 2; tx++) {
+      for (let ty = lv.boss.ty - 2; ty <= lv.boss.ty; ty++) {
+        if (W.tileAt(lv, tx, ty) !== CQ.TILE.EMPTY) fail('เขตบอสต้องโล่ง แต่มีของที่ (' + tx + ', ' + ty + ')');
+      }
+      if (!W.isSolid(lv, tx, lv.boss.ty + 1)) fail('เขตบอสต้องเป็นพื้นเรียบ แต่คอลัมน์ ' + tx + ' ไม่มีพื้น');
+    }
+  }
+  lv.rocks.forEach(function (r) {
+    if (!W.isSolid(lv, r.tx, r.ty - 1)) fail('จุดหินหล่นที่ (' + r.tx + ', ' + r.ty + ') ต้องอยู่ใต้เพดาน');
+  });
 
   if (stage.noPits) {
     const pits = [];
@@ -77,14 +91,23 @@ function checkStage(stage) {
   }
 
   const pool = Spawn.buildPool(lv);
-  const totalCoins = lv.coins.length + Spawn.COINS;
-  console.log('จุดที่สุ่มวางได้: ' + pool.length + ' จุด | เหรียญในฉาก ' + totalCoins + ' (ตายตัว ' + lv.coins.length + ') | เป้าหมาย: เก็บครบทุกเหรียญ');
-  if (pool.length < (Spawn.COINS + Spawn.ITEMS.length) * 2) fail('จุดที่สุ่มวางได้น้อยเกินไป');
-  if (pool.length < (Spawn.TIMED_COINS + Spawn.ITEMS.length) * 2) fail('จุดที่สุ่มวางได้น้อยเกินไปสำหรับโหมดจับเวลา');
+  const items = Spawn.itemsFor(stage);
+  const nNormal = Spawn.coinsFor(stage, 'normal'), nTimed = Spawn.coinsFor(stage, 'timed');
+  const bossCoins = stage.bossCoins || 0;
+  const totalCoins = lv.coins.length + nNormal + bossCoins;
+  console.log('จุดที่สุ่มวางได้: ' + pool.length + ' จุด | เหรียญในฉาก ' + totalCoins + ' (ตายตัว ' + lv.coins.length +
+    (bossCoins ? ', จากบอส ' + bossCoins : '') + ') | ไอเทม ' + items.join(', ') + (stage.hp ? ' | พลังชีวิต ' + stage.hp : '') + ' | เป้าหมาย: เก็บครบทุกเหรียญ');
+  if (pool.length < (nNormal + items.length) * 2) fail('จุดที่สุ่มวางได้น้อยเกินไป');
+  if (pool.length < (nTimed + items.length) * 2) fail('จุดที่สุ่มวางได้น้อยเกินไปสำหรับโหมดจับเวลา');
 
-  // เป้าหมายที่ต้องเข้าถึงได้: เหรียญตายตัว + ทุกจุดใน spawn pool
+  // เป้าหมายที่ต้องเข้าถึงได้: เหรียญตายตัว + ทุกจุดใน spawn pool (+ จุดที่เหรียญจากบอสอาจตก)
   const targets = lv.coins.map(function (c) { return { tx: c.tx, ty: c.ty, what: 'เหรียญตายตัว' }; })
     .concat(pool.map(function (s) { return { tx: s.tx, ty: s.ty, what: 'จุดสุ่ม' }; }));
+  if (lv.boss) {
+    for (let tx = lv.boss.tx - 8; tx <= lv.boss.tx + 2; tx++) {
+      for (let ty = lv.boss.ty - 1; ty <= lv.boss.ty; ty++) targets.push({ tx: tx, ty: ty, what: 'จุดเหรียญจากบอส' });
+    }
+  }
   chars.forEach(function (ch) { checkReach(lv, ch, targets, label); });
   checkDaily(lv, pool, stage);
 }
@@ -199,29 +222,30 @@ function checkReach(lv, ch, targets, label) {
 // ── ทดลองสุ่มแบบรายวัน 1 ปี ───────────────────────────────────────
 function checkDaily(lv, pool, stage) {
   const day0 = new Date(2026, 0, 1);
+  const ITEMS = Spawn.itemsFor(stage);
   const MODES = [
-    { id: 'normal', name: 'โหมดปกติ', coins: Spawn.COINS },
-    { id: 'timed', name: 'โหมดจับเวลา', coins: Spawn.TIMED_COINS }
+    { id: 'normal', name: 'โหมดปกติ', coins: Spawn.coinsFor(stage, 'normal') },
+    { id: 'timed', name: 'โหมดจับเวลา', coins: Spawn.coinsFor(stage, 'timed') }
   ];
   MODES.forEach(function (m) {
     let badDays = 0;
     for (let d = 0; d < 366; d++) {
       const date = new Date(day0.getFullYear(), day0.getMonth(), day0.getDate() + d);
       const seed = Spawn.modeSeed(Spawn.dailySeed(date), m.id, stage.id);
-      const r = Spawn.pick(pool, lv.w, Spawn.makeRng(seed), { coins: m.coins });
+      const r = Spawn.pick(pool, lv.w, Spawn.makeRng(seed), { coins: m.coins, items: ITEMS });
       const cells = new Set();
       r.coins.concat(r.items).forEach(function (s) { cells.add(s.tx + ',' + s.ty); });
       const types = {};
       r.items.forEach(function (it) { types[it.type] = (types[it.type] || 0) + 1; });
-      const okItems = Spawn.ITEMS.every(function (t) {
-        return types[t] === Spawn.ITEMS.filter(function (x) { return x === t; }).length;
+      const okItems = ITEMS.every(function (t) {
+        return types[t] === ITEMS.filter(function (x) { return x === t; }).length;
       });
-      if (r.coins.length !== m.coins || r.items.length !== Spawn.ITEMS.length || cells.size !== r.coins.length + r.items.length || !okItems) {
+      if (r.coins.length !== m.coins || r.items.length !== ITEMS.length || cells.size !== r.coins.length + r.items.length || !okItems) {
         badDays++;
         if (badDays <= 5) fail(m.name + ' วันที่ ' + seed + ': ได้เหรียญ ' + r.coins.length + ', ไอเทม ' + r.items.length + ', ตำแหน่งไม่ซ้ำ ' + cells.size);
       }
     }
-    const today = Spawn.pick(pool, lv.w, Spawn.makeRng(Spawn.modeSeed(Spawn.dailySeed(), m.id, stage.id)), { coins: m.coins });
+    const today = Spawn.pick(pool, lv.w, Spawn.makeRng(Spawn.modeSeed(Spawn.dailySeed(), m.id, stage.id)), { coins: m.coins, items: ITEMS });
     console.log(m.name + ' ทดลองสุ่มรายวัน 366 วัน: ' + (366 - badDays) + ' วันผ่าน | วันนี้ (' + Spawn.dailySeed() + '): เหรียญ ' + today.coins.length + ', ไอเทม ' +
       today.items.map(function (i) { return i.type + '@' + i.tx; }).join(' '));
   });

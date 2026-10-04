@@ -16,6 +16,17 @@
   const TIMED_COINS = 80;  // โหมดจับเวลา: จำนวนเหรียญในฉาก
   const TIMED_TIME = 120;  // โหมดจับเวลา: เวลาที่มี (วินาที)
 
+  /** จำนวนเหรียญสุ่มของสเตจ (Boss Stage ยาวครึ่งเดียว: coinScale 0.5) ไม่รวมเหรียญจากบอส */
+  function coinsFor(stage, mode) {
+    const n = mode === 'timed' ? TIMED_COINS : COINS;
+    return Math.round(n * ((stage && stage.coinScale) || 1));
+  }
+
+  /** ไอเทมของสเตจ (สเตจที่ไม่กำหนด items ใช้ชุดมาตรฐาน) */
+  function itemsFor(stage) {
+    return (stage && stage.items) || ITEMS;
+  }
+
   function hashString(str) {
     let h = 2166136261 >>> 0;
     for (let i = 0; i < str.length; i++) {
@@ -74,7 +85,9 @@
       }
       return false;
     };
+    const bossZone = lv.boss ? lv.boss.tx - 7 : Infinity; // เขตที่บอสเดินอยู่ ไม่วางของ
     const blocked = function (x, y) {
+      if (x >= bossZone) return true;
       const s = lv.start;
       if (Math.abs(x - s.tx) <= 2 && y >= s.ty - 3 && y <= s.ty) return true;
       return lv.checkpoints.some(function (c) { return x >= c.tx && x <= c.tx + 1 && y >= c.ty - 2 && y <= c.ty; });
@@ -167,6 +180,8 @@
     ITEMS: ITEMS,
     TIMED_COINS: TIMED_COINS,
     TIMED_TIME: TIMED_TIME,
+    coinsFor: coinsFor,
+    itemsFor: itemsFor,
     makeRng: makeRng,
     dailySeed: dailySeed,
     modeSeed: modeSeed,

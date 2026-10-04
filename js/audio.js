@@ -137,6 +137,45 @@
     },
     // Mew เริ่มลอยตัว
     float: function () { tone(660, 0.22, { type: 'sine', vol: 0.12, slide: 990 }); },
+    // ── Boss Stage ──
+    shoot: function (kind) {
+      if (kind === 'wind') {
+        noise(0.09, 0.1, 5000);
+        tone(880, 0.08, { type: 'sine', vol: 0.09, slide: 1700 });
+      } else if (kind === 'fire') {
+        tone(240, 0.2, { type: 'sawtooth', vol: 0.08, slide: 120 });
+        noise(0.16, 0.14, 1300);
+      } else {
+        tone(1250, 0.07, { vol: 0.05, slide: 1900 });
+      }
+    },
+    hurt: function () {
+      tone(520, 0.22, { vol: 0.12, slide: 200 });
+      noise(0.12, 0.16, 1200);
+    },
+    heart: function () {
+      [659, 880, 1175].forEach(function (f, i) { tone(f, 0.14, { type: 'triangle', vol: 0.24, delay: i * 0.07 }); });
+    },
+    rockCrack: function () { noise(0.1, 0.1, 2600); },
+    rockBreak: function () {
+      noise(0.22, 0.2, 700);
+      tone(120, 0.16, { type: 'triangle', vol: 0.25, slide: 60 });
+    },
+    roar: function () {
+      tone(110, 0.9, { type: 'sawtooth', vol: 0.14, slide: 55 });
+      tone(82, 0.9, { type: 'square', vol: 0.08, slide: 45 });
+      noise(0.5, 0.2, 500);
+    },
+    bossWind: function () { tone(160, 0.5, { type: 'sawtooth', vol: 0.06, slide: 320 }); },
+    bossFire: function () {
+      noise(0.35, 0.22, 900);
+      tone(150, 0.3, { type: 'sawtooth', vol: 0.1, slide: 70 });
+    },
+    bossHit: function () { tone(190, 0.09, { type: 'square', vol: 0.1, slide: 110 }); },
+    bossDown: function () {
+      [0, 0.18, 0.36, 0.6].forEach(function (d) { tone(90, 0.4, { type: 'sawtooth', vol: 0.12, slide: 40, delay: d }); });
+      noise(0.5, 0.3, 800);
+    },
     timeup: function () {
       [784, 659, 523].forEach(function (f, i) { tone(f, 0.16, { type: 'triangle', vol: 0.28, delay: i * 0.13 }); });
       tone(392, 0.6, { vol: 0.12, delay: 0.39 });

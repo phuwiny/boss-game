@@ -38,6 +38,7 @@
     STUN_TIME: 5,          // หมูป่าสลบหลังโดนเหยียบ (วินาที)
     GUARD_TIME: 5,         // อมตะหลังกันตาย (ความสามารถของ Aclaire)
     HURT_BOUNCE: 380,      // แรงเด้งตอนกันตายได้
+    HURT_INVULN: 1.5,      // อมตะชั่วคราวหลังเสียพลังชีวิต (Boss Stage)
     COIN_R: 10
   };
 
@@ -133,12 +134,16 @@
 
   const DEFAULT_STATS = { run: 1, accel: 1, jump: 1 };
 
-  /** ch = ตัวละครจาก CQ.CHARACTERS (ไม่ใส่ = ค่าพื้นฐาน) */
-  function makePlayer(tx, ty, ch) {
+  /**
+   * ch = ตัวละครจาก CQ.CHARACTERS (ไม่ใส่ = ค่าพื้นฐาน)
+   * hp = พลังชีวิต (Boss Stage) ไม่ใส่/0 = โดนครั้งเดียวพลาดแบบสเตจปกติ
+   */
+  function makePlayer(tx, ty, ch, hp) {
     const ab = (ch && ch.ability) || {};
+    const x = tx * T + (T - P.PW) / 2, y = (ty + 1) * T - P.PH;
     return {
-      x: tx * T + (T - P.PW) / 2,
-      y: (ty + 1) * T - P.PH,
+      x: x,
+      y: y,
       w: P.PW, h: P.PH,
       vx: 0, vy: 0,
       face: 1,
@@ -156,6 +161,9 @@
       floating: false,
       guard: ab.guard || 0,              // กันตายได้อีกกี่ครั้ง (ได้คืนเมื่อเกิดใหม่)
       guardMax: ab.guard || 0,
+      hp: hp || 0,                       // พลังชีวิต (Boss Stage)
+      hpMax: hp || 0,
+      safeX: x, safeY: y,                // จุดยืนปลอดภัยล่าสุด (ตกเหวแล้วกลับมาที่นี่)
       pw: { wing: 0, mush: 0, star: 0 } // เวลาที่เหลือของไอเทมแต่ละชนิด (วินาที)
     };
   }
@@ -165,22 +173,35 @@
     p.airJumps = (p.airJumpsMax || 0) + (p.pw && p.pw.wing > 0 ? 1 : 0);
   }
 
+  function bounce(p, v) {
+    p.vy = -v;
+    p.jumping = false;
+    p.onGround = false;
+    p.ride = null;
+    p.coyote = 0;
+  }
+
   /**
    * ผู้เล่นโดนหนามหรือศัตรู: ถ้ามีกันตาย (Aclaire) จะไม่ตาย เด้งตัวและอมตะชั่วคราว
+   * Boss Stage (hpMax > 0): เสียพลังชีวิต 1 ขีดแล้วอมตะชั่วคราว พลาดเมื่อพลังชีวิตหมด
    * คืนค่า true ถ้าตาย
    */
   function hurt(p, ev, cause) {
     if (p.guard > 0) {
       p.guard--;
       p.invuln = P.GUARD_TIME;
-      p.vy = -P.HURT_BOUNCE;
-      p.jumping = false;
-      p.onGround = false;
-      p.ride = null;
-      p.coyote = 0;
+      bounce(p, P.HURT_BOUNCE);
       if (ev) ev.push({ type: 'guard', cause: cause });
       return false;
     }
+    if (p.hpMax > 0 && p.hp > 1) {
+      p.hp--;
+      p.invuln = P.HURT_INVULN;
+      bounce(p, P.HURT_BOUNCE * 0.8);
+      if (ev) ev.push({ type: 'hurt', cause: cause });
+      return false;
+    }
+    if (p.hpMax > 0) p.hp = 0;
     p.dead = true;
     if (ev) ev.push({ type: 'die', cause: cause });
     return true;
@@ -288,7 +309,31 @@
       }
     }
 
+    // Boss Stage: จำจุดยืนปลอดภัยล่าสุด (พื้นทึบ/แผ่นไม้ใต้เท้าทั้งสองข้าง ไม่ติดหนาม)
+    if (p.hpMax > 0 && p.onGround && !p.ride && !(p.invuln > 0)) {
+      const fy = Math.floor((p.y + p.h + 1) / T);
+      const l = Math.floor((p.x - 4) / T), r = Math.floor((p.x + p.w + 4) / T);
+      let safe = true;
+      for (let tx = l; tx <= r && safe; tx++) {
+        if (!isSolid(lv, tx, fy) && !isOneWay(lv, tx, fy)) safe = false;
+        if (tileAt(lv, tx, fy - 1) === TILE.SPIKE) safe = false;
+      }
+      if (safe) { p.safeX = p.x; p.safeY = p.y; }
+    }
+
     if (p.y > lv.h * T + 40) {
+      if (p.hpMax > 0 && p.hp > 1) {
+        // Boss Stage: ตกเหวเสียพลังชีวิต 1 ขีด แล้วกลับไปยืนที่จุดปลอดภัยล่าสุด
+        p.hp--;
+        p.x = p.safeX;
+        p.y = p.safeY;
+        p.vx = 0;
+        bounce(p, 0);
+        p.invuln = P.HURT_INVULN;
+        if (ev) ev.push({ type: 'fell' });
+        return;
+      }
+      if (p.hpMax > 0) p.hp = 0;
       p.dead = true;
       if (ev) ev.push({ type: 'die', cause: 'fall' });
     }

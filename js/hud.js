@@ -41,7 +41,10 @@
     wing: { m: { k: K, w: '#ffffff', W: '#a9d4f5', y: '#ffd23f' }, r: ['.........', 'kk.....kk', 'kwk...kwk', 'kwWk.kWwk', 'kwwWkWwwk', '.kwwywwk.', '..kWWWk..', '...kkk...', '.........'] },
     // ความสามารถของตัวละคร: ลอยตัว (Mew) และโล่กันตาย (Aclaire)
     float: { m: { k: K, w: '#ffffff', W: '#b9d0ff', b: '#7fb0ff' }, r: ['.........', '...kkk...', '.kkwwwkk.', 'kwwwwwwwk', 'kwwwwwwWk', 'kWwwwwWWk', '.kkkkkkk.', '..b...b..', '.b..b..b.'] },
-    guard: { m: { k: K, p: '#ff8fc0', P: '#d9467f', L: '#ffd3e6' }, r: ['kkkkkkkkk', 'kLLppppPk', 'kLppppPPk', 'kLppppPPk', 'kpppppPPk', '.kppppPk.', '.kpppPPk.', '..kpPPk..', '...kkk...'] }
+    guard: { m: { k: K, p: '#ff8fc0', P: '#d9467f', L: '#ffd3e6' }, r: ['kkkkkkkkk', 'kLLppppPk', 'kLppppPPk', 'kLppppPPk', 'kpppppPPk', '.kppppPk.', '.kpppPPk.', '..kpPPk..', '...kkk...'] },
+    // Boss Stage: พลังชีวิต (หัวใจ) และบอส (หัวกะโหลก)
+    heart: { m: { k: K, r: '#ff4d6a', L: '#ffc2cd', R: '#c42a48' }, r: ['.kkk.kkk.', 'kLLrkrrrk', 'kLrrrrrRk', 'krrrrrrRk', '.krrrrRk.', '..krrRk..', '...kRk...', '....k....', '.........'] },
+    skull: { m: { k: K, w: '#f0e6d8', W: '#b9ab98', r: '#ff3b3b' }, r: ['..kkkkk..', '.kwwwwwk.', 'kwwwwwwWk', 'kwrrwrrWk', 'kwrrwrrWk', 'kwwwkwwWk', '.kwwwwWk.', '..kwkWk..', '...kkk...'] }
   };
   const POWER_COLOR = { wing: ['#bfe6ff', '#6fb8ef'], mush: ['#ff9db0', '#ff4d6a'], star: ['#fff3a0', '#ffc21a'], float: ['#e2edff', '#7fb0ff'], guard: ['#ffd3e6', '#ff6fa8'] };
   const DIM = '#5a5078';
@@ -58,6 +61,7 @@
   const ROW_H = 17;     // ความสูงกรอบปกติ
   const TIMED_H = 23;   // กรอบเวลาโหมดจับเวลา (มีแถบเวลา)
   const POWER_W = 66, POWER_H = 15, GAP = 2;
+  const BOSS_W = 120;
 
   /** ขนาดพิกเซล HUD (device px) ตามขนาดจอ อย่างน้อย 2 css px */
   function pixelSize(cssW, cssH, dpr) {
@@ -186,9 +190,25 @@
       const frac = left / g.limit;
       pt.bar(L.timeX + 4, ty + 15, TIME_W - 8, 5, frac, timeColors(frac));
     }
-    if (g.deathAnim) return;
     const p = g.player;
     let y = L.powersY;
+    // Boss Stage: พลังชีวิต (หัวใจเต็ม/ว่าง) กะพริบเมื่อเหลือ 1 ขีด
+    if (p.hpMax > 0) {
+      const low = p.hp === 1 && Math.floor(time * 4) % 2 === 0;
+      pt.panel(0, y, 5 + p.hpMax * 10, POWER_H);
+      for (let i = 0; i < p.hpMax; i++) pt.icon('heart', 3 + i * 10, y + 3, i >= p.hp || low);
+      y += POWER_H + 1;
+    }
+    // Boss Stage: แถบพลังชีวิตบอส (แสดงเมื่อบอสตื่น)
+    const b = g.boss;
+    if (b && b.state !== 'sleep' && !(b.dead && b.deadT > 1.2)) {
+      const angry = b.hp <= b.hpMax / 2;
+      pt.panel(0, y, BOSS_W, POWER_H);
+      pt.icon('skull', 3, y + 3);
+      pt.bar(14, y + 5, BOSS_W - 18, 5, b.hp / b.hpMax, b.flash > 0 ? ['#ffffff', '#ffe0d8'] : angry ? ['#ffb0a0', '#ff3b2a'] : ['#ffcf9a', '#e8661e']);
+      y += POWER_H + 1;
+    }
+    if (g.deathAnim) return;
     // ความสามารถของตัวละคร
     if (p.floatMax > 0 && p.floatT < p.floatMax) {
       // Mew: เวลาลอยตัวที่เหลือ (แสดงเมื่อเริ่มใช้ แตะพื้นแล้วเต็มและซ่อน)
