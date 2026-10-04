@@ -13,6 +13,7 @@
   const Spawn = CQ.Spawn;
   const CHAR_KEY = 'coinquest.char';  // ตัวละครที่เลือกไว้
   const MODE_KEY = 'coinquest.mode';  // โหมดที่เล่นล่าสุด
+  const STAGE_KEY = 'coinquest.stage'; // สเตจที่เลือกไว้
   const POWERS = ['wing', 'mush', 'star'];
   const ITEM_INFO = {
     wing: { name: 'ปีก', toast: 'ได้ปีก! กระโดด 2 ชั้นได้ 10 วินาที', colors: ['#ffffff', '#bfe6ff', '#7fc4f5'] },
@@ -36,6 +37,7 @@
     titleCharPreview: $('title-char-preview'),
     titleCharName: $('title-char-name'),
     titleCharTag: $('title-char-tag'),
+    stagePick: $('stage-pick'),
     btnNormal: $('btn-normal'),
     btnTimed: $('btn-timed'),
     descNormal: $('desc-normal'),
@@ -62,11 +64,13 @@
   let acc = 0;
   let clock = 0;
   let winShownAt = 0;
-  let spawnPool = null;
+  const spawnPools = {};
   let tempo = 1;
   let charId = CQ.getCharacter(CQ.store.get(CHAR_KEY)).id;
+  let stageId = CQ.getStage(CQ.store.get(STAGE_KEY)).id;
   let lastMode = CQ.store.get(MODE_KEY) === 'timed' ? 'timed' : 'normal';
   let charCards = [];
+  let stageBtns = [];
   let navPrev = 0;
   const events = [];
 
@@ -82,35 +86,42 @@
     return { seed: day, day: day, custom: false, label: 'ด่านประจำวันที่ ' + label };
   }
 
-  function getPool() {
-    if (!spawnPool) spawnPool = Spawn.buildPool(CQ.parseLevel(CQ.LEVEL_SECTIONS, { staticPlatforms: true }));
-    return spawnPool;
+  /** จุดที่สุ่มวางของได้ แยกตามสเตจ (คำนวณครั้งเดียวต่อสเตจ) */
+  function getPool(stage) {
+    if (!spawnPools[stage.id]) spawnPools[stage.id] = Spawn.buildPool(CQ.parseLevel(stage.sections, { staticPlatforms: true }));
+    return spawnPools[stage.id];
+  }
+
+  function stageLabel(stage) {
+    return 'สเตจ ' + stage.no + ' ' + stage.name;
   }
 
   // ── สร้างเกมใหม่ ──────────────────────────────────────────────
   function newGame(mode) {
     const timed = mode === 'timed';
     const ch = CQ.getCharacter(charId);
-    const lv = CQ.parseLevel(CQ.LEVEL_SECTIONS);
+    const stage = CQ.getStage(stageId);
+    const lv = CQ.parseLevel(stage.sections);
     if (lv.errors.length) console.warn('Level errors:', lv.errors);
     const springs = [];
     for (let i = 0; i < lv.tiles.length; i++) {
       if (lv.tiles[i] === TILE.SPRING) springs.push({ tx: i % lv.w, ty: Math.floor(i / lv.w), hit: -10 });
     }
     const seedInfo = currentSeed();
-    const rng = Spawn.makeRng(Spawn.modeSeed(seedInfo.seed, timed ? 'timed' : 'normal'));
-    const picked = Spawn.pick(getPool(), lv.w, rng, { coins: timed ? Spawn.TIMED_COINS : Spawn.COINS });
+    const rng = Spawn.makeRng(Spawn.modeSeed(seedInfo.seed, timed ? 'timed' : 'normal', stage.id));
+    const picked = Spawn.pick(getPool(stage), lv.w, rng, { coins: timed ? Spawn.TIMED_COINS : Spawn.COINS });
     const center = function (o) { return { tx: o.tx, ty: o.ty, x: o.tx * T + T / 2, y: o.ty * T + T / 2 }; };
     const coins = lv.coins.map(center).concat(picked.coins.map(center));
     g = {
       lv: lv,
       mode: timed ? 'timed' : 'normal',
+      stage: stage,
       char: ch,
       seedInfo: seedInfo,
       player: W.makePlayer(lv.start.tx, lv.start.ty, ch),
       coins: coins.map(function (c, i) { c.taken = false; c.phase = i * 0.83; return c; }),
       items: picked.items.map(function (it, i) { const o = center(it); o.type = it.type; o.taken = false; o.phase = i * 1.7; return o; }),
-      enemies: lv.enemies.map(function (e) { return W.makeSlime(e.tx, e.ty); }),
+      enemies: lv.enemies.map(W.makeEnemy),
       checkpoints: lv.checkpoints.map(function (c) { return { tx: c.tx, ty: c.ty, active: false, raise: 0 }; }),
       springs: springs,
       particles: [],
@@ -132,7 +143,7 @@
       clearT: 0,
       showMinimap: false
     };
-    renderer.setLevel(lv);
+    renderer.setLevel(lv, stage.theme);
     renderer.prepareHero(ch.id);
     renderer.look = 0;
     renderer.updateCamera(focusPoint(), 1, 0, true);
@@ -177,7 +188,7 @@
     for (let i = 0; i < lv.platforms.length; i++) W.stepPlatform(lv.platforms[i], dt);
     for (let i = g.enemies.length - 1; i >= 0; i--) {
       const e = g.enemies[i];
-      W.stepSlime(e, lv, dt);
+      W.stepEnemy(e, lv, dt);
       if (e.dead && e.deadT > 0.7) g.enemies.splice(i, 1);
     }
 
@@ -221,10 +232,27 @@
     for (let i = 0; i < g.enemies.length; i++) {
       const e = g.enemies[i];
       if (e.dead) continue;
-      if (!W.overlap(p.x + 2, p.y + 3, p.w - 4, p.h - 3, e.x + 2, e.y + 4, e.w - 4, e.h - 4)) continue;
-      if (p.pw.star > 0) knockOut(e, p);
-      else if (p.vy > 0 && p.prevBottom <= e.y + e.h * 0.6) stomp(e, p, inp);
-      else if (p.invuln <= 0) { kill(); return; }
+      const touching = W.overlap(p.x + 2, p.y + 3, p.w - 4, p.h - 3, e.x + 2, e.y + 4, e.w - 4, e.h - 4);
+      if (e.kind === 'boar') {
+        // หมูป่าที่ตื่นขณะทับตัวผู้เล่น ยังไม่ทำร้ายจนกว่าจะแยกกัน
+        const stunned = e.stunT > 0;
+        if (e.wasStunned && !stunned && touching) e.safe = true;
+        e.wasStunned = stunned;
+        if (e.safe && !touching) e.safe = false;
+      }
+      if (!touching) continue;
+      const stomping = p.vy > 0 && p.prevBottom <= e.y + e.h * 0.6;
+      if (e.kind === 'boar') {
+        if (p.pw.star > 0) { if (!(e.stunT > 0)) stunBoar(e, p, true); continue; }
+        if (stomping) { stomp(e, p, inp); continue; }
+        if (e.stunT > 0 || e.safe) continue; // สลบอยู่: เดินทะลุได้
+      } else {
+        if (p.pw.star > 0) { knockOut(e, p); continue; }
+        if (stomping) { stomp(e, p, inp); continue; }
+      }
+      if (p.invuln > 0) continue;
+      if (W.hurt(p, null, 'enemy')) { kill(); return; }
+      guarded(p, e);
     }
 
     for (let i = 0; i < g.checkpoints.length; i++) {
@@ -251,9 +279,23 @@
         break;
       case 'airjump':
         Sound.sfx.airjump();
-        for (let i = 0; i < 6; i++) {
-          spawn({ kind: 'feather', x: p.x + p.w / 2 + (Math.random() - 0.5) * 20, y: p.y + p.h - 4, vx: (Math.random() - 0.5) * 70, vy: 20 + Math.random() * 40, g: 30, size: 5 + Math.random() * 3, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 6, color: '#ffffff', life: 0.7 + Math.random() * 0.3 });
+        if (ev.wing) {
+          for (let i = 0; i < 6; i++) {
+            spawn({ kind: 'feather', x: p.x + p.w / 2 + (Math.random() - 0.5) * 20, y: p.y + p.h - 4, vx: (Math.random() - 0.5) * 70, vy: 20 + Math.random() * 40, g: 30, size: 5 + Math.random() * 3, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 6, color: '#ffffff', life: 0.7 + Math.random() * 0.3 });
+          }
+        } else {
+          // กระโดดชั้นที่ 2 ของตัวละคร (Mew): วงประกายใต้เท้า
+          for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2;
+            spawn({ kind: 'star', x: p.x + p.w / 2, y: p.y + p.h, vx: Math.cos(a) * 90, vy: Math.sin(a) * 30 + 20, g: 0, size: 2.5 + Math.random() * 2, color: i % 2 ? '#ffffff' : g.char.color, life: 0.4 });
+          }
         }
+        break;
+      case 'float':
+        Sound.sfx.float();
+        break;
+      case 'guard':
+        guarded(p, null);
         break;
       case 'spring': {
         Sound.sfx.spring();
@@ -285,7 +327,7 @@
     const info = ITEM_INFO[it.type];
     it.taken = true;
     p.pw[it.type] = P.POWER_TIME;
-    if (it.type === 'wing') p.airJumps = 1;
+    if (it.type === 'wing') p.airJumps = Math.min(p.airJumps + 1, p.airJumpsMax + 1); // ปีกเพิ่มกระโดดกลางอากาศ 1 ครั้ง
     Sound.sfx.powerup();
     burst(it.x, it.y, 14, info.colors, 170, 'star');
     spawn({ kind: 'text', text: info.name + '!', x: it.x, y: it.y - 16, vx: 0, vy: -45, g: 0, color: '#ffffff', life: 1 });
@@ -306,6 +348,9 @@
     if (p.pw.star > 0 && Math.random() < 0.3) {
       spawn({ kind: 'star', x: p.x + Math.random() * p.w, y: p.y + Math.random() * p.h, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, g: 0, size: 2.5 + Math.random() * 2.5, color: 'hsl(' + Math.floor(Math.random() * 360) + ',95%,70%)', life: 0.45 });
     }
+    if (p.floating && Math.random() < 0.45) {
+      spawn({ kind: 'star', x: p.x + 3 + Math.random() * (p.w - 6), y: p.y + p.h + 1, vx: (Math.random() - 0.5) * 20, vy: 25 + Math.random() * 25, g: 0, size: 2 + Math.random() * 2, color: Math.random() < 0.5 ? '#ffffff' : '#bcd4ff', life: 0.45 });
+    }
     if (p.pw.mush > 0 && p.onGround && Math.abs(p.vx) > P.RUN && Math.random() < 0.35) {
       spawn({ kind: 'circle', x: p.x + p.w / 2 - Math.sign(p.vx) * 10, y: p.y + p.h - 3, vx: -p.vx * 0.15, vy: -Math.random() * 30, g: 60, size: 2 + Math.random() * 2, color: 'rgba(255,200,210,0.9)', life: 0.3 });
     }
@@ -321,16 +366,42 @@
   }
 
   function stomp(e, p, inp) {
-    e.dead = true;
-    e.deadT = 0;
     p.vy = inp.jump ? -P.JUMP_V * p.st.jump * 0.9 : -P.STOMP_V;
     p.jumping = !!inp.jump;
     p.onGround = false;
     p.ride = null;
-    p.airJumps = p.pw.wing > 0 ? 1 : 0;
+    W.refillAirJumps(p);
     g.shake = Math.max(g.shake, 3);
+    if (e.kind === 'boar') { stunBoar(e, p, false); return; }
+    e.dead = true;
+    e.deadT = 0;
     Sound.sfx.stomp();
     burst(e.x + e.w / 2, e.y + e.h / 2, 8, ['#58d26d', '#a8f0b4'], 140, 'circle');
+  }
+
+  /** หมูป่าสลบ STUN_TIME วินาที (ไม่ตาย) knock = โดนดาวชน: กระเด็นเล็กน้อย */
+  function stunBoar(e, p, knock) {
+    e.stunT = P.STUN_TIME;
+    e.safe = false;
+    if (knock) {
+      e.dir = Math.sign(e.x + e.w / 2 - (p.x + p.w / 2)) || p.face;
+      e.vy = -260;
+      e.onGround = false;
+      g.shake = Math.max(g.shake, 3);
+      Sound.sfx.zap();
+    }
+    Sound.sfx.stun();
+    burst(e.x + e.w / 2, e.y + 4, 8, ['#ffd23f', '#ffffff', '#c98b55'], 130, 'star');
+  }
+
+  /** Aclaire กันตายได้: ผลักตัวออกจากศัตรู (from = null คือหนาม) แล้วอมตะชั่วคราว */
+  function guarded(p, from) {
+    if (from) p.vx = (p.x + p.w / 2 < from.x + from.w / 2 ? -1 : 1) * 230;
+    g.shake = Math.max(g.shake, 5);
+    g.flash = Math.max(g.flash, 0.5);
+    Sound.sfx.guard();
+    burst(p.x + p.w / 2, p.y + p.h / 2, 14, [g.char.color, '#ffffff', '#ffd3e6'], 170, 'star');
+    toast(g.char.name + ' ทนไว้ได้! อมตะ ' + P.GUARD_TIME + ' วินาที');
   }
 
   function activateCheckpoint(cp) {
@@ -379,9 +450,16 @@
     toast('หมดเวลา! เก็บได้ ' + g.collected + ' เหรียญ');
   }
 
-  // ── บันทึกสถิติ (แยกตามโหมดและตัวละคร: ตลอดกาล + ของด่านวันนี้) ─────
-  /** Bobo โหมดปกติใช้ key เดิม เพื่อเก็บสถิติที่ทำไว้ก่อนมีหลายตัวละคร */
-  function recordKeys(mode, id) {
+  // ── บันทึกสถิติ (แยกตามสเตจ โหมด และตัวละคร: ตลอดกาล + ของด่านวันนี้) ─────
+  /**
+   * สเตจ 1 ใช้ key เดิม (Bobo โหมดปกติใช้ key ตั้งแต่ก่อนมีหลายตัวละคร) สถิติที่ทำไว้จึงไม่หาย
+   * สเตจอื่นใช้ coinquest.<สเตจ>.{best|daily}.v1.<โหมด>.<ตัวละคร>
+   */
+  function recordKeys(stage, mode, id) {
+    if (stage !== 'grassland') {
+      const k = 'coinquest.' + stage;
+      return { all: k + '.best.v1.' + mode + '.' + id, day: k + '.daily.v1.' + mode + '.' + id };
+    }
     if (mode === 'timed') return { all: 'coinquest.timed.best.v1.' + id, day: 'coinquest.timed.daily.v1.' + id };
     const sfx = id === 'bobo' ? '' : '.' + id;
     return { all: 'coinquest.best.v2' + sfx, day: 'coinquest.daily.v2' + sfx };
@@ -395,8 +473,8 @@
     } catch (e) { return null; }
   }
 
-  function loadRecords(mode, id, day) {
-    const keys = recordKeys(mode, id);
+  function loadRecords(stage, mode, id, day) {
+    const keys = recordKeys(stage, mode, id);
     const daily = readRecord(keys.day, mode);
     return { all: readRecord(keys.all, mode), today: daily && daily.day === day ? daily : null };
   }
@@ -419,8 +497,8 @@
     return mode === 'timed' ? rec.coins + ' เหรียญ' : fmtTime(rec.time);
   }
 
-  function bestLine(mode, id, info) {
-    const rec = loadRecords(mode, id, info.day);
+  function bestLine(stage, mode, id, info) {
+    const rec = loadRecords(stage, mode, id, info.day);
     const parts = [];
     if (rec.today && !info.custom) parts.push('วันนี้ ' + fmtRecord(mode, rec.today));
     if (rec.all) parts.push('ดีที่สุด ' + fmtRecord(mode, rec.all));
@@ -433,8 +511,13 @@
     ui.titleDay.textContent = info.label;
     ui.titleCharName.textContent = ch.name;
     ui.titleCharTag.textContent = ch.tagline;
+    stageBtns.forEach(function (b) {
+      const on = b.id === stageId;
+      b.btn.classList.toggle('selected', on);
+      b.btn.setAttribute('aria-checked', String(on));
+    });
     [['normal', ui.bestNormal, ui.btnNormal], ['timed', ui.bestTimed, ui.btnTimed]].forEach(function (m) {
-      const line = bestLine(m[0], charId, info);
+      const line = bestLine(stageId, m[0], charId, info);
       m[1].hidden = !line;
       m[1].textContent = line;
       m[2].classList.toggle('btn-primary', m[0] === lastMode);
@@ -460,11 +543,13 @@
         '<span class="char-info">' +
         '<b class="char-name"></b><span class="char-tag"></span><span class="char-desc"></span>' +
         statRow('ความเร็ว', ch.bars.speed) + statRow('กระโดด', ch.bars.jump) +
+        '<span class="char-skill"></span>' +
         '<span class="char-best"></span>' +
         '</span>';
       btn.querySelector('.char-name').textContent = ch.name;
       btn.querySelector('.char-tag').textContent = ch.tagline;
       btn.querySelector('.char-desc').textContent = ch.desc;
+      btn.querySelector('.char-skill').textContent = ch.skill;
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         Sound.unlock();
@@ -484,11 +569,11 @@
       c.btn.classList.toggle('selected', on);
       c.btn.setAttribute('aria-checked', String(on));
       const parts = [];
-      const n = loadRecords('normal', c.id, info.day).all;
-      const t = loadRecords('timed', c.id, info.day).all;
+      const n = loadRecords(stageId, 'normal', c.id, info.day).all;
+      const t = loadRecords(stageId, 'timed', c.id, info.day).all;
       if (n) parts.push('ปกติ ' + fmtRecord('normal', n));
       if (t) parts.push('จับเวลา ' + fmtRecord('timed', t));
-      c.best.textContent = parts.length ? 'ดีที่สุด: ' + parts.join(' · ') : 'ยังไม่มีสถิติ';
+      c.best.textContent = 'สเตจ ' + CQ.getStage(stageId).no + ': ' + (parts.length ? 'ดีที่สุด ' + parts.join(' · ') : 'ยังไม่มีสถิติ');
     });
   }
 
@@ -513,6 +598,53 @@
       const c = charCards.find(function (cc) { return cc.id === next; });
       if (c) c.btn.focus({ preventScroll: true });
     }
+  }
+
+  // ── เลือกสเตจ (หน้าแรก) ───────────────────────────────────────
+  function buildStageButtons() {
+    ui.stagePick.textContent = '';
+    stageBtns = CQ.STAGES.map(function (st) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'stage-btn stage-' + st.theme;
+      btn.setAttribute('role', 'radio');
+      btn.innerHTML = '<span class="stage-text"><span class="stage-no"></span><span class="stage-name"></span></span>';
+      btn.querySelector('.stage-no').textContent = 'สเตจ ' + st.no;
+      btn.querySelector('.stage-name').textContent = st.name;
+      btn.title = st.name + ' (' + st.th + ')';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        Sound.unlock();
+        Sound.sfx.click();
+        selectStage(st.id);
+      });
+      ui.stagePick.appendChild(btn);
+      return { id: st.id, btn: btn };
+    });
+  }
+
+  function selectStage(id) {
+    if (state !== 'title') return;
+    const st = CQ.getStage(id);
+    if (st.id === stageId) return;
+    stageId = st.id;
+    CQ.store.set(STAGE_KEY, stageId);
+    newGame(lastMode); // ให้ฉากหลังเปลี่ยนตามทันที
+    refreshTitle();
+  }
+
+  /** ลูกศรซ้าย/ขวาตอน focus อยู่ที่ปุ่มสเตจ = เลื่อนสเตจ */
+  function navStage(dir) {
+    const el = document.activeElement;
+    if (!el || !el.classList.contains('stage-btn')) return;
+    const n = CQ.STAGES.length;
+    let i = 0;
+    while (i < n && CQ.STAGES[i].id !== stageId) i++;
+    const next = CQ.STAGES[(i + dir + n) % n].id;
+    Sound.sfx.click();
+    selectStage(next);
+    const b = stageBtns.find(function (sb) { return sb.id === next; });
+    if (b) b.btn.focus({ preventScroll: true });
   }
 
   function openChars() {
@@ -554,6 +686,7 @@
     state = 'playing';
     g.showMinimap = true;
     setScreen(null);
+    toast(stageLabel(g.stage) + (g.mode === 'timed' ? ' · โหมดจับเวลา' : ''));
     ui.hud.hidden = false;
     document.body.classList.add('in-game');
     layoutHud();
@@ -605,11 +738,11 @@
     if (timed) {
       const all = g.collected >= g.total;
       ui.winHeading.textContent = all ? 'เก็บครบทุกเหรียญ!' : 'หมดเวลา!';
-      ui.winSub.textContent = g.char.name + (all ? ' · เหลือเวลา ' + fmtTime(result.left) : '') + ' · ' + deaths;
+      ui.winSub.textContent = stageLabel(g.stage) + ' · ' + g.char.name + (all ? ' · เหลือเวลา ' + fmtTime(result.left) : '') + ' · ' + deaths;
       ui.winLabel.textContent = 'เหรียญที่เก็บได้';
     } else {
       ui.winHeading.textContent = 'ภารกิจสำเร็จ!';
-      ui.winSub.textContent = 'เก็บครบ ' + g.goal + ' เหรียญ · ' + g.char.name + ' · ' + deaths;
+      ui.winSub.textContent = stageLabel(g.stage) + ' · เก็บครบ ' + g.goal + ' เหรียญ · ' + g.char.name + ' · ' + deaths;
       ui.winLabel.textContent = 'เวลา';
     }
     ui.winTime.textContent = fmtRecord(mode, result);
@@ -619,8 +752,8 @@
       ui.winBestAll.textContent = '-';
       ui.winNew.hidden = true;
     } else {
-      const keys = recordKeys(mode, g.char.id);
-      const rec = loadRecords(mode, g.char.id, g.seedInfo.day);
+      const keys = recordKeys(g.stage.id, mode, g.char.id);
+      const rec = loadRecords(g.stage.id, mode, g.char.id, g.seedInfo.day);
       const newToday = isBetter(mode, result, rec.today);
       const newAll = isBetter(mode, result, rec.all);
       if (newToday) CQ.store.set(keys.day, JSON.stringify(Object.assign({ day: g.seedInfo.day }, result)));
@@ -713,9 +846,12 @@
       acc = 0;
     }
 
-    if (state === 'chars') {
+    if (state === 'chars' || state === 'title') {
       const nav = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
-      if (nav !== 0 && nav !== navPrev) navChar(nav);
+      if (nav !== 0 && nav !== navPrev) {
+        if (state === 'chars') navChar(nav);
+        else navStage(nav);
+      }
       navPrev = nav;
     }
 
@@ -825,6 +961,7 @@
     ui.descTimed.textContent = 'เก็บให้มากที่สุดใน ' + Spawn.TIMED_TIME + ' วินาที';
     ui.btnTimed.title = 'มีเหรียญ ' + Spawn.TIMED_COINS + ' เหรียญในฉาก มากกว่าโหมดปกติ';
     buildCharCards();
+    buildStageButtons();
 
     bindButton('btn-normal', function () { startGame('normal'); });
     bindButton('btn-timed', function () { startGame('timed'); });
@@ -863,6 +1000,7 @@
     get game() { return g; },
     get state() { return state; },
     get charId() { return charId; },
+    get stageId() { return stageId; },
     renderer: renderer
   };
 

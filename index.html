@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#4fa9f2">
-  <meta name="description" content="Coin Quest เกมแพลตฟอร์มเลื่อนฉากด้านข้าง ตามหาเหรียญทองที่สุ่มวางใหม่ทุกวัน เลือกตัวละครได้ 3 ตัว มีโหมดปกติและโหมดจับเวลา ไอเทมปีก เห็ด ดาว เล่นได้ทั้งคอมพิวเตอร์และมือถือ">
+  <meta name="description" content="Coin Quest เกมแพลตฟอร์มเลื่อนฉากด้านข้าง ตามหาเหรียญทองที่สุ่มวางใหม่ทุกวัน 2 สเตจ (Grassland และ Forest) เลือกตัวละครได้ 3 ตัว แต่ละตัวมีความสามารถต่างกัน มีโหมดปกติและโหมดจับเวลา ไอเทมปีก เห็ด ดาว เล่นได้ทั้งคอมพิวเตอร์และมือถือ">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta property="og:title" content="Coin Quest — ผจญภัยเก็บเหรียญทอง">
-  <meta property="og:description" content="เกมแพลตฟอร์มเลื่อนฉากด้านข้าง 3 ตัวละคร 2 โหมด เล่นบนเว็บได้ทันที รองรับมือถือ">
+  <meta property="og:description" content="เกมแพลตฟอร์มเลื่อนฉากด้านข้าง 2 สเตจ 3 ตัวละคร 2 โหมด เล่นบนเว็บได้ทันที รองรับมือถือ">
   <title>Coin Quest — ผจญภัยเก็บเหรียญทอง</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -79,6 +79,9 @@
         <span class="char-pick-change">เปลี่ยน<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 15.5 12 9 18.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </button>
 
+      <!-- ปุ่มเลือกสเตจ สร้างจาก CQ.STAGES ใน js/main.js -->
+      <div class="stages" id="stage-pick" role="radiogroup" aria-label="เลือกสเตจ"></div>
+
       <div class="modes">
         <button class="btn mode-btn btn-primary" id="btn-normal" type="button">
           <span class="mode-name">
@@ -141,6 +144,7 @@
           <ul>
             <li>กดค้างเพื่อกระโดดสูงขึ้น</li>
             <li>เหยียบหัวสไลม์เพื่อกำจัด</li>
+            <li>เหยียบหมูป่าให้สลบ 5 วินาที</li>
             <li>ไอเทมทุกชนิดมีผล 10 วินาที</li>
             <li>แตะธงเพื่อบันทึกเช็กพอยต์</li>
           </ul>
@@ -191,6 +195,7 @@
   <noscript><p class="noscript">เกมนี้ต้องเปิดใช้งาน JavaScript</p></noscript>
 
   <script src="js/level.js"></script>
+  <script src="js/stage-forest.js"></script>
   <script src="js/world.js"></script>
   <script src="js/characters.js"></script>
   <script src="js/spawn.js"></script>

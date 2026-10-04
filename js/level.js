@@ -10,8 +10,11 @@
  *   ~  รางแพลตฟอร์มเคลื่อนที่ (แพลตฟอร์มกว้าง 3 ช่องวิ่งไป-กลับตามราง)
  *   ^  หนามแหลม              S  สปริง                    o  เหรียญแบบวางตายตัว (ไม่บังคับ)
  *   P  จุดเริ่มต้นผู้เล่น      C  จุดเช็กพอยต์              s  สไลม์ (ศัตรู)
+ *   h  หมูป่า (ศัตรู เหยียบแล้วสลบ ไม่ตาย)
  *
  * เหรียญและไอเทมส่วนใหญ่ถูกสุ่มวางทุกวันโดย js/spawn.js จากจุดที่ยืนยันแล้วว่าเก็บได้
+ *
+ * ไฟล์นี้มีตัวแปลงด่านและสเตจ 1 (Grassland) สเตจอื่นอยู่ในไฟล์ js/stage-*.js ซึ่งเพิ่มตัวเองเข้า CQ.STAGES
  */
 (function (root) {
   'use strict';
@@ -213,6 +216,22 @@
   ];
 
   /**
+   * รายชื่อสเตจ: id ใช้ใน seed และ key ของสถิติ, theme ใช้เลือกภาพฉาก (js/render.js)
+   * noPits = ห้ามมีเหว (ตัวตรวจด่านจะตรวจว่าแถวล่างสุดเป็นพื้นทุกคอลัมน์)
+   */
+  CQ.STAGES = [
+    { id: 'grassland', no: 1, name: 'Grassland', th: 'ทุ่งหญ้า', theme: 'grassland', sections: CQ.LEVEL_SECTIONS }
+  ];
+
+  /** หาสเตจจาก id ถ้าไม่พบคืนสเตจแรก */
+  CQ.getStage = function (id) {
+    for (let i = 0; i < CQ.STAGES.length; i++) {
+      if (CQ.STAGES[i].id === id) return CQ.STAGES[i];
+    }
+    return CQ.STAGES[0];
+  };
+
+  /**
    * แปลงข้อมูลส่วนต่าง ๆ เป็นโครงสร้างด่าน
    * @param {string[][]} sections
    * @param {{staticPlatforms?: boolean}} [opts] staticPlatforms = แปลงรางเป็นแผ่นไม้นิ่ง (ใช้ในตัวตรวจด่าน)
@@ -263,7 +282,8 @@
           case 'S': tiles[i] = TILE.SPRING; break;
           case '~': if (opts.staticPlatforms) tiles[i] = TILE.ONEWAY; break;
           case 'o': lv.coins.push({ tx: tx, ty: ty, x: tx * T + T / 2, y: ty * T + T / 2 }); break;
-          case 's': lv.enemies.push({ tx: tx, ty: ty }); break;
+          case 's': lv.enemies.push({ tx: tx, ty: ty, kind: 'slime' }); break;
+          case 'h': lv.enemies.push({ tx: tx, ty: ty, kind: 'boar' }); break;
           case 'C': lv.checkpoints.push({ tx: tx, ty: ty }); break;
           case 'P':
             if (lv.start) errors.push('พบจุดเริ่มต้น P มากกว่า 1 จุด');

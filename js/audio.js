@@ -123,6 +123,20 @@
       noise(0.1, 0.2, 2500);
     },
     tick: function () { tone(1175, 0.07, { type: 'triangle', vol: 0.28 }); },
+    // หมูป่าสลบ: เสียงกระแทกต่ำ + เสียงหวีดลงแบบมึนงง
+    stun: function () {
+      tone(180, 0.16, { type: 'triangle', vol: 0.35, slide: 60 });
+      noise(0.08, 0.16, 1100);
+      tone(1400, 0.3, { type: 'sine', vol: 0.08, slide: 700, delay: 0.08 });
+    },
+    // Aclaire กันตาย: เสียงโล่แตก
+    guard: function () {
+      tone(1568, 0.22, { type: 'triangle', vol: 0.22, slide: 784 });
+      tone(1047, 0.3, { type: 'triangle', vol: 0.18, delay: 0.06 });
+      noise(0.16, 0.14, 4000);
+    },
+    // Mew เริ่มลอยตัว
+    float: function () { tone(660, 0.22, { type: 'sine', vol: 0.12, slide: 990 }); },
     timeup: function () {
       [784, 659, 523].forEach(function (f, i) { tone(f, 0.16, { type: 'triangle', vol: 0.28, delay: i * 0.13 }); });
       tone(392, 0.6, { vol: 0.12, delay: 0.39 });
