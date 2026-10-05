@@ -124,6 +124,7 @@
       tags.push(s.winner === who ? ['t-win', 'ชนะเป่า · เลือกก่อน'] : ['t-lose', 'แพ้เป่า']);
     }
     if (battle && s.allowed[who] && !s.allowed[who].attack.ok) tags.push(['t-warn', 'ห้ามโจมตี']);
+    if (battle && s.allowed[who] && s.allowed[who].defend.buffed) tags.push(['t-win', 'ป้องกัน +' + fmt(R.GUARD_BONUS)]);
     if (f.healedLastTurn && s.phase !== 'summary' && s.phase !== 'over') tags.push(['t-cd', 'ฟื้นพลังรอ 1 เทิร์น']);
     return tags;
   }
@@ -234,11 +235,13 @@
     }
     s.winner = res > 0 ? 'me' : 'com';
     const loser = res > 0 ? 'com' : 'me';
-    s[loser].losses++;
+    R.recordRps(s[s.winner], s[loser]);
     s.allowed.me = R.allowedActions(s.me, s.winner === 'me' ? 'winner' : 'loser');
     s.allowed.com = R.allowedActions(s.com, s.winner === 'com' ? 'winner' : 'loser');
     render();
-    const noAtk = !s.allowed[loser].attack.ok ? ' · ' + (loser === 'me' ? 'คุณ' : 'COM') + 'แพ้ครั้งแรก ห้ามโจมตี' : '';
+    const noAtk = !s.allowed[loser].attack.ok
+      ? ' · ' + (loser === 'me' ? 'คุณ' : 'COM') + 'แพ้ครั้งแรก ห้ามโจมตี แต่ป้องกันได้ +' + fmt(R.GUARD_BONUS)
+      : '';
     if (res > 0) {
       Sound.sfx.coin();
       say('<b>คุณชนะ!</b> ' + HAND_INFO[s.hands.me].name + ' ชนะ ' + HAND_INFO[s.hands.com].name + ' — ได้เลือก action ก่อน' + noAtk, 'good');
@@ -267,6 +270,7 @@
       let hint = info.hint;
       if (a === 'attack') hint = 'ศัตรู -' + fmt(R.power(s.me, 1)) + ' HP';
       if (a === 'heal') hint = 'ตัวเอง +' + fmt(R.power(s.me, 1)) + ' HP';
+      if (a === 'defend') hint = 'ลดดาเมจ ' + fmt(allowed.defend.block);
       return { icon: info.icon, name: info.name, hint: hint, disabled: !allowed[a].ok, reason: allowed[a].reason, onClick: function () { pickAction(a); } };
     }), 'actions');
   }
@@ -298,10 +302,11 @@
     const foeName = who === 'me' ? 'COM' : 'คุณ';
     switch (me.action) {
       case 'attack':
-        if (me.clash) return name + ' โจมตี';
+        if (me.clash) return name + ' โจมตี (พลังชาร์จ ' + fmt(me.clashPower) + ')';
         return name + ' โจมตี ' + fmt(me.power) + (foe.blocked ? ' → ' + foeName + ' ป้องกันไว้ เสีย ' + fmt(foe.dmg) : ' → ' + foeName + ' เสีย ' + fmt(foe.dmg)) + ' HP';
       case 'defend':
-        return name + ' ป้องกัน' + (me.blocked ? '' : ' (ไม่ถูกโจมตี)');
+        if (!me.blocked) return name + ' ป้องกัน (ไม่ถูกโจมตี)';
+        return name + ' ป้องกัน ลดดาเมจ ' + fmt(me.block) + (me.block > R.DEFEND_BLOCK ? ' (แพ้เป่าครั้งแรก +' + fmt(R.GUARD_BONUS) + ')' : '');
       case 'charge':
         return name + ' ชาร์จพลัง (สะสม ' + s[who].charge + '/' + R.MAX_CHARGE + ')';
       case 'heal':
@@ -310,15 +315,27 @@
     return '';
   }
 
+  /** โจมตีชนกัน: พลังชาร์จหักลบกัน ฝ่ายที่โดนถ้าเป็นผู้เริ่มก่อนลดดาเมจ 0.5 */
+  function clashLine(rep) {
+    const d = rep.a.clashPower - rep.b.clashPower;
+    if (d === 0) return 'โจมตีชนกัน! พลังชาร์จเท่ากัน ไม่มีใครเสีย HP';
+    const strong = d > 0 ? 'คุณ' : 'COM';
+    const weak = d > 0 ? 'COM' : 'คุณ';
+    const hit = d > 0 ? rep.b : rep.a;
+    let line = 'โจมตีชนกัน! ' + strong + ' ชาร์จมากกว่า ' + fmt(Math.abs(d));
+    if (hit.clashGuard) line += ' แต่ ' + weak + ' เริ่มก่อน ลดดาเมจ ' + fmt(R.CLASH_BONUS);
+    return line + (hit.dmg > 0 ? ' → ' + weak + ' เสีย ' + fmt(hit.dmg) + ' HP' : ' → ไม่มีใครเสีย HP');
+  }
+
   function resolveBattle() {
-    const rep = R.resolve(s.me, s.com, s.acts.me, s.acts.com);
+    const rep = R.resolve(s.me, s.com, s.acts.me, s.acts.com, s.winner === 'me' ? 'a' : 'b');
     s.report = rep;
     s.phase = 'summary';
     render();
     pop(ui.me, rep.a.hp - rep.a.hpBefore);
     pop(ui.com, rep.b.hp - rep.b.hpBefore);
     const lines = [lineFor('me', rep.a, rep.b), lineFor('com', rep.b, rep.a)];
-    if (rep.a.clash) lines.push('โจมตีชนกัน! ไม่มีใครเสีย HP');
+    if (rep.a.clash) lines.push(clashLine(rep));
     if (rep.a.dmg > 0 || rep.b.dmg > 0) Sound.sfx.stomp();
     else if (rep.a.blocked || rep.b.blocked || rep.a.clash) Sound.sfx.bonk();
     if (rep.a.heal || rep.b.heal) Sound.sfx.checkpoint();

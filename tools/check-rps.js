@@ -27,25 +27,47 @@ t('เป่ายิ้งฉุบ: กรรไกร>กระดาษ>ค�
   assert.strictEqual(R.judge('rock', 'rock'), 0);
 });
 
-t('โจมตี -1 / โดนป้องกัน -0.5 / โจมตีชนกัน -0', function () {
+// resolve(a, b, actA, actB, winner): winner = ผู้ชนะเป่า ('a' | 'b')
+t('โจมตี -1 / โดนป้องกัน -0.5 / โจมตีชนกันไม่มีชาร์จ -0', function () {
   let [a, b] = pair();
-  R.resolve(a, b, 'attack', 'charge');
+  R.resolve(a, b, 'attack', 'charge', 'a');
   assert.strictEqual(b.hp, 2);
   [a, b] = pair();
-  R.resolve(a, b, 'attack', 'defend');
+  R.resolve(a, b, 'attack', 'defend', 'a');
   assert.strictEqual(b.hp, 2.5);
-  [a, b] = pair({ charge: 2 }, { charge: 1 });
-  R.resolve(a, b, 'attack', 'attack');
+  [a, b] = pair();
+  R.resolve(a, b, 'attack', 'attack', 'a');
   assert.strictEqual(a.hp, 3); assert.strictEqual(b.hp, 3);
+});
+
+t('โจมตีชนกัน: พลังชาร์จหักลบกัน ผู้เริ่มก่อนที่โดนลดดาเมจ 0.5 (ตัวอย่างจากโจทย์)', function () {
+  // ผู้เล่นชาร์จ 2 (=1) COM ชาร์จ 1 (=0.5) ผู้เล่นเริ่มก่อน → COM -0.5
+  let [a, b] = pair({ charge: 2 }, { charge: 1 });
+  let r = R.resolve(a, b, 'attack', 'attack', 'a');
+  assert.strictEqual(b.hp, 2.5); assert.strictEqual(a.hp, 3);
+  assert.strictEqual(r.b.clashGuard, false);
   assert.strictEqual(a.charge, 0); assert.strictEqual(b.charge, 0);
+  // COM เริ่มก่อน → ลดดาเมจ 0.5 ไม่เสีย HP
+  [a, b] = pair({ charge: 2 }, { charge: 1 });
+  r = R.resolve(a, b, 'attack', 'attack', 'b');
+  assert.strictEqual(b.hp, 3); assert.strictEqual(a.hp, 3);
+  assert.strictEqual(r.b.clashGuard, true);
+  // ชาร์จ 3 vs 0 ผู้โดนเริ่มก่อน → 1.5 - 0.5 = 1
+  [a, b] = pair({ charge: 3 }, { charge: 0 });
+  R.resolve(a, b, 'attack', 'attack', 'b');
+  assert.strictEqual(b.hp, 2);
+  // ชาร์จเท่ากัน → -0 ทั้งคู่
+  [a, b] = pair({ charge: 2 }, { charge: 2 });
+  R.resolve(a, b, 'attack', 'attack', 'a');
+  assert.strictEqual(a.hp, 3); assert.strictEqual(b.hp, 3);
 });
 
 t('ชาร์จ +0.5 ต่อครั้ง สูงสุด 3 ใช้หมดเมื่อโจมตี', function () {
   const [a, b] = pair();
-  R.resolve(a, b, 'charge', 'defend');
-  R.resolve(a, b, 'charge', 'defend');
+  R.resolve(a, b, 'charge', 'defend', 'a');
+  R.resolve(a, b, 'charge', 'defend', 'a');
   assert.strictEqual(a.charge, 2);
-  R.resolve(a, b, 'attack', 'charge');
+  R.resolve(a, b, 'attack', 'charge', 'a');
   assert.strictEqual(b.hp, 1); // 1 + 0.5*2
   assert.strictEqual(a.charge, 0);
   const [c] = pair({ charge: 3 });
@@ -54,29 +76,50 @@ t('ชาร์จ +0.5 ต่อครั้ง สูงสุด 3 ใช้�
 
 t('ชาร์จแล้วโจมตีโดนป้องกัน ลดลง 0.5', function () {
   const [a, b] = pair({ charge: 3 });
-  R.resolve(a, b, 'attack', 'defend');
+  R.resolve(a, b, 'attack', 'defend', 'a');
   assert.strictEqual(b.hp, 1); // 2.5 - 0.5
 });
 
 t('ฟื้นพลัง +1 (+ชาร์จ) ไม่เกิน 3 และใช้ติดกันไม่ได้', function () {
   const [a, b] = pair({ hp: 1, charge: 1 });
-  R.resolve(a, b, 'heal', 'defend');
+  R.resolve(a, b, 'heal', 'defend', 'a');
   assert.strictEqual(a.hp, 2.5);
   assert.strictEqual(a.charge, 0);
   assert.strictEqual(R.allowedActions(a, 'winner').heal.ok, false);
-  R.resolve(a, b, 'defend', 'defend');
+  R.resolve(a, b, 'defend', 'defend', 'a');
   assert.strictEqual(R.allowedActions(a, 'winner').heal.ok, true);
-  R.resolve(a, b, 'heal', 'defend');
+  R.resolve(a, b, 'heal', 'defend', 'a');
   assert.strictEqual(a.hp, 3);
 });
 
-t('ผู้แพ้ครั้งแรกโจมตีไม่ได้ ครั้งต่อไปโจมตีได้ ผู้ชนะเลือกได้ทุก action', function () {
-  const f = R.newFighter();
-  f.losses = 1;
-  assert.strictEqual(R.allowedActions(f, 'loser').attack.ok, false);
-  assert.strictEqual(R.allowedActions(f, 'winner').attack.ok, true);
-  f.losses = 2;
-  assert.strictEqual(R.allowedActions(f, 'loser').attack.ok, true);
+t('แพ้เป่าครั้งแรกห้ามโจมตี นับใหม่ทุกครั้งที่ชนะเป่า', function () {
+  const me = R.newFighter(), foe = R.newFighter();
+  R.recordRps(foe, me); // แพ้ครั้งแรก
+  assert.strictEqual(R.allowedActions(me, 'loser').attack.ok, false);
+  assert.strictEqual(R.allowedActions(foe, 'winner').attack.ok, true);
+  R.recordRps(foe, me); // แพ้ติดกันครั้งที่ 2
+  assert.strictEqual(R.allowedActions(me, 'loser').attack.ok, true);
+  R.recordRps(me, foe); // ชนะ → รีเซ็ต
+  assert.strictEqual(me.lossStreak, 0);
+  R.recordRps(foe, me); // แพ้ครั้งแรกอีกรอบ
+  assert.strictEqual(R.allowedActions(me, 'loser').attack.ok, false);
+});
+
+t('แพ้เป่าครั้งแรกแล้วป้องกัน ลดดาเมจได้ 1 (0.5 + buff 0.5)', function () {
+  let [a, b] = pair();
+  R.recordRps(a, b);
+  assert.strictEqual(R.allowedActions(b, 'loser').defend.block, 1);
+  let r = R.resolve(a, b, 'attack', 'defend', 'a');
+  assert.strictEqual(b.hp, 3); assert.strictEqual(r.b.block, 1);
+  [a, b] = pair({ charge: 2 });
+  R.recordRps(a, b);
+  R.resolve(a, b, 'attack', 'defend', 'a');
+  assert.strictEqual(b.hp, 2); // 2 - 1
+  // แพ้ติดกันครั้งที่ 2 ไม่มี buff
+  [a, b] = pair();
+  R.recordRps(a, b); R.recordRps(a, b);
+  R.resolve(a, b, 'attack', 'defend', 'a');
+  assert.strictEqual(b.hp, 2.5);
 });
 
 t('AI ของ COM เลือกเฉพาะ action ที่อนุญาต และเกมจบได้เสมอ', function () {
@@ -90,13 +133,13 @@ t('AI ของ COM เลือกเฉพาะ action ที่อนุญ�
       assert(++round < 500, 'เกมไม่จบ');
       let res = 0;
       while (!res) res = R.judge(R.randomHand(rand), R.randomHand(rand));
-      (res > 0 ? c : p).losses++;
+      if (res > 0) R.recordRps(p, c); else R.recordRps(c, p);
       const ap = R.allowedActions(p, res > 0 ? 'winner' : 'loser');
       const ac = R.allowedActions(c, res > 0 ? 'loser' : 'winner');
       const xp = R.comAction(p, c, ap, ac, rand);
       const xc = R.comAction(c, p, ac, ap, rand);
       assert(ap[xp].ok && ac[xc].ok, 'เลือก action ต้องห้าม');
-      R.resolve(p, c, xp, xc);
+      R.resolve(p, c, xp, xc, res > 0 ? 'a' : 'b');
       assert(p.hp >= 0 && p.hp <= R.MAX_HP && c.hp >= 0 && c.hp <= R.MAX_HP);
     }
     assert(!(p.hp <= 0 && c.hp <= 0), 'แพ้พร้อมกัน');
