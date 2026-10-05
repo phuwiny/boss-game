@@ -92,6 +92,22 @@ t('ฟื้นพลัง +1 (+ชาร์จ) ไม่เกิน 3 แล
   assert.strictEqual(a.hp, 3);
 });
 
+t('เพดานฟื้นพลัง: 3 แล้วลด 0.5 ทุก 3 รอบ ต่ำสุด 1', function () {
+  assert.deepStrictEqual([1, 3, 4, 6, 7, 10, 13, 16, 40].map(R.healCap), [3, 3, 2.5, 2.5, 2, 1.5, 1, 1, 1]);
+  // รอบ 4 เพดาน 2.5: HP 2 ฟื้น +1 ได้แค่ 2.5
+  let [a, b] = pair({ hp: 2 });
+  R.resolve(a, b, 'heal', 'defend', 'a', 4);
+  assert.strictEqual(a.hp, 2.5);
+  // HP ถึงเพดานแล้วฟื้นไม่ได้
+  [a] = pair({ hp: 2.5 });
+  assert.strictEqual(R.allowedActions(a, 'winner', 4).heal.ok, false);
+  assert.strictEqual(R.allowedActions(a, 'winner', 3).heal.ok, true);
+  // HP เกินเพดานอยู่แล้วไม่ถูกลด
+  [a, b] = pair({ hp: 3 });
+  R.resolve(a, b, 'defend', 'charge', 'a', 13);
+  assert.strictEqual(a.hp, 3);
+});
+
 t('แพ้เป่าครั้งแรกห้ามโจมตี นับใหม่ทุกครั้งที่ชนะเป่า', function () {
   const me = R.newFighter(), foe = R.newFighter();
   R.recordRps(foe, me); // แพ้ครั้งแรก
@@ -134,12 +150,12 @@ t('AI ของ COM เลือกเฉพาะ action ที่อนุญ�
       let res = 0;
       while (!res) res = R.judge(R.randomHand(rand), R.randomHand(rand));
       if (res > 0) R.recordRps(p, c); else R.recordRps(c, p);
-      const ap = R.allowedActions(p, res > 0 ? 'winner' : 'loser');
-      const ac = R.allowedActions(c, res > 0 ? 'loser' : 'winner');
+      const ap = R.allowedActions(p, res > 0 ? 'winner' : 'loser', round);
+      const ac = R.allowedActions(c, res > 0 ? 'loser' : 'winner', round);
       const xp = R.comAction(p, c, ap, ac, rand);
       const xc = R.comAction(c, p, ac, ap, rand);
       assert(ap[xp].ok && ac[xc].ok, 'เลือก action ต้องห้าม');
-      R.resolve(p, c, xp, xc, res > 0 ? 'a' : 'b');
+      R.resolve(p, c, xp, xc, res > 0 ? 'a' : 'b', round);
       assert(p.hp >= 0 && p.hp <= R.MAX_HP && c.hp >= 0 && c.hp <= R.MAX_HP);
     }
     assert(!(p.hp <= 0 && c.hp <= 0), 'แพ้พร้อมกัน');
