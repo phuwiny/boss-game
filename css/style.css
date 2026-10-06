@@ -466,6 +466,8 @@ h1 {
   white-space: nowrap;
 }
 
+.rps-round:not([data-cap=""])::after { content: ' · ' attr(data-cap); color: #ffd23f; }
+
 .rps-phases {
   display: flex;
   justify-content: center;
