@@ -439,6 +439,123 @@ h1 {
 
 .mg-btn-rain { background: #fff4cc; color: #6b4500; box-shadow: inset 0 -4px 0 #f0d27a; }
 
+.mg-btn-memory { background: #e8f4ff; color: #1f4f8a; box-shadow: inset 0 -4px 0 #b9d8f5; }
+
+/* ── มินิเกม: Memory Match ─────────────────────────────── */
+.card-memory { position: relative; width: min(620px, 100%); padding: 14px 16px; display: flex; flex-direction: column; }
+.card-memory.playing { height: 100%; overflow: hidden; }
+.card-memory .rps-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mem-time {
+  min-width: 4.6em;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+.mem-time:empty { display: none; }
+.mem-how { margin: 10px 0 6px; font-size: 15.5px; }
+.mem-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.mem-level { flex-direction: column; gap: 0; max-width: none; min-height: 84px; margin: 0; padding: 8px 4px; line-height: 1.25; }
+.mem-level b { font-size: 19px; font-weight: 800; }
+.mem-level span { font-size: 13px; font-weight: 400; }
+.mem-level small { margin-top: 2px; font-size: 11.5px; font-weight: 400; opacity: 0.85; }
+.mem-play { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mem-bar { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0; font-size: 15px; color: var(--muted); }
+.mem-bar b { color: var(--navy); font-variant-numeric: tabular-nums; }
+.mem-peek {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #e5f1ff;
+  color: #2a5fa8;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: inset 0 -2px 0 #bcd6f2;
+}
+.mem-peek:disabled { opacity: 0.45; cursor: default; }
+.mem-board {
+  --cols: 4;
+  --cw: 70px;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cw));
+  grid-auto-rows: calc(var(--cw) * 1.25);
+  gap: 8px;
+  justify-content: center;
+  align-content: center;
+  perspective: 800px;
+}
+.mem-card {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.mem-card:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 12px; }
+.mem-card:disabled { cursor: default; }
+.mem-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.28s ease;
+}
+.mem-card.up .mem-inner, .mem-card.matched .mem-inner { transform: rotateY(180deg); }
+.mem-back, .mem-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.mem-back {
+  background:
+    radial-gradient(circle at 50% 50%, #ffd23f 0 18%, #d48a00 19% 22%, transparent 23%),
+    repeating-linear-gradient(45deg, #ff7a4d 0 8px, #ff6a3d 8px 16px);
+  box-shadow: inset 0 -4px 0 var(--orange-dark), inset 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+.mem-face {
+  transform: rotateY(180deg);
+  background: #fffaf0;
+  box-shadow: inset 0 -4px 0 #ead9b5, inset 0 0 0 2px #f2e3c2;
+}
+.mem-card.matched .mem-face { background: #eaffe6; box-shadow: inset 0 -4px 0 #a9e09c, inset 0 0 0 2px #7fd06b; }
+.mem-emoji { font-size: calc(var(--cw) * 0.52); line-height: 1; }
+.mem-svg { display: block; width: 62%; }
+.mem-svg svg { display: block; width: 100%; height: auto; }
+.mem-hero { display: block; width: auto; height: calc(var(--cw) * 0.95); max-width: 90%; object-fit: contain; image-rendering: pixelated; }
+.mem-card.pop .mem-face { animation: mem-pop 0.35s ease-out; }
+.mem-card.shake { animation: mem-shake 0.3s; }
+@keyframes mem-pop { 50% { transform: rotateY(180deg) scale(1.12); } }
+@keyframes mem-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.mem-msg { min-height: 1.5em; margin: 8px 0 0; font-size: 15px; color: var(--muted); }
+.mem-msg.good { color: #2f8f3a; font-weight: 600; }
+.mem-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.86);
+  overflow-y: auto;
+}
+.mem-result-box { width: min(340px, 100%); }
+.mem-result .screen-title { margin-bottom: 4px; }
+.mem-stars { font-size: 38px; line-height: 1.1; color: var(--gold); text-shadow: 0 2px 0 #d48a00; letter-spacing: 4px; }
+
 /* ── มินิเกม: Coin Rain (เต็มจอ) ─────────────────────────── */
 .screen-rain {
   display: block;
@@ -1076,6 +1193,9 @@ body.touch .only-desktop { display: none; }
   .char-info { align-items: flex-start; }
   .char-desc { min-height: 0; }
   .card-rps { padding: 12px 10px; }
+  .card-memory { padding: 12px 10px; }
+  .card-memory .rps-title { font-size: 19px; }
+  .mem-level b { font-size: 17px; }
   .rps-arena { gap: 4px; }
   .rps-vs { font-size: 15px; }
   .rps-controls.actions { grid-template-columns: repeat(2, 1fr); }
@@ -1097,4 +1217,6 @@ body.touch .only-desktop { display: none; }
   .logo { animation: none; }
   .card { animation: none; }
   .rps-slot.shake, .rps-slot.flip { animation: none; }
+  .mem-inner { transition: none; }
+  .mem-card.pop .mem-face, .mem-card.shake { animation: none; }
 }

@@ -45,6 +45,7 @@
     minigames: $('screen-minigames'),
     rps: $('screen-rps'),
     rain: $('screen-rain'),
+    memory: $('screen-memory'),
     titleDay: $('title-day'),
     titleCharPreview: $('title-char-preview'),
     titleCharName: $('title-char-name'),
@@ -70,7 +71,7 @@
   };
 
   let g = null;
-  let state = 'title'; // title | chars | minigames | rps | rain | playing | paused | cleared | won
+  let state = 'title'; // title | chars | minigames | rps | rain | memory | playing | paused | cleared | won
   let pendingJump = false;
   let lastTime = performance.now();
   let acc = 0;
@@ -916,9 +917,10 @@
 
   // ── มินิเกม ──────────────────────────────────────────────────
   function openMinigames() {
-    if (state !== 'title' && state !== 'rps' && state !== 'rain') return;
+    if (state !== 'title' && state !== 'rps' && state !== 'rain' && state !== 'memory') return;
     if (state === 'rps') CQ.RPS.stop();
     if (state === 'rain') CQ.Rain.stop();
+    if (state === 'memory') CQ.Memory.stop();
     state = 'minigames';
     setScreen(ui.minigames);
   }
@@ -944,16 +946,23 @@
     CQ.Rain.start(charId);
   }
 
+  function startMemory() {
+    if (state !== 'minigames') return;
+    state = 'memory';
+    setScreen(ui.memory);
+    CQ.Memory.start(charId);
+  }
+
   // ── หน้าจอและสถานะ ─────────────────────────────────────────────
   function setScreen(el) {
-    [ui.title, ui.chars, ui.minigames, ui.rps, ui.rain, ui.pause, ui.win].forEach(function (s) { s.hidden = s !== el; });
+    [ui.title, ui.chars, ui.minigames, ui.rps, ui.rain, ui.memory, ui.pause, ui.win].forEach(function (s) { s.hidden = s !== el; });
     document.body.classList.toggle('overlay', !!el);
     const focusBtn = el && visiblePrimary(el);
     if (focusBtn) setTimeout(function () { try { focusBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 30);
   }
 
   function currentScreen() {
-    return [ui.title, ui.chars, ui.minigames, ui.rps, ui.rain, ui.pause, ui.win].find(function (s) { return !s.hidden; }) || null;
+    return [ui.title, ui.chars, ui.minigames, ui.rps, ui.rain, ui.memory, ui.pause, ui.win].find(function (s) { return !s.hidden; }) || null;
   }
 
   /** ปุ่มหลักของหน้าที่มองเห็นอยู่ (ข้ามปุ่มในส่วนที่ซ่อน เช่นหน้าซ้อนของ Coin Rain) */
@@ -1147,6 +1156,7 @@
     }
 
     if (state === 'rain') CQ.Rain.frame(dt, inp);
+    else if (state === 'memory') CQ.Memory.frame(dt);
 
     if (state === 'cleared') {
       g.clearT += dt;
@@ -1239,7 +1249,7 @@
     Input.bindTouch($('touch'));
     // Space / Enter / ปุ่ม A ของจอย: กดปุ่มที่ focus อยู่ ถ้าไม่มีกดปุ่มหลักของหน้านั้น
     Input.on('confirm', function () {
-      if (state !== 'title' && state !== 'chars' && state !== 'minigames' && state !== 'rps' && state !== 'rain' && state !== 'won') return;
+      if (state !== 'title' && state !== 'chars' && state !== 'minigames' && state !== 'rps' && state !== 'rain' && state !== 'memory' && state !== 'won') return;
       if (state === 'won' && clock - winShownAt < 0.8) return;
       if (state === 'rain' && CQ.Rain.playing) return;
       const scr = currentScreen();
@@ -1255,6 +1265,7 @@
       else if (state === 'minigames') closeMinigames();
       else if (state === 'rps') openMinigames();
       else if (state === 'rain' && !CQ.Rain.escape()) openMinigames();
+      else if (state === 'memory' && !CQ.Memory.escape()) openMinigames();
     });
 
     buildCharCards();
@@ -1271,6 +1282,9 @@
     CQ.RPS.init({ onExit: openMinigames });
     bindButton('btn-mg-rain', startRain);
     CQ.Rain.init({ onExit: openMinigames });
+    bindButton('btn-mg-memory', startMemory);
+    bindButton('btn-mem-exit', openMinigames);
+    CQ.Memory.init({ onExit: openMinigames });
     bindButton('btn-again', function () { startGame(); });
     bindButton('btn-win-home', goTitle);
     bindButton('btn-resume', resumeGame);
