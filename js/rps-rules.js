@@ -15,11 +15,7 @@
   const DEFEND_BLOCK = 0.5; // โจมตีโดนป้องกัน: ดาเมจลดลง 0.5 (โจมตีปกติจึงเหลือ -0.5)
   const GUARD_BONUS = 0.5;  // แพ้เป่าครั้งแรกแล้วป้องกัน: ลดดาเมจเพิ่มอีก 0.5
   const CLASH_BONUS = 0.5;  // โจมตีชนกัน: ฝ่ายที่เริ่มก่อน (ชนะเป่า) ลดดาเมจที่ได้รับ 0.5
-  const HEAL_HP = 1;
-  // เพดาน HP ที่ฟื้นพลังได้: เริ่มที่ 3 แล้วลด 0.5 ทุก 3 รอบ ต่ำสุด 1 (กันเกมยืดเยื้อ)
-  const HEAL_CAP_EVERY = 3;
-  const HEAL_CAP_STEP = 0.5;
-  const HEAL_CAP_MIN = 1;
+  const HEAL_HP = 1;        // ฟื้นพลัง +1 เสมอ บวกชาร์จ 0.5 ต่อเกจ (สูงสุด +1.5) ไม่เกิน MAX_HP
 
   const HANDS = ['scissors', 'paper', 'rock'];
   const BEATS = { scissors: 'paper', paper: 'rock', rock: 'scissors' };
@@ -51,27 +47,20 @@
     return DEFEND_BLOCK + (isFirstLoss(f, role) ? GUARD_BONUS : 0);
   }
 
-  /** เพดาน HP ที่ฟื้นพลังได้ในรอบที่ round (เริ่มที่ 1) */
-  function healCap(round) {
-    const steps = Math.floor(Math.max(0, (round || 1) - 1) / HEAL_CAP_EVERY);
-    return Math.max(HEAL_CAP_MIN, MAX_HP - steps * HEAL_CAP_STEP);
-  }
-
   /**
    * action ที่เลือกได้ในเฟสต่อสู้ คืน { attack: { ok, reason }, ... }
    * role = 'winner' | 'loser' (ผลเป่ายิ้งฉุบรอบนี้; ต้องเรียก recordRps ก่อน)
    * defend.block = ดาเมจที่ป้องกันได้
    */
-  function allowedActions(f, role, round) {
+  function allowedActions(f, role) {
     const out = {};
     const firstLoss = isFirstLoss(f, role);
     out.attack = firstLoss ? { ok: false, reason: 'แพ้ครั้งแรก ห้ามโจมตี' } : { ok: true };
     out.defend = { ok: true, block: defendBlock(f, role), buffed: firstLoss };
     out.charge = f.charge >= MAX_CHARGE ? { ok: false, reason: 'ชาร์จเต็มแล้ว' } : { ok: true };
-    const cap = healCap(round);
-    if (f.healedLastTurn) out.heal = { ok: false, reason: 'ต้องพัก 1 เทิร์น', cap: cap };
-    else if (f.hp >= cap) out.heal = { ok: false, reason: 'HP ถึงเพดาน ' + cap, cap: cap };
-    else out.heal = { ok: true, cap: cap };
+    if (f.healedLastTurn) out.heal = { ok: false, reason: 'ต้องพัก 1 เทิร์น' };
+    else if (f.hp >= MAX_HP) out.heal = { ok: false, reason: 'HP เต็มแล้ว' };
+    else out.heal = { ok: true };
     return out;
   }
 
@@ -81,11 +70,10 @@
 
   /**
    * คิดผลเฟสต่อสู้ (ทั้งสองฝ่ายเกิดพร้อมกัน) แล้วแก้ค่าใน a, b
-   * winner = 'a' | 'b' ฝ่ายที่ชนะเป่ายิ้งฉุบรอบนี้ (เริ่มก่อน), round = รอบปัจจุบัน (ใช้คิดเพดานฟื้นพลัง)
+   * winner = 'a' | 'b' ฝ่ายที่ชนะเป่ายิ้งฉุบรอบนี้ (เริ่มก่อน)
    * คืน { a: report, b: report } โดย report = { action, power, dmg, heal, blocked, block, clash, clashPower, clashGuard, hpBefore, hp }
    */
-  function resolve(a, b, actA, actB, winner, round) {
-    const cap = healCap(round);
+  function resolve(a, b, actA, actB, winner) {
     const roleA = winner === 'a' ? 'winner' : 'loser';
     const roleB = winner === 'b' ? 'winner' : 'loser';
     const ra = { action: actA, power: 0, dmg: 0, heal: 0, blocked: false, block: 0, clash: false, clashPower: 0, clashGuard: false, hpBefore: a.hp };
@@ -122,9 +110,9 @@
         ra.dmg = Math.max(0, rb.power - ra.block);
       }
     }
-    // ฟื้นพลังได้ไม่เกินเพดานของรอบนี้
-    if (actA === 'heal') ra.heal = Math.max(0, Math.min(ra.power, cap - a.hp));
-    if (actB === 'heal') rb.heal = Math.max(0, Math.min(rb.power, cap - b.hp));
+    // ฟื้นพลังได้ไม่เกิน HP สูงสุด
+    if (actA === 'heal') ra.heal = Math.max(0, Math.min(ra.power, MAX_HP - a.hp));
+    if (actB === 'heal') rb.heal = Math.max(0, Math.min(rb.power, MAX_HP - b.hp));
 
     [[a, ra], [b, rb]].forEach(function (p) {
       const f = p[0], r = p[1];
@@ -157,7 +145,7 @@
         (foeAtk ? (me.charge - foe.charge) * 0.8 : 0), // ถ้าอีกฝ่ายโจมตีด้วย ชาร์จมากกว่าได้เปรียบตอนชนกัน
       defend: foeAtk ? 1.5 + foe.charge * 1.5 + (me.hp <= foeAtk ? 3 : 0) + (block > DEFEND_BLOCK ? 1.5 : 0) : 0,
       charge: 2.5 - me.charge * 0.6 + (foeAtk ? 0 : 1),
-      heal: Math.max(0, (myAllowed.heal.cap || MAX_HP) - me.hp) * 2.2 + me.charge * 0.5
+      heal: (MAX_HP - me.hp) * 2.2 + me.charge * 0.5
     };
     let total = 0;
     ACTIONS.forEach(function (k) {
@@ -180,7 +168,6 @@
     DEFEND_BLOCK: DEFEND_BLOCK,
     GUARD_BONUS: GUARD_BONUS,
     CLASH_BONUS: CLASH_BONUS,
-    healCap: healCap,
     HANDS: HANDS,
     ACTIONS: ACTIONS,
     judge: judge,
