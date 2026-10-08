@@ -44,6 +44,7 @@
     win: $('screen-win'),
     minigames: $('screen-minigames'),
     rps: $('screen-rps'),
+    rain: $('screen-rain'),
     titleDay: $('title-day'),
     titleCharPreview: $('title-char-preview'),
     titleCharName: $('title-char-name'),
@@ -69,7 +70,7 @@
   };
 
   let g = null;
-  let state = 'title'; // title | chars | minigames | rps | playing | paused | cleared | won
+  let state = 'title'; // title | chars | minigames | rps | rain | playing | paused | cleared | won
   let pendingJump = false;
   let lastTime = performance.now();
   let acc = 0;
@@ -915,8 +916,9 @@
 
   // ── มินิเกม ──────────────────────────────────────────────────
   function openMinigames() {
-    if (state !== 'title' && state !== 'rps') return;
+    if (state !== 'title' && state !== 'rps' && state !== 'rain') return;
     if (state === 'rps') CQ.RPS.stop();
+    if (state === 'rain') CQ.Rain.stop();
     state = 'minigames';
     setScreen(ui.minigames);
   }
@@ -935,16 +937,30 @@
     CQ.RPS.start(charId);
   }
 
+  function startRain() {
+    if (state !== 'minigames') return;
+    state = 'rain';
+    setScreen(ui.rain);
+    CQ.Rain.start(charId);
+  }
+
   // ── หน้าจอและสถานะ ─────────────────────────────────────────────
   function setScreen(el) {
-    [ui.title, ui.chars, ui.minigames, ui.rps, ui.pause, ui.win].forEach(function (s) { s.hidden = s !== el; });
+    [ui.title, ui.chars, ui.minigames, ui.rps, ui.rain, ui.pause, ui.win].forEach(function (s) { s.hidden = s !== el; });
     document.body.classList.toggle('overlay', !!el);
-    const focusBtn = el && el.querySelector('.btn-primary');
+    const focusBtn = el && visiblePrimary(el);
     if (focusBtn) setTimeout(function () { try { focusBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 30);
   }
 
   function currentScreen() {
-    return [ui.title, ui.chars, ui.minigames, ui.rps, ui.pause, ui.win].find(function (s) { return !s.hidden; }) || null;
+    return [ui.title, ui.chars, ui.minigames, ui.rps, ui.rain, ui.pause, ui.win].find(function (s) { return !s.hidden; }) || null;
+  }
+
+  /** ปุ่มหลักของหน้าที่มองเห็นอยู่ (ข้ามปุ่มในส่วนที่ซ่อน เช่นหน้าซ้อนของ Coin Rain) */
+  function visiblePrimary(scr) {
+    const list = scr.querySelectorAll('.btn-primary');
+    for (let i = 0; i < list.length; i++) if (!list[i].closest('[hidden]')) return list[i];
+    return null;
   }
 
   /** mode = 'normal' | 'timed' ไม่ระบุ = เล่นโหมดเดิมซ้ำ */
@@ -1130,6 +1146,8 @@
       navPrev = nav;
     }
 
+    if (state === 'rain') CQ.Rain.frame(dt, inp);
+
     if (state === 'cleared') {
       g.clearT += dt;
       if (g.clearT > 1.9) showWin();
@@ -1142,9 +1160,11 @@
     if (wantTempo !== tempo) { tempo = wantTempo; Sound.setTempo(tempo); }
 
     updateEffects(dt);
-    const face = g.deathAnim ? g.deathAnim.face : g.player.face;
-    renderer.updateCamera(focusPoint(), face, dt, false);
-    renderer.render(g, clock);
+    if (state !== 'rain') { // Coin Rain วาดบน canvas ของตัวเองเต็มจอ ไม่ต้องวาดฉากเกมหลักด้านหลัง
+      const face = g.deathAnim ? g.deathAnim.face : g.player.face;
+      renderer.updateCamera(focusPoint(), face, dt, false);
+      renderer.render(g, clock);
+    }
     drawMenuPreviews();
     requestAnimationFrame(frame);
   }
@@ -1219,12 +1239,13 @@
     Input.bindTouch($('touch'));
     // Space / Enter / ปุ่ม A ของจอย: กดปุ่มที่ focus อยู่ ถ้าไม่มีกดปุ่มหลักของหน้านั้น
     Input.on('confirm', function () {
-      if (state !== 'title' && state !== 'chars' && state !== 'minigames' && state !== 'rps' && state !== 'won') return;
+      if (state !== 'title' && state !== 'chars' && state !== 'minigames' && state !== 'rps' && state !== 'rain' && state !== 'won') return;
       if (state === 'won' && clock - winShownAt < 0.8) return;
+      if (state === 'rain' && CQ.Rain.playing) return;
       const scr = currentScreen();
       if (!scr) return;
       const el = document.activeElement;
-      const target = el && el.tagName === 'BUTTON' && !el.disabled && scr.contains(el) ? el : scr.querySelector('.btn-primary');
+      const target = el && el.tagName === 'BUTTON' && !el.disabled && scr.contains(el) && !el.closest('[hidden]') ? el : visiblePrimary(scr);
       if (target) target.click();
     });
     Input.on('pause', function () {
@@ -1233,6 +1254,7 @@
       else if (state === 'chars') closeChars();
       else if (state === 'minigames') closeMinigames();
       else if (state === 'rps') openMinigames();
+      else if (state === 'rain' && !CQ.Rain.escape()) openMinigames();
     });
 
     buildCharCards();
@@ -1247,6 +1269,8 @@
     bindButton('btn-mg-rps', startRps);
     bindButton('btn-rps-exit', openMinigames);
     CQ.RPS.init({ onExit: openMinigames });
+    bindButton('btn-mg-rain', startRain);
+    CQ.Rain.init({ onExit: openMinigames });
     bindButton('btn-again', function () { startGame(); });
     bindButton('btn-win-home', goTitle);
     bindButton('btn-resume', resumeGame);
@@ -1259,7 +1283,11 @@
     else ui.btnFullscreen.hidden = true;
     refreshToggles();
 
-    document.addEventListener('visibilitychange', function () { if (document.hidden) pauseGame(); });
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) return;
+      pauseGame();
+      if (state === 'rain') CQ.Rain.pause();
+    });
     document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     document.addEventListener('dblclick', function (e) { e.preventDefault(); });
     window.addEventListener('resize', resize);

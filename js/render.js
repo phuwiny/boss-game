@@ -1714,6 +1714,9 @@
     ctx.drawImage(fr.c, Math.round(W / 2) - fr.ax * k, base - (fr.h - 1) * k, fr.w * k, fr.h * k);
   };
 
+  /** frame ของตัวละคร { c: canvas 1 พิกเซลต่อ art px, w, h, ax } ใช้วาดในมินิเกม */
+  CQ.heroFrame = function (id, pose) { return heroFrame(id, pose, null); };
+
   Renderer.prototype.drawParticles = function (list) {
     const ctx = this.ctx;
     for (let i = 0; i < list.length; i++) {

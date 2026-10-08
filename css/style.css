@@ -437,6 +437,135 @@ h1 {
 .mg-btn-text b { font-size: 19px; font-weight: 800; }
 .mg-btn-text span { font-size: 13px; font-weight: 400; opacity: 0.9; }
 
+.mg-btn-rain { background: #fff4cc; color: #6b4500; box-shadow: inset 0 -4px 0 #f0d27a; }
+
+/* ── มินิเกม: Coin Rain (เต็มจอ) ─────────────────────────── */
+.screen-rain {
+  display: block;
+  padding: 0;
+  background: #7fb6f0;
+  touch-action: none;
+}
+.rain-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+.rain-hud {
+  position: absolute;
+  top: calc(10px + var(--safe-t));
+  left: calc(10px + var(--safe-l));
+  right: calc(10px + var(--safe-r));
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+}
+.rain-hud[hidden] { display: none; }
+.rain-pause-btn {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(16, 28, 52, 0.55);
+  color: #fff;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.rain-pause-btn svg { width: 24px; height: 24px; }
+.rain-pause-btn.off { visibility: hidden; }
+.rain-pause-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.rain-scorebox {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(16, 28, 52, 0.55);
+}
+.rain-score { font-size: 38px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rain-mult { min-height: 1.2em; margin-top: 4px; font-size: 16px; font-weight: 600; }
+.rain-mult.hot { color: var(--gold); font-size: 20px; font-weight: 800; }
+.rain-hearts {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 46px;
+  justify-content: flex-end;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(16, 28, 52, 0.55);
+}
+.rain-heart { display: block; width: 24px; height: 21px; color: #ff4d6a; }
+.rain-heart svg { width: 100%; height: 100%; fill: currentColor; display: block; }
+.rain-heart.empty { color: rgba(255, 255, 255, 0.25); }
+.rain-guard { font-size: 18px; line-height: 1; }
+.rain-guard.used { opacity: 0.3; filter: grayscale(1); }
+
+.rain-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(12px + var(--safe-t)) calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l));
+  touch-action: pan-y;
+}
+.rain-overlay[hidden] { display: none; }
+.card-rain { padding: 20px 18px 14px; }
+.card-rain .screen-title { margin-bottom: 6px; }
+.rain-how { margin: 0 0 8px; font-size: 15.5px; color: var(--ink); }
+.rain-how kbd {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #eef0f5;
+  box-shadow: inset 0 -2px 0 #d3d8e2;
+  font: inherit;
+  font-size: 13px;
+}
+.rain-legend {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 10px;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #f4f6fa;
+  list-style: none;
+  text-align: left;
+  font-size: 14.5px;
+  color: var(--navy);
+}
+.rain-legend span { display: inline-block; width: 1.4em; text-align: center; }
+.rain-tip { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
+.rain-perk { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--orange-dark); }
+.rain-best { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+.rain-new {
+  display: inline-block;
+  margin: 0 0 4px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #6b4500;
+  font-weight: 800;
+}
+.rain-final { font-size: 18px; font-weight: 600; color: var(--navy); }
+.rain-final b { font-size: 54px; font-weight: 800; color: var(--orange); text-shadow: 0 3px 0 var(--orange-dark); }
+.rain-stats { margin: 4px 0 0; font-size: 14px; color: var(--ink); }
+
+@media (max-height: 420px) {
+  .rain-score { font-size: 30px; }
+  .rain-tip { display: none; }
+}
+
 /* ── มินิเกม: เป่า-ยิ้ง-ฉุบ Battle ──────────────────────── */
 .card-rps { width: min(620px, 100%); padding: 14px 18px 14px; }
 .rps-top { display: flex; align-items: center; gap: 8px; }
