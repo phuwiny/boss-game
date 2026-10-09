@@ -131,9 +131,11 @@ body.touch .icon-btn { --p: max(var(--hud-px), 2.6px); }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ── ปุ่มสัมผัส ──────────────────────────────────────── */
+/* บนจอสัมผัสวางปุ่มไว้ตลอด (ซ่อนด้วย visibility) เพื่อให้ main.js วัดความสูงปุ่มไปคำนวณการซูมได้ */
 #touch { display: none; }
-body.touch.in-game #touch { display: block; }
-body.overlay #touch { display: none; }
+body.touch #touch { display: block; visibility: hidden; }
+body.touch.in-game #touch { visibility: visible; }
+body.touch.overlay #touch { visibility: hidden; }
 
 .pad {
   position: fixed;
