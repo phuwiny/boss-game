@@ -1084,6 +1084,9 @@ kbd {
 body.touch .only-touch { display: block; }
 body.touch .only-desktop { display: none; }
 
+/* ลิงก์ไปหน้าคู่มือ (manual.html) */
+.btn-manual { margin-top: 10px; min-height: 40px; font-size: 16px; text-decoration: none; }
+
 .rotate-hint { display: none; margin: 12px 0 0; font-size: 14px; color: var(--muted); }
 @media (orientation: portrait) {
   body.touch .rotate-hint { display: block; }
