@@ -107,7 +107,7 @@
       </div>
 
       <button class="btn btn-minigames" id="btn-minigames" type="button">
-        <span class="mg-icons" aria-hidden="true">✊✋✌️</span>
+        <span class="mg-icons" aria-hidden="true">✊🪙🃏</span>
         มินิเกมอื่นๆ
         <span class="new-badge">ใหม่</span>
       </button>
@@ -210,6 +210,20 @@
           <span>ดวลกับ COM ฝ่ายละ 3 หัวใจ ชนะเป่าได้เลือกท่าก่อน</span>
         </span>
       </button>
+      <button class="btn mg-btn mg-btn-rain" id="btn-mg-rain" type="button">
+        <span class="mg-btn-icon" aria-hidden="true">🪙</span>
+        <span class="mg-btn-text">
+          <b>Coin Rain</b>
+          <span>ลากนิ้วเก็บเหรียญที่ตกจากฟ้า หลบหิน เล่นคนเดียว</span>
+        </span>
+      </button>
+      <button class="btn mg-btn mg-btn-memory" id="btn-mg-memory" type="button">
+        <span class="mg-btn-icon" aria-hidden="true">🃏</span>
+        <span class="mg-btn-text">
+          <b>Memory Match</b>
+          <span>เปิดการ์ดจับคู่ให้ครบเร็วที่สุด เล่นสบาย ๆ 3 ระดับ</span>
+        </span>
+      </button>
       <button class="btn btn-ghost" id="btn-mg-back" type="button">กลับหน้าแรก</button>
     </div>
   </section>
@@ -250,6 +264,103 @@
     </div>
   </section>
 
+  <!-- มินิเกม: Coin Rain (js/rain.js) -->
+  <section class="screen screen-rain" id="screen-rain" hidden aria-labelledby="rain-heading">
+    <canvas class="rain-canvas" id="rain-canvas" aria-label="พื้นที่เล่น Coin Rain"></canvas>
+    <div class="rain-hud" id="rain-hud" hidden>
+      <button class="rain-pause-btn" id="btn-rain-pause" type="button" aria-label="หยุดชั่วคราว">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg>
+      </button>
+      <div class="rain-scorebox" role="status" aria-live="off">
+        <b class="rain-score" id="rain-score">0</b>
+        <span class="rain-mult" id="rain-mult"></span>
+      </div>
+      <div class="rain-hearts" id="rain-hearts" role="img"></div>
+    </div>
+
+    <div class="rain-overlay" id="rain-ready">
+      <div class="card card-sm card-rain">
+        <h2 class="screen-title" id="rain-heading">🪙 Coin Rain</h2>
+        <p class="rain-how">ลากนิ้วซ้าย-ขวาบนจอ (หรือกด <kbd>←</kbd> <kbd>→</kbd>) ให้ตัวละครรับของที่ตกลงมา</p>
+        <ul class="rain-legend">
+          <li><span aria-hidden="true">🪙</span> เหรียญ +1</li>
+          <li><span aria-hidden="true">💎</span> เพชร +5</li>
+          <li><span aria-hidden="true">❤️</span> หัวใจ +1</li>
+          <li><span aria-hidden="true">🪨</span> หิน −1 หัวใจ</li>
+        </ul>
+        <p class="rain-tip">เก็บต่อเนื่องทุก 10 ชิ้น ตัวคูณแต้ม +1 (สูงสุด x5) ปล่อยเหรียญตกพื้นคอมโบขาด ยิ่งนานของยิ่งตกเร็ว</p>
+        <p class="rain-perk" id="rain-perk"></p>
+        <p class="rain-best" id="rain-ready-best" hidden></p>
+        <button class="btn btn-primary" id="btn-rain-start" type="button">เริ่มเล่น</button>
+        <button class="btn btn-ghost" id="btn-rain-back" type="button">กลับเมนูมินิเกม</button>
+      </div>
+    </div>
+
+    <div class="rain-overlay" id="rain-pause" hidden>
+      <div class="card card-sm card-rain">
+        <h2 class="screen-title">หยุดชั่วคราว</h2>
+        <button class="btn btn-primary" id="btn-rain-resume" type="button">เล่นต่อ</button>
+        <button class="btn" id="btn-rain-restart" type="button">เริ่มใหม่</button>
+        <button class="btn btn-ghost" id="btn-rain-quit" type="button">กลับเมนูมินิเกม</button>
+      </div>
+    </div>
+
+    <div class="rain-overlay" id="rain-over" hidden>
+      <div class="card card-sm card-rain">
+        <h2 class="screen-title">จบเกม!</h2>
+        <p class="rain-new" id="rain-over-new" hidden>สถิติใหม่!</p>
+        <div class="rain-final"><b id="rain-over-score">0</b> แต้ม</div>
+        <p class="rain-stats" id="rain-over-stats"></p>
+        <p class="rain-best">สถิติดีที่สุด: <b id="rain-over-best">-</b></p>
+        <button class="btn btn-primary" id="btn-rain-again" type="button">เล่นอีกครั้ง</button>
+        <button class="btn btn-ghost" id="btn-rain-home" type="button">กลับเมนูมินิเกม</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- มินิเกม: Memory Match (js/memory.js) -->
+  <section class="screen" id="screen-memory" hidden aria-labelledby="mem-heading">
+    <div class="card card-memory" id="mem-card">
+      <div class="rps-top">
+        <button class="rps-exit" id="btn-mem-exit" type="button" aria-label="ออกจากมินิเกม">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5.5 8.5 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>ออก
+        </button>
+        <h2 class="rps-title" id="mem-heading">Memory Match</h2>
+        <span class="mem-time" id="mem-time" aria-live="off"></span>
+      </div>
+
+      <div class="mem-setup" id="mem-setup">
+        <p class="mem-how">แตะการ์ดเพื่อเปิดทีละ 2 ใบ ภาพตรงกัน = จับคู่ได้ ไม่ตรง = คว่ำกลับ จับให้ครบทุกคู่เร็วที่สุด</p>
+        <p class="rain-perk" id="mem-perk"></p>
+        <div class="mem-levels" id="mem-levels" role="group" aria-label="เลือกระดับ"></div>
+      </div>
+
+      <div class="mem-play" id="mem-play" hidden>
+        <div class="mem-bar">
+          <span>เปิด <b id="mem-moves">0</b> ครั้ง</span>
+          <span>คู่ <b id="mem-pairs">0/0</b></span>
+          <button class="mem-peek" id="btn-mem-peek" type="button" hidden>👁️ ส่องดู</button>
+        </div>
+        <div class="mem-board" id="mem-board"></div>
+        <p class="mem-msg" id="mem-msg" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="mem-result" id="mem-result" hidden>
+        <div class="mem-result-box">
+          <h3 class="screen-title">เก็บครบทุกคู่!</h3>
+          <p class="rain-new" id="mem-res-new" hidden>สถิติใหม่!</p>
+          <div class="mem-stars" id="mem-res-stars" role="img"></div>
+          <div class="rain-final"><b id="mem-res-time">0:00.0</b></div>
+          <p class="rain-stats" id="mem-res-sub"></p>
+          <p class="rain-best">สถิติดีที่สุด: <b id="mem-res-best">-</b></p>
+          <button class="btn btn-primary" id="btn-mem-again" type="button">เล่นอีกครั้ง</button>
+          <button class="btn" id="btn-mem-levels" type="button">เปลี่ยนระดับ</button>
+          <button class="btn btn-ghost" id="btn-mem-home" type="button">กลับเมนูมินิเกม</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <noscript><p class="noscript">เกมนี้ต้องเปิดใช้งาน JavaScript</p></noscript>
 
   <script src="js/level.js"></script>
@@ -266,6 +377,10 @@
   <script src="js/render.js"></script>
   <script src="js/rps-rules.js"></script>
   <script src="js/rps.js"></script>
+  <script src="js/rain-rules.js"></script>
+  <script src="js/rain.js"></script>
+  <script src="js/memory-rules.js"></script>
+  <script src="js/memory.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
