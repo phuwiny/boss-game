@@ -130,10 +130,7 @@
   }
 
   function render() {
-    const cap = R.healCap(s.round);
     ui.round.textContent = 'รอบ ' + s.round;
-    ui.round.title = 'เพดานฟื้นพลังรอบนี้ ' + fmt(cap) + ' HP';
-    ui.round.dataset.cap = cap < R.MAX_HP ? 'ฟื้นได้ถึง ' + fmt(cap) : '';
     const stage = s.phase.indexOf('rps') === 0 ? 0 : s.phase.indexOf('battle') === 0 ? 1 : 2;
     Array.prototype.forEach.call(ui.phases.children, function (chip, i) {
       chip.classList.toggle('active', i === stage);
@@ -208,10 +205,7 @@
     pop(ui.me, 0);
     pop(ui.com, 0);
     render();
-    const capDown = !again && s.round > 1 && R.healCap(s.round) < R.healCap(s.round - 1);
-    say(again ? '<b>เสมอ!</b> เป่าใหม่อีกครั้ง'
-      : capDown ? '<b>เพดานฟื้นพลังลดเหลือ ' + fmt(R.healCap(s.round)) + ' HP</b> — เลือกการ์ดเป่า-ยิ้ง-ฉุบ'
-      : 'เลือกการ์ด <b>เป่า-ยิ้ง-ฉุบ</b> ผู้ชนะได้เลือก action ก่อน');
+    say(again ? '<b>เสมอ!</b> เป่าใหม่อีกครั้ง' : 'เลือกการ์ด <b>เป่า-ยิ้ง-ฉุบ</b> ผู้ชนะได้เลือก action ก่อน');
     setControls(R.HANDS.map(function (h) {
       const info = HAND_INFO[h];
       return { icon: info.icon, name: info.name, hint: info.hint, onClick: function () { pickHand(h); } };
@@ -242,8 +236,8 @@
     s.winner = res > 0 ? 'me' : 'com';
     const loser = res > 0 ? 'com' : 'me';
     R.recordRps(s[s.winner], s[loser]);
-    s.allowed.me = R.allowedActions(s.me, s.winner === 'me' ? 'winner' : 'loser', s.round);
-    s.allowed.com = R.allowedActions(s.com, s.winner === 'com' ? 'winner' : 'loser', s.round);
+    s.allowed.me = R.allowedActions(s.me, s.winner === 'me' ? 'winner' : 'loser');
+    s.allowed.com = R.allowedActions(s.com, s.winner === 'com' ? 'winner' : 'loser');
     render();
     const noAtk = !s.allowed[loser].attack.ok
       ? ' · ' + (loser === 'me' ? 'คุณ' : 'COM') + 'แพ้ครั้งแรก ห้ามโจมตี แต่ป้องกันได้ +' + fmt(R.GUARD_BONUS)
@@ -275,10 +269,7 @@
       const info = ACTION_INFO[a];
       let hint = info.hint;
       if (a === 'attack') hint = 'ศัตรู -' + fmt(R.power(s.me, 1)) + ' HP';
-      if (a === 'heal') {
-        const gain = fmt(Math.max(0, Math.min(R.power(s.me, 1), allowed.heal.cap - s.me.hp)));
-        hint = allowed.heal.cap < R.MAX_HP ? '+' + gain + ' HP · เพดาน ' + fmt(allowed.heal.cap) : 'ตัวเอง +' + gain + ' HP';
-      }
+      if (a === 'heal') hint = 'ตัวเอง +' + fmt(Math.max(0, Math.min(R.power(s.me, 1), R.MAX_HP - s.me.hp))) + ' HP';
       if (a === 'defend') hint = 'ลดดาเมจ ' + fmt(allowed.defend.block);
       return { icon: info.icon, name: info.name, hint: hint, disabled: !allowed[a].ok, reason: allowed[a].reason, onClick: function () { pickAction(a); } };
     }), 'actions');
@@ -337,7 +328,7 @@
   }
 
   function resolveBattle() {
-    const rep = R.resolve(s.me, s.com, s.acts.me, s.acts.com, s.winner === 'me' ? 'a' : 'b', s.round);
+    const rep = R.resolve(s.me, s.com, s.acts.me, s.acts.com, s.winner === 'me' ? 'a' : 'b');
     s.report = rep;
     s.phase = 'summary';
     render();
