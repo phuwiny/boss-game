@@ -10,6 +10,9 @@
   // พื้นที่โลกเกม (หน่วย logical px) ที่ต้องเห็นอย่างน้อยไม่ว่าจอขนาดใด
   const MIN_VIEW_W = 420;
   const MIN_VIEW_H = 380;
+  // จอสัมผัส: ถ้าเห็นด่านสูงเกินนี้ (ซูมออกมาก ตัวละครเล็ก) ให้ซูมเข้าอีกขั้น ตราบใดที่ยังเห็นอย่างน้อย TOUCH_MIN_VIEW_H
+  const TOUCH_MAX_VIEW_H = 440;
+  const TOUCH_MIN_VIEW_H = 240;
   const GROUND_ROW = 14;
 
   function makeCanvas(w, h) {
@@ -219,13 +222,26 @@
     }
   }
 
-  Renderer.prototype.resize = function (cssW, cssH, dpr) {
+  /**
+   * opts = { touch: จอสัมผัส, bottomInset: ความสูงของปุ่มควบคุมจากขอบล่างจอ (CSS px) }
+   */
+  Renderer.prototype.resize = function (cssW, cssH, dpr, opts) {
+    opts = opts || {};
     this.dpr = dpr;
     // ปรับสเกลให้ 1 พิกเซลของตัวละคร = จำนวนเต็มของพิกเซลจอ (ภาพคม)
     // โดยยังเห็นด่านอย่างน้อยราว 80% ของพื้นที่ขั้นต่ำ (MIN_VIEW_W x MIN_VIEW_H)
     const U = CQ.Sprites.UNIT;
-    let k = Math.max(1, Math.round(Math.min(cssW / MIN_VIEW_W, cssH / MIN_VIEW_H) * dpr * U));
-    while (k > 1 && (cssH * U * dpr / k < MIN_VIEW_H * 0.8 || cssW * U * dpr / k < MIN_VIEW_W * 0.78)) k--;
+    const px = dpr * U;
+    let k = Math.max(1, Math.round(Math.min(cssW / MIN_VIEW_W, cssH / MIN_VIEW_H) * px));
+    while (k > 1 && (cssH * px / k < MIN_VIEW_H * 0.8 || cssW * px / k < MIN_VIEW_W * 0.78)) k--;
+    if (opts.touch) {
+      // มือถือแนวนอนจอเตี้ย (เช่นมีแถบเบราว์เซอร์) สูตรข้างบนจะได้ k = 1 ภาพซูมออกจนกว้างเกิน
+      // จึงยอมเห็นด่านเตี้ยลงเพื่อให้ตัวละครใหญ่พอเล่นด้วยนิ้วได้
+      while (cssH * px / k > TOUCH_MAX_VIEW_H && cssH * px / (k + 1) >= TOUCH_MIN_VIEW_H && cssW * px / (k + 1) >= MIN_VIEW_W * 0.78) k++;
+      // ปุ่มควบคุมต้องบังแค่ชั้นดินใต้พื้น ไม่บังพื้นที่ตัวละครยืน (เผื่อขอบ 8px)
+      const dirt = (CQ.LEVEL_ROWS - GROUND_ROW) * T - 8;
+      if (opts.bottomInset > 0) k = Math.max(k, Math.ceil(opts.bottomInset * px / dirt));
+    }
     this.pixel = k;
     this.scale = k / (U * dpr);
     this.S = this.scale * dpr;

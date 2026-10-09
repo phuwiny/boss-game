@@ -1161,11 +1161,22 @@
     renderer.layoutHud({ P: P, x: A.left, y: A.top, right: B.left, vw: vw, timed: !!g.limit });
   }
 
+  /** ความสูงที่ปุ่มควบคุมบนมือถือกินจากขอบล่างของ canvas (CSS px) */
+  function touchInset(r) {
+    let top = r.bottom;
+    document.querySelectorAll('#touch .pad').forEach(function (el) {
+      const b = el.getBoundingClientRect();
+      if (b.height > 0) top = Math.min(top, b.top);
+    });
+    return Math.max(0, r.bottom - top);
+  }
+
   function resize() {
-    renderer.bottomCrop = document.body.classList.contains('touch') ? 0 : T * 1.5;
+    const touch = document.body.classList.contains('touch');
+    renderer.bottomCrop = touch ? 0 : T * 1.5;
     const r = canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    renderer.resize(Math.max(1, r.width), Math.max(1, r.height), dpr);
+    renderer.resize(Math.max(1, r.width), Math.max(1, r.height), dpr, { touch: touch, bottomInset: touch ? touchInset(r) : 0 });
     if (g) {
       renderer.updateCamera(focusPoint(), g.player.face, 0, true);
       layoutHud();
