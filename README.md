@@ -5,7 +5,7 @@
 
 **เล่นเกม:** https://phuwiny.github.io/boss-game/ — เล่นบนเบราว์เซอร์ได้ทันที ทั้งคอมพิวเตอร์และมือถือ ไม่ต้องติดตั้ง
 
-**คู่มือเกม:** [MANUAL.md](MANUAL.md) — วิธีเล่น กติกา ตัวละคร ไอเทม ศัตรู ทุกสเตจ บอส และมินิเกม แบบละเอียด
+**คู่มือเกม:** https://phuwiny.github.io/boss-game/manual.html (หรือปุ่ม **คู่มือเกมฉบับเต็ม** ในหน้าแรกของเกม) ต้นฉบับอยู่ที่ [MANUAL.md](MANUAL.md) — วิธีเล่น กติกา ตัวละคร ไอเทม ศัตรู ทุกสเตจ บอส และมินิเกม แบบละเอียด
 
 **เวอร์ชันล่าสุด:** [v0.9.0-beta — มินิเกมใหม่ Coin Rain และ Memory Match](https://github.com/phuwiny/boss-game/releases/tag/v0.9.0-beta) · [ดูทุกเวอร์ชัน](https://github.com/phuwiny/boss-game/releases)
 
@@ -234,7 +234,8 @@ python -m http.server 8000
 ## โครงสร้างโปรเจกต์
 
 ```
-MANUAL.md           คู่มือเกมสำหรับผู้เล่น (ภาษาไทย)
+MANUAL.md           คู่มือเกมสำหรับผู้เล่น (ภาษาไทย) ต้นฉบับของหน้าคู่มือ
+manual.html         หน้าเว็บคู่มือ: โหลด MANUAL.md มาแสดง (js/manual.js, css/manual.css)
 index.html          หน้าเกม (HUD, ปุ่มสัมผัส, หน้าแรก/เลือกตัวละคร/มินิเกม/หยุด/สรุปผล)
 css/style.css       สไตล์และ layout แบบ responsive (รองรับ safe-area ของ iPhone)
 js/level.js         ตัวแปลงด่าน รายชื่อสเตจ (CQ.STAGES) และข้อมูลสเตจ 1 Grassland (ASCII map)
