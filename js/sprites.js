@@ -402,61 +402,68 @@
     },
 
     // ─────────────── Aclaire ───────────────
+    // ผมส้มฟูทรงบ๊อบ + หางม้าสั้นด้านหลังศีรษะ เสื้อโปโลชมพูปกขาว กางเกงขาสั้นสีน้ำตาล
     aclaire: function (g, pose, tint) {
-      const hair = { l: '#ffc27a', b: '#ff8c32', s: '#e0661a', d: '#a8440c' };
+      const hair = { l: '#f9bd5a', b: '#e17e20', s: '#c85816', d: '#963711' };
       const shirt = tint.a;
-      const pants = tint.b;
-      const shoe = { l: '#ffffff', b: '#f3f5fb', s: '#c6cede', d: '#9aa4bb' };
-      const tie = { l: '#fff1a0', b: '#ffd23f', s: '#e0a800', d: '#b07f00' };
+      const shorts = tint.b;
+      const shoe = { l: '#8a5034', b: '#6c3a25', s: '#56281a', d: '#421b14' };
       const L = limbs(pose);
       const by = pose.bob ? -1 : 0;
       const HX = 1.5, HY = -23.2 + by, HR = 8;
-      // หางม้า
-      const bounce = pose.run ? Math.sin(pose.ph * 2) * 0.22 : 0;
-      const ang = 0.25 + pose.speed * 0.55 + bounce + clamp(pose.vy / 900, -1, 1) * (pose.air ? 0.55 : 0);
-      const tx = HX - 7.4, ty = HY - 3.2;
+      // หางม้าสั้น ผูกด้านหลังศีรษะ ปลายชี้ลงและสะบัดตามการเคลื่อนไหว
+      const bounce = pose.run ? Math.sin(pose.ph * 2) * 0.18 : 0;
+      const ang = 0.15 + pose.speed * 0.4 + bounce + clamp(pose.vy / 900, -1, 1) * (pose.air ? 0.45 : 0);
+      const tx = HX - 6.6, ty = HY - 5.6;
       g.begin('tail');
       const c = Math.cos(ang), s = Math.sin(ang);
       const R = function (px, py) { return [tx + px * c - py * s, ty + px * s + py * c]; };
-      g.poly([R(1, -2.4), R(-5, -3.6), R(-9, 0), R(-9.5, 5), R(-7.2, 12), R(-5.2, 7), R(-2, 3), R(1, 2.4)], hair, { bias: -0.05 });
+      g.poly([R(1, -1.8), R(-2.6, -2.8), R(-5, -0.8), R(-5.6, 3), R(-4.4, 7.4), R(-3, 4.2), R(-1, 2), R(1, 1.8)], hair, { bias: -0.05 });
       drawArm(g, 'armB', L.handB, shirt, MAT.skinBack, { sx: -3.4, sy: -15 + by });
-      drawLegs(g, pose, L, { hipY: -7 + by, legR: 1.75, leg: pants, legBack: { b: pants.s, s: pants.d, d: pants.d }, shoe: shoe, shoeBack: { b: shoe.s, s: shoe.d, d: shoe.d } });
-      // สะโพก
+      drawLegs(g, pose, L, { hipY: -7 + by, legR: 1.55, leg: MAT.skin, legBack: MAT.skinBack, shoe: shoe, shoeBack: { b: shoe.s, s: shoe.d, d: shoe.d } });
+      // กางเกงขาสั้น
       g.begin('hips', { line: true, lineSkip: ['legB', 'legF', 'armB', 'tail'] });
-      g.poly([[-5.2, -11.2 + by], [5.2, -11.2 + by], [5.4, -5.6 + by], [-5.4, -5.6 + by]], pants);
-      // เสื้อยืดแขนสั้น
+      g.poly([[-5.2, -11.2 + by], [5.2, -11.2 + by], [5.7, -5.6 + by], [0.4, -5.6 + by], [0, -6.8 + by], [-0.4, -5.6 + by], [-5.7, -5.6 + by]], shorts);
+      // เสื้อโปโลแขนสั้น
       g.begin('torso', { line: true, lineSkip: ['hips', 'armB', 'tail'] });
       g.poly([[-5.4, -16.6 + by], [5.4, -16.6 + by], [5.8, -9.6 + by], [-5.8, -9.6 + by]], shirt);
-      g.begin('print');
-      g.stampAt(-1.2, -12.4 + by, ['w.w', 'www', '.w.'], { w: '#ffffff' });
-      drawArm(g, 'armF', L.handF, shirt, MAT.skin, { lineSkip: ['print'], sx: 3.2, sy: -15 + by });
+      // ปกเสื้อสีขาว + กระดุม
+      g.begin('collar');
+      const cm = { w: '#ffffff', W: '#d9dde6', o: '#f9fbfa' };
+      g.stampAt(1.4, -14.4 + by, ['wwwW.Wwww', '.wwW.Www.', '....o....', '.........', '....o....'], cm);
+      drawArm(g, 'armF', L.handF, shirt, MAT.skin, { lineSkip: ['collar'], sx: 3.2, sy: -15 + by });
       // หัว
-      g.begin('face', { line: true, lineSkip: ['tail', 'torso', 'armF', 'armB', 'print'] });
+      g.begin('face', { line: true, lineSkip: ['tail', 'torso', 'armF', 'armB', 'collar'] });
       g.ellipse(HX, HY, HR, HR * 0.97, MAT.skin, { bias: 0.15 });
+      // ผม: ฟูคลุมด้านหลังลงมาถึงคอ หน้าม้าหนาเป็นแฉก มีจอนยาวข้างแก้ม
       g.begin('hairFront');
-      g.ellipse(HX - 0.2, HY - 0.7, HR + 1.1, HR + 0.9, hair, {
+      const fringe = function (x) {
+        const k = (x - HX) / HR;
+        const zig = Math.abs(((x - HX + 20) % 2.8) - 1.4) * 1.1;
+        return HY - 0.8 - zig + Math.max(0, -k - 0.1) * 10;
+      };
+      g.ellipse(HX - 0.6, HY - 0.2, HR + 1.6, HR + 1.3, hair, {
         clip: function (x, y) {
-          if (x < HX - 4.6) return y < HY + 5.4;           // ผมสั้นด้านหลัง
-          if (x < HX - 2.8) return y < HY + 4.2;
-          // หน้าม้าปัดข้าง: ต่ำด้านหน้า สูงด้านหลัง
-          const k = (x - HX) / HR;
-          return y < HY - 3.2 + Math.max(0, k - 0.2) * 5 - Math.max(0, -k) * 0.8;
+          if (x < HX - 4.2) return y < HY + 7.2;          // ผมด้านหลังยาวลงมาถึงคอ
+          if (x < HX - 3.2) return y < HY + 6.4;          // ผมข้างหู
+          return y < fringe(x);
         }
       });
-      g.capsule(HX + 8.2, HY - 2.2, HX + 8.5, HY + 1.6, 0.75, hair);
-      g.shine('hairFront', HX - 0.5, HY - 0.5, 6.2, 7.6, -2.75, -1.25, hair.l);
+      // จอนผมข้างแก้มด้านหน้า
+      g.capsule(HX + 8.3, HY - 3, HX + 8.6, HY + 5.4, 0.9, hair);
+      g.shine('hairFront', HX - 0.8, HY - 0.4, 6.8, 8.4, -2.75, -1.25, hair.l);
       // ยางรัดผม
       g.begin('tie', { line: true, lineSkip: ['hairFront'] });
-      g.ellipse(tx + 0.4, ty + 0.2, 1.5, 1.9, tie);
-      // หน้า
+      g.ellipse(tx + 0.5, ty + 0.1, 1.2, 1.6, { l: '#ff9fbf', b: '#ed648d', s: '#c74b7a', d: '#a32e63' });
+      // หน้า: ตาสีฟ้าเทา แก้มแดง
       g.begin('features');
-      const eyes = eyeStamps('#5aa8ff', '#2464c8');
-      const ey = HY + 1.6;
+      const eyes = eyeStamps('#8aa6c8', '#40486d');
+      const ey = HY + 2;
       const pick = pose.dead ? eyes.dead : pose.blink ? eyes.blink : eyes.open;
-      g.stampAt(HX + 0.9, ey, pick[0], pick[1]);
-      g.stampAt(HX + 5.6, ey, pick[0], pick[1]);
-      g.stampAt(HX + 3.6, HY + 5.6, pose.dead ? ['mm'] : ['m'], { m: '#c0485a' });
-      if (!pose.dead) { g.stampAt(HX + 7.3, HY + 4.4, ['c'], { c: '#ff8fa0' }); g.stampAt(HX - 1.4, HY + 4.4, ['c'], { c: '#ff8fa0' }); }
+      g.stampAt(HX + 1.2, ey, pick[0], pick[1]);
+      g.stampAt(HX + 5.8, ey, pick[0], pick[1]);
+      g.stampAt(HX + 4, HY + 5.8, pose.dead ? ['mm'] : ['m'], { m: '#c0485a' });
+      if (!pose.dead) { g.stampAt(HX + 7.4, HY + 4.6, ['c'], { c: '#f3a38e' }); g.stampAt(HX - 1, HY + 4.6, ['c'], { c: '#f3a38e' }); }
     }
   };
 
@@ -466,7 +473,7 @@
   const NORMAL = {
     bobo: { a: { l: '#ffa47e', b: '#ff6a3d', s: '#e04e26', d: '#b8381a' }, b: { l: '#ffa47e', b: '#ff6a3d', s: '#e04e26', d: '#b8381a' } },
     mew: { a: { l: '#6a9cff', b: '#3563d8', s: '#24459e', d: '#182f70' }, b: { l: '#ffb36b', b: '#ff8a2a', s: '#db6617', d: '#a84a10' } },
-    aclaire: { a: { l: '#ffc4de', b: '#ff8fc0', s: '#e5619e', d: '#b83c78' }, b: { l: '#5f86f0', b: '#2f56cc', s: '#203f9c', d: '#162c70' } }
+    aclaire: { a: { l: '#f58bab', b: '#ed648d', s: '#c74b7a', d: '#a32e63' }, b: { l: '#8a5034', b: '#6c3a25', s: '#56281a', d: '#421b14' } }
   };
   function rainbow(h) {
     const tones = function (hh) {
