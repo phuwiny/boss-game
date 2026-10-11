@@ -50,7 +50,7 @@
       ability: { guard: 1 },
       shot: { kind: 'fire', speed: 250, max: 1, damage: 5, cooldown: 0.2, r: 8, range: 420, desc: 'กระสุนไฟ ช้าและยิงได้ทีละลูก แต่ดาเมจแรง' },
       bars: { speed: 5, jump: 3 },
-      color: '#ed648d'
+      color: '#ff8fc0'
     }
   ];
 
