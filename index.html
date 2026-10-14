@@ -42,12 +42,12 @@
   <div id="toast" role="status" aria-live="polite"></div>
 
   <!-- ปุ่มควบคุมบนมือถือ -->
-  <div id="touch" aria-hidden="true">
+  <div id="touch" aria-label="ปุ่มควบคุมเกม">
     <div class="pad pad-left">
-      <button class="tbtn" data-btn="left" type="button" tabindex="-1">
+      <button class="tbtn" data-btn="left" type="button" aria-label="เดินซ้าย" tabindex="-1">
         <svg viewBox="0 0 24 24"><path d="M15.5 5 8 12l7.5 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button class="tbtn" data-btn="right" type="button" tabindex="-1">
+      <button class="tbtn" data-btn="right" type="button" aria-label="เดินขวา" tabindex="-1">
         <svg viewBox="0 0 24 24"><path d="M8.5 5 16 12l-7.5 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
@@ -66,13 +66,19 @@
 
   <!-- หน้าแรก -->
   <section class="screen" id="screen-title" aria-labelledby="title-heading">
-    <div class="card">
-      <div class="logo" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffd23f" stroke="#d48a00" stroke-width="2"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="#fff0aa" stroke-width="1.8"/></svg>
+    <div class="card title-card">
+      <div class="title-art" data-stage="grassland">
+        <img id="title-landscape" class="title-landscape" src="assets/2026-10-13_grassland-menu.webp" alt="" width="1672" height="941" fetchpriority="high">
+        <div class="adventure-brand">
+          <span class="eyebrow">A LITTLE ADVENTURE, EVERY DAY</span>
+          <h1 id="title-heading">Coin<span>Quest<span class="brand-spark" aria-hidden="true">✦</span></span></h1>
+          <p class="subtitle">ผจญภัยเก็บเหรียญทอง</p>
+        </div>
+        <div class="world-caption"><span class="world-number" id="title-world-number">01</span><div><span class="eyebrow">YOUR NEXT ADVENTURE</span><b id="title-world-name">Grassland</b></div><span class="world-arrow" aria-hidden="true">↗</span></div>
       </div>
-      <h1 id="title-heading">Coin Quest</h1>
-      <p class="subtitle">ผจญภัยเก็บเหรียญทอง</p>
-      <p class="day"><span id="title-day">ด่านประจำวัน</span> · ตำแหน่งเหรียญและไอเทมเปลี่ยนทุกวัน</p>
+      <div class="launch-panel">
+      <div class="launch-heading"><span class="eyebrow">LET’S PLAY</span><span class="daily-pill"><i></i> ด่านประจำวัน</span></div>
+      <p class="day" id="title-day">ด่านประจำวัน</p>
 
       <button class="char-pick" id="btn-char" type="button">
         <canvas class="char-pick-preview" id="title-char-preview" aria-hidden="true"></canvas>
@@ -84,6 +90,7 @@
         <span class="char-pick-change">เปลี่ยน<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 15.5 12 9 18.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </button>
 
+      <div class="section-label"><span>เลือกจุดหมาย</span><span>03 WORLDS</span></div>
       <!-- ปุ่มเลือกสเตจ สร้างจาก CQ.STAGES ใน js/main.js -->
       <div class="stages" id="stage-pick" role="radiogroup" aria-label="เลือกสเตจ"></div>
 
@@ -109,9 +116,10 @@
       <button class="btn btn-minigames" id="btn-minigames" type="button">
         <span class="mg-icons" aria-hidden="true">✊🪙🃏</span>
         มินิเกมอื่นๆ
-        <span class="new-badge">ใหม่</span>
+        <span class="new-badge" aria-hidden="true">↗</span>
       </button>
 
+      <details class="play-guide"><summary>วิธีเล่นและไอเทม <span aria-hidden="true">＋</span></summary>
       <div class="items-help" aria-label="ไอเทมในเกม">
         <div class="item-chip">
           <svg viewBox="-14 -12 28 24" aria-hidden="true"><g fill="#fff" stroke="#7fb8e6" stroke-width="1.4"><path d="M-1 2C-5-6-10-9-13-5C-10-4-11-1-12 1C-9 0-9 3-10 5C-6 3-3 4-1 2Z"/><path transform="scale(-1,1)" d="M-1 2C-5-6-10-9-13-5C-10-4-11-1-12 1C-9 0-9 3-10 5C-6 3-3 4-1 2Z"/></g><circle cx="0" cy="2" r="2.4" fill="#ffd23f"/></svg>
@@ -161,7 +169,11 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5v13c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5z M12 6v13.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
         คู่มือเกมฉบับเต็ม
       </a>
-      <p class="rotate-hint">หมุนจอเป็นแนวนอนเพื่อเล่นได้สะดวกขึ้น</p>
+      </details>
+      <p class="rotate-hint">เล่นแนวนอน จะมองเห็นเส้นทางได้กว้างขึ้น</p>
+      <p class="title-footer">เก็บเหรียญ · สำรวจโลก · ทำลายสถิติ</p>
+      </div>
+
     </div>
   </section>
 
@@ -179,6 +191,18 @@
     <div class="card card-sm">
       <h2 class="screen-title" id="pause-heading">หยุดชั่วคราว</h2>
       <button class="btn btn-primary" id="btn-resume" type="button">เล่นต่อ</button>
+      <fieldset class="touch-settings">
+        <legend>ขนาดปุ่มสัมผัส</legend>
+        <div class="size-options">
+          <label><input type="radio" name="touch-size" value="standard" checked><span>มาตรฐาน</span></label>
+          <label><input type="radio" name="touch-size" value="large"><span>ใหญ่</span></label>
+        </div>
+      </fieldset>
+      <div class="pause-options">
+        <button class="setting-btn" id="btn-pause-music" type="button" aria-pressed="true">เพลง <span class="setting-state">เปิด</span></button>
+        <button class="setting-btn" id="btn-pause-sound" type="button" aria-pressed="true">เสียง <span class="setting-state">เปิด</span></button>
+        <button class="setting-btn" id="btn-pause-fullscreen" type="button">เต็มจอ <span aria-hidden="true">⛶</span></button>
+      </div>
       <button class="btn" id="btn-restart" type="button">เริ่มใหม่</button>
       <button class="btn btn-ghost" id="btn-home" type="button">กลับหน้าแรก</button>
     </div>
@@ -375,6 +399,7 @@
   <script src="js/characters.js"></script>
   <script src="js/spawn.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/2026-10-13_ui-settings.js"></script>
   <script src="js/input.js"></script>
   <script src="js/sprites.js"></script>
   <script src="js/hud.js"></script>

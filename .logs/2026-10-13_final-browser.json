@@ -1,0 +1,132 @@
+[
+  {
+    "width": 360,
+    "height": 640,
+    "functional": "PASS",
+    "hud": {
+      "map": {
+        "x": 12,
+        "y": 64,
+        "w": 300,
+        "h": 23.011363636363637
+      },
+      "powerBottom": 224,
+      "button": {
+        "x": 300,
+        "y": 13,
+        "w": 45,
+        "h": 45
+      }
+    },
+    "checks": "stage/character persistence; both modes; Mew air jump; Aclaire guard; settings/toggles; native keyboard; touch cancel/rotate; fit; reduced motion"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "functional": "PASS",
+    "hud": {
+      "map": {
+        "x": 12,
+        "y": 64,
+        "w": 300,
+        "h": 23.011363636363637
+      },
+      "powerBottom": 224,
+      "button": {
+        "x": 330,
+        "y": 13,
+        "w": 45,
+        "h": 45
+      }
+    },
+    "checks": "stage/character persistence; both modes; Mew air jump; Aclaire guard; settings/toggles; native keyboard; touch cancel/rotate; fit; reduced motion"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "errors": []
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "functional": "PASS",
+    "hud": {
+      "map": {
+        "x": 240,
+        "y": 14.535511363636363,
+        "w": 325,
+        "h": 24.928977272727273
+      },
+      "powerBottom": 188,
+      "button": {
+        "x": 580,
+        "y": 13,
+        "w": 45,
+        "h": 45
+      }
+    },
+    "checks": "stage/character persistence; both modes; Mew air jump; Aclaire guard; settings/toggles; native keyboard; touch cancel/rotate; fit; reduced motion"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "errors": []
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "functional": "PASS",
+    "hud": {
+      "map": {
+        "x": 334.5,
+        "y": 13.960227272727273,
+        "w": 340,
+        "h": 26.079545454545453
+      },
+      "powerBottom": 188,
+      "button": {
+        "x": 784,
+        "y": 13,
+        "w": 45,
+        "h": 45
+      }
+    },
+    "checks": "stage/character persistence; both modes; Mew air jump; Aclaire guard; settings/toggles; native keyboard; touch cancel/rotate; fit; reduced motion"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "errors": []
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "functional": "PASS",
+    "hud": {
+      "map": {
+        "x": 573,
+        "y": 22.460227272727273,
+        "w": 340,
+        "h": 26.079545454545453
+      },
+      "powerBottom": 277,
+      "button": {
+        "x": 1306,
+        "y": 13,
+        "w": 45,
+        "h": 45
+      }
+    },
+    "checks": "stage/character persistence; both modes; Mew air jump; Aclaire guard; settings/toggles; native keyboard; touch cancel/rotate; fit; reduced motion"
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "errors": []
+  }
+]

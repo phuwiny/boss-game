@@ -1,0 +1,44 @@
+[
+  {
+    "id": "bobo",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "mew",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "aclaire",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  }
+]

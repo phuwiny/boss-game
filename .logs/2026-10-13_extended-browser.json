@@ -1,0 +1,34 @@
+[
+  {
+    "fallback": "PASS: missing art/font + blocked localStorage"
+  },
+  {
+    "denseRecordsAndSimulatedInsets": "PASS"
+  },
+  {
+    "version": "baseline HEAD",
+    "frameTimingMs": {
+      "median": 6.900000000000091,
+      "p95": 7.199999999999818,
+      "samples": 120
+    }
+  },
+  {
+    "version": "updated",
+    "frameTimingMs": {
+      "median": 7,
+      "p95": 7.199999999999818,
+      "samples": 120
+    }
+  },
+  {
+    "realTimedPlay": "PASS",
+    "outcome": {
+      "coins": 17,
+      "time": 120,
+      "deaths": 3
+    },
+    "exploratorySeconds": 123.957,
+    "inputs": "keyboard direction/jump, pause/resume, retry/home; no state mutations"
+  }
+]

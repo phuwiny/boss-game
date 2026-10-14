@@ -24,6 +24,8 @@
   function emit(name) { listeners[name].forEach(function (fn) { fn(); }); }
 
   root.addEventListener('keydown', function (e) {
+    // Native form controls and disclosure widgets own their keyboard behavior.
+    if (e.code !== 'Escape' && e.target && e.target.closest && e.target.closest('input, select, textarea, summary')) return;
     const act = KEYMAP[e.code];
     if (act) {
       e.preventDefault();
@@ -138,6 +140,7 @@
     pointers.clear();
     refreshTouch();
     jumpQueued = false;
+    prevJump = false;
   }
 
   CQ.Input = {

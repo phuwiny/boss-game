@@ -1,0 +1,265 @@
+[
+  {
+    "stage": "grassland",
+    "rounds": [
+      {
+        "baseline": {
+          "frame": {
+            "median": 6.900000000000546,
+            "p95": 7.100000000000364,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6000000014901161,
+            "p95": 1,
+            "samples": 120
+          }
+        },
+        "updated": {
+          "frame": {
+            "median": 6.900000000000546,
+            "p95": 7.199999999999818,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6999999955296516,
+            "p95": 1.1999999955296516,
+            "samples": 120
+          }
+        }
+      },
+      {
+        "updated": {
+          "frame": {
+            "median": 6.900000000000546,
+            "p95": 7.199999999999818,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.7000000029802322,
+            "p95": 1.2999999970197678,
+            "samples": 120
+          }
+        },
+        "baseline": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.100000000000364,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6000000014901161,
+            "p95": 1.2000000029802322,
+            "samples": 120
+          }
+        }
+      },
+      {
+        "baseline": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.100000000000364,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.7000000029802322,
+            "p95": 1.1999999955296516,
+            "samples": 120
+          }
+        },
+        "updated": {
+          "frame": {
+            "median": 7,
+            "p95": 7.100000000000364,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6000000014901161,
+            "p95": 1.1000000014901161,
+            "samples": 120
+          }
+        }
+      }
+    ],
+    "medianP95Ratio": 1.014084507042176,
+    "withinBudget": true,
+    "worstP95Ratio": 1.014084507042176
+  },
+  {
+    "stage": "forest",
+    "rounds": [
+      {
+        "baseline": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.200000000000728,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6999999955296516,
+            "p95": 1.1000000014901161,
+            "samples": 120
+          }
+        },
+        "updated": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.199999999998909,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6999999955296516,
+            "p95": 1.1999999955296516,
+            "samples": 120
+          }
+        }
+      },
+      {
+        "updated": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.100000000000364,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6999999955296516,
+            "p95": 1.2999999970197678,
+            "samples": 120
+          }
+        },
+        "baseline": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.100000000000364,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.7000000029802322,
+            "p95": 1.1000000014901161,
+            "samples": 120
+          }
+        }
+      },
+      {
+        "baseline": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.100000000000364,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.7000000029802322,
+            "p95": 1.1999999955296516,
+            "samples": 120
+          }
+        },
+        "updated": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.100000000002183,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6000000014901161,
+            "p95": 1,
+            "samples": 120
+          }
+        }
+      }
+    ],
+    "medianP95Ratio": 1,
+    "withinBudget": true,
+    "worstP95Ratio": 1.0000000000002562
+  },
+  {
+    "stage": "castle",
+    "rounds": [
+      {
+        "baseline": {
+          "frame": {
+            "median": 7,
+            "p95": 7.599999999998545,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.5,
+            "p95": 1,
+            "samples": 120
+          }
+        },
+        "updated": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.100000000002183,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6999999955296516,
+            "p95": 1.0999999940395355,
+            "samples": 120
+          }
+        }
+      },
+      {
+        "updated": {
+          "frame": {
+            "median": 7,
+            "p95": 7.100000000002183,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.6999999955296516,
+            "p95": 1,
+            "samples": 120
+          }
+        },
+        "baseline": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.100000000002183,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.7000000029802322,
+            "p95": 1.1000000014901161,
+            "samples": 120
+          }
+        }
+      },
+      {
+        "baseline": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.100000000002183,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.7999999970197678,
+            "p95": 1.1000000014901161,
+            "samples": 120
+          }
+        },
+        "updated": {
+          "frame": {
+            "median": 6.900000000001455,
+            "p95": 7.200000000000728,
+            "samples": 120
+          },
+          "submission": {
+            "median": 0.7000000029802322,
+            "p95": 1.1000000014901161,
+            "samples": 120
+          }
+        }
+      }
+    ],
+    "medianP95Ratio": 1,
+    "withinBudget": true,
+    "worstP95Ratio": 1.0140845070420443
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "errors": []
+  }
+]

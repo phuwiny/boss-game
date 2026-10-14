@@ -61,21 +61,21 @@
   const THEMES = {
     grassland: {
       id: 'grassland',
-      sky: ['#4fa9f2', '#a5dbff', '#dff4ff'],
-      ground: { dirt: '#8d5b34', dark: '#7a4c2a', light: '#a5703f', grassDark: '#3f9a40', grass: '#5cc451', grassLight: '#82e070' },
+      sky: ['#51b4ee', '#a4dff2', '#edf5d7'],
+      ground: { dirt: '#855337', dark: '#68402e', light: '#b77a48', grassDark: '#306647', grass: '#62ab4c', grassLight: '#b1d86e' },
       plank: { edge: '#8e5a2c', mid: '#c88a4e', light: '#e4ad70', grain: 'rgba(90,50,20,0.35)', knot: '#6b4220', leg: '#7a4c25' },
       tuft: '#3f9a40'
     },
     forest: {
       id: 'forest',
-      sky: ['#245c4c', '#6ea77a', '#d8ebb0'],
-      ground: { dirt: '#5e3d26', dark: '#4c3020', light: '#7a5235', grassDark: '#2b6a33', grass: '#3d8a3a', grassLight: '#69ad4c' },
+      sky: ['#153e43', '#437e73', '#a8c99a'],
+      ground: { dirt: '#654531', dark: '#43352b', light: '#8f6541', grassDark: '#244d3c', grass: '#4a8c4a', grassLight: '#a1c65d' },
       plank: { edge: '#4f3019', mid: '#7e5230', light: '#9c6c40', grain: 'rgba(40,22,10,0.4)', knot: '#3d2412', leg: '#4f3019', leaves: true },
       tuft: '#2f7a35'
     },
     castle: {
       id: 'castle',
-      sky: ['#120e1a', '#1f1829', '#2e2338'],
+      sky: ['#171526', '#262039', '#382b40'],
       plank: { edge: '#3b2616', mid: '#6a4529', light: '#86603c', grain: 'rgba(30,16,6,0.45)', knot: '#2e1c0e', leg: '#55565e' },
       tuft: '#5a5268'
     }
@@ -273,8 +273,7 @@
     const r = rng(variant * 977 + 13);
     c.fillStyle = pal.dark;
     for (let i = 0; i < 4; i++) {
-      rr(c, r() * 26, 8 + r() * 20, 4 + r() * 4, 3 + r() * 2, 2);
-      c.fill();
+      c.fillRect(Math.floor(r() * 13) * 2, 8 + Math.floor(r() * 10) * 2, 4 + Math.floor(r() * 3), 2 + Math.floor(r() * 2));
     }
     c.fillStyle = pal.light;
     for (let i = 0; i < 3; i++) c.fillRect(r() * 29, 10 + r() * 20, 2, 2);
@@ -283,17 +282,15 @@
     if (right) c.fillRect(29, 0, 3, 32);
     if (top) {
       c.fillStyle = pal.grassDark;
-      c.beginPath();
-      c.moveTo(0, 0);
-      c.lineTo(32, 0);
-      c.lineTo(32, 10);
-      for (let x = 32; x > 0; x -= 8) c.quadraticCurveTo(x - 4, 16, x - 8, 10);
-      c.closePath();
-      c.fill();
+      c.fillRect(0, 0, 32, 10);
+      for (let x = 0; x < 32; x += 4) c.fillRect(x, 9, 3, 2 + (hash(x, variant) % 4));
       c.fillStyle = pal.grass;
       c.fillRect(0, 0, 32, 9);
       c.fillStyle = pal.grassLight;
       c.fillRect(0, 0, 32, 3);
+      for (let x = 2; x < 32; x += 7) c.fillRect(x, 4, 3, 1);
+      c.fillStyle = pal.grassDark;
+      for (let x = 0; x < 32; x += 8) c.fillRect(x + 2, 7, 4, 2);
       if (left) { c.fillStyle = pal.grassDark; c.fillRect(0, 0, 2, 11); }
       if (right) { c.fillStyle = pal.grassDark; c.fillRect(30, 0, 2, 11); }
     }
@@ -304,12 +301,14 @@
     c.fillRect(0, 0, 32, 32);
     const bricks = [[1, 1, 14, 14], [17, 1, 14, 14], [1, 17, 6, 14], [9, 17, 14, 14], [25, 17, 6, 14]];
     bricks.forEach(function (b) {
-      c.fillStyle = '#c96a3b';
+      c.fillStyle = '#bc7047';
       c.fillRect(b[0], b[1], b[2], b[3]);
       c.fillStyle = 'rgba(255,255,255,0.22)';
       c.fillRect(b[0], b[1], b[2], 2);
       c.fillStyle = 'rgba(0,0,0,0.16)';
       c.fillRect(b[0], b[1] + b[3] - 2, b[2], 2);
+      c.fillStyle = '#d9935c';
+      c.fillRect(b[0] + 2, b[1] + 4, Math.max(1, b[2] - 5), 1);
     });
   }
 
@@ -513,6 +512,15 @@
           c.fillRect(0, 0, w, h);
           c.fillStyle = 'rgba(255,255,255,0.03)';
           for (let y = 8; y < h; y += 22) c.fillRect(0, y, w, 1);
+          // Cached masonry: muted seams stay behind enemies and projectiles.
+          for (let y = 8; y < h; y += 22) {
+            for (let x = ((y - 8) / 22 % 2) * 32; x < w; x += 64) {
+              c.fillRect(x, y, 1, 22);
+              c.fillStyle = '#2a2436';
+              c.fillRect(x + 4, y + 3, 28, 1);
+              c.fillStyle = 'rgba(255,255,255,0.03)';
+            }
+          }
           for (let i = 0; i < 4; i++) {
             const x = i * 256 + 128;
             // หน้าต่างโค้ง
@@ -520,6 +528,9 @@
             c.beginPath();
             c.moveTo(x - 30, 210); c.lineTo(x - 30, 120); c.arc(x, 120, 30, Math.PI, 0); c.lineTo(x + 30, 210);
             c.closePath(); c.fill();
+            c.strokeStyle = '#51445d';
+            c.lineWidth = 5;
+            c.stroke();
             const gl = c.createLinearGradient(x, 90, x, 210);
             gl.addColorStop(0, 'rgba(140,170,255,0.45)');
             gl.addColorStop(1, 'rgba(90,110,200,0.12)');
@@ -530,6 +541,10 @@
             c.fillStyle = '#231c2e';
             c.fillRect(x - 1.5, 90, 3, 120);
             c.fillRect(x - 30, 160, 60, 3);
+            c.fillStyle = '#574b65';
+            c.fillRect(x - 35, 210, 70, 5);
+            c.fillStyle = '#383046';
+            c.fillRect(x - 33, 215, 66, 4);
             // เสาระหว่างหน้าต่าง
             const px = i * 256;
             c.fillStyle = '#1b1524';
@@ -560,6 +575,12 @@
             c.fillRect(x - 26, 0, 6, h);
             c.fillStyle = '#0f0b15';
             c.fillRect(x + 20, 0, 6, h);
+            for (let y = 36; y < h; y += 38) {
+              c.fillStyle = '#30283d';
+              c.fillRect(x - 27, y, 54, 3);
+              c.fillStyle = '#171320';
+              c.fillRect(x - 25, y + 3, 50, 2);
+            }
             // ธงสีแดงห้อยข้างเสา
             const bx = x + 40 + r() * 30;
             c.fillStyle = '#6e1c2c';
@@ -594,8 +615,10 @@
             }
             c.fillRect(0, base, w, h - base);
           };
-          crowns(120, 26, 26, 40, '#5f9c78');
-          crowns(170, 30, 22, 34, '#4b8a67');
+          crowns(120, 26, 26, 40, '#4f8d7d');
+          crowns(170, 30, 22, 34, '#387461');
+          c.fillStyle = '#3f7a6c';
+          for (let x = 16; x < w; x += 53) c.fillRect(x, 25 + r() * 30, 5, h);
         }),
         near: mk(900, 440, function (c, w, h) {
           const r = rng(57);
@@ -608,12 +631,27 @@
             c.fillRect(x - tw / 2 + 3, 40, 4, h - 40);
             c.fillStyle = 'rgba(0,0,0,0.18)';
             c.fillRect(x + tw / 2 - 5, 40, 5, h - 40);
+            // Broken bark highlights, generated once per cached layer.
+            for (let y = 65; y < h - 20; y += 28) {
+              c.fillStyle = '#5c4834';
+              c.fillRect(Math.floor(x - tw / 2 + 5), y, 2, 13);
+              c.fillStyle = '#302e27';
+              c.fillRect(Math.floor(x + tw / 2 - 9), y + 10, 3, 9);
+            }
           }
           // เรือนยอดด้านบน
           c.fillStyle = '#2c5e3e';
           for (let x = -20; x < w + 40; x += 34 + r() * 20) {
             ellipse(c, x, 18 + r() * 30, 40 + r() * 20, 30 + r() * 14); c.fill();
           }
+          c.save();
+          c.globalCompositeOperation = 'source-atop';
+          for (let i = 0; i < 500; i++) {
+            const x = Math.floor(r() * w / 4) * 4, y = Math.floor(r() * 70 / 4) * 4;
+            c.fillStyle = i % 3 ? '#376b47' : '#477e4c';
+            c.fillRect(x, y, 6 + Math.floor(r() * 3) * 2, 4);
+          }
+          c.restore();
           // พุ่มไม้ด้านล่าง
           ridge(c, w, h, 380, [[14, 5, 0.7], [7, 13, 1.9]], '#2f6e40');
           c.fillStyle = '#3b8048';
@@ -623,13 +661,13 @@
           c.fillRect(0, 404, w, h - 404);
         })
       };
-      this.layers.far.fill = '#4b8a67';
+      this.layers.far.fill = '#387461';
       this.layers.near.fill = '#3b8048';
     } else {
       this.layers = {
         far: mk(1024, 240, function (c, w, h) {
-          ridge(c, w, h, 120, [[46, 3, 0.4], [22, 7, 1.3], [10, 13, 2]], '#b9def3');
-          ridge(c, w, h, 160, [[38, 4, 2.1], [16, 9, 0.2], [7, 17, 1]], '#9fcfea');
+          ridge(c, w, h, 120, [[46, 3, 0.4], [22, 7, 1.3], [10, 13, 2]], '#badfec');
+          ridge(c, w, h, 160, [[38, 4, 2.1], [16, 9, 0.2], [7, 17, 1]], '#8fc5db');
         }),
         near: mk(768, 170, function (c, w, h) {
           ridge(c, w, h, 80, [[22, 3, 1.1], [10, 7, 0.3]], '#97d68d');
@@ -640,11 +678,14 @@
             ellipse(c, x, y, 9 * s, 13 * s);
             c.fill();
             c.fillRect(x - 1.5, y + 10 * s, 3, 8);
+            c.fillStyle = '#9ed27a';
+            c.fillRect(Math.floor(x - 6 * s), Math.floor(y - 8 * s), 7 * s, 3 * s);
+            c.fillStyle = '#74bf6d';
           }
           ridge(c, w, h, 118, [[16, 2, 2.4], [8, 6, 0.9]], '#7cc775');
         })
       };
-      this.layers.far.fill = '#9fcfea';
+      this.layers.far.fill = '#8fc5db';
       this.layers.near.fill = '#7cc775';
     }
     this.cloudSprite = mk(120, 50, function (c) {
@@ -1703,7 +1744,8 @@
     if (pw && shown(pw.wing)) {
       // ปีก: ต่อที่ไหล่ด้านหลัง กระพือเร็วตอนลอยกลางอากาศ
       const wf = wingFrame(p.onGround ? Math.floor(time * 2.5) % 2 : Math.floor(time * 14) % 2);
-      ctx.drawImage(wf.c, (-3 - wf.w) * k, sy - 25 * k, wf.w * k, wf.h * k);
+      // Keep feather tips outside the hair/body silhouette at small mobile scales.
+      ctx.drawImage(wf.c, (-6 - wf.w * 2) * k, sy - 27 * k, wf.w * 2 * k, wf.h * 2 * k);
     }
     const fr = heroFrame(p.ch || 'bobo', heroPose(p, g, time, dead), hue);
     ctx.drawImage(fr.c, -fr.ax * k, sy - (fr.h - 1) * k, fr.w * k, fr.h * k);

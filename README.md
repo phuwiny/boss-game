@@ -150,7 +150,7 @@
   Boss Stage มีหัวใจ 3 ดวง ปีก 1 และเห็ด 1 (ไม่มีดาว)
 
 - เขียนด้วย HTML5 Canvas + CSS + JavaScript ล้วน **ไม่ต้อง build** ไม่มี dependency
-- กราฟิกและเสียงสร้างด้วยโค้ดทั้งหมด (Canvas 2D + Web Audio API) ไม่มีไฟล์ภาพ/เสียง รวมถึง sprite ตัวละครและ HUD แบบ pixel art
+- สนาม ตัวละคร HUD และเสียงสร้างด้วยโค้ด (Canvas 2D + Web Audio API); ภาพประกอบ Grassland/Forest ในเมนูใช้ไฟล์ WebP ที่สร้างด้วย imagegen
 - รองรับคอมพิวเตอร์ มือถือ (ปุ่มสัมผัสแบบ multi-touch) และจอยเกม (Gamepad API)
 - พร้อมเผยแพร่บน GitHub Pages ทันที
 
@@ -205,6 +205,32 @@
 - เปิดด่านแบบกำหนดเองได้ด้วย `?seed=ข้อความใดก็ได้` เช่น `index.html?seed=party` (ไม่บันทึกสถิติ)
 
 ## รันบนเครื่อง
+
+### หน้าตาและการเล่นบนมือถือ (ปรับปรุง 13 ต.ค. 2569)
+
+- หน้าแรกแสดงภาพของด่านที่เลือก พร้อมการ์ดด่าน ตัวละคร และปุ่มเริ่มทั้งสองโหมด; เปิดรายละเอียดได้ที่ **วิธีเล่นและไอเทม**
+- บนมือถือ กด **หยุดเกม** เพื่อปรับเพลง เสียง เต็มจอ และขนาดปุ่มสัมผัส **มาตรฐาน / ใหญ่**
+- ขนาดมาตรฐาน: ปุ่มเดิน 64 px / กระโดด 76 px; ขนาดใหญ่: 80 px / 92 px ระบบจำขนาดไว้ใน `coinquest.ui.v1` แยกจากสถิติเดิม
+- เล่นได้ทั้งแนวตั้งและแนวนอน รองรับเดินพร้อมกระโดด ลากนิ้วเปลี่ยนทิศ และ safe area ของจอ
+- ไฟล์ภาพที่หน้าเว็บใช้คือ `assets/2026-10-13_grassland-menu.webp` และ `assets/2026-10-13_forest-menu.webp` รวม 582,478 bytes; PNG ชื่อเดียวกันเป็นต้นฉบับ ไม่โหลดระหว่างเล่น
+- ถ้าภาพหรือ web font โหลดไม่ได้ เมนูยังใช้เลือกด่านและเริ่มเกมได้
+
+ตรวจ logic โดยไม่ติดตั้ง dependency:
+
+```bash
+node tools/2026-10-13_check-ui-settings.js
+node tools/2026-10-13_check-input.js
+node tools/check-rps.js
+```
+
+Browser QA ต้องมี Node.js, Playwright และ Chrome ที่ติดตั้งไว้แล้ว (เป็นเครื่องมือทดสอบ ไม่ใช่ dependency ของเกม):
+
+```bash
+node tools/2026-10-13_browser-qa.cjs final
+node tools/2026-10-13_browser-qa.cjs extended
+```
+
+สคริปต์เปิด local server ที่ `127.0.0.1:8001` และปิดเมื่อทดสอบเสร็จ ตั้ง `PLAYWRIGHT_MODULE` เป็น path ของ package และ `PLAYWRIGHT_CHANNEL` เป็น browser channel อื่นได้หากจำเป็น `extended` รวมการเล่นโหมดจับเวลาจริง 120 วินาที และเปรียบเทียบ frame timing กับ source ใน Git HEAD ผลและ screenshot เก็บใน `.logs/` การจำลองจอมือถือยังไม่ใช่การยืนยันผลบนอุปกรณ์ iOS/Android จริง
 
 เปิดไฟล์ `index.html` ด้วยเบราว์เซอร์ได้โดยตรง หรือรันผ่าน web server ใดก็ได้ เช่น
 
@@ -305,3 +331,9 @@ sprite ไม่ได้เก็บเป็นไฟล์ภาพ แต่
 - สีของแต่ละส่วนเป็นชุดโทน `l` (สว่าง) `b` (ปกติ) `s` (เงา) `d` (เงาเข้ม) สีเสื้อ/กระโปรงอยู่ใน `NORMAL` (ตอนได้ดาวจะสลับเป็นสีรุ้ง)
 - ตา ปาก ปกเสื้อ เป็นลายพิกเซลวาดมือ (`stampAt`)
 - ขนาด 1 พิกเซลของ sprite = `UNIT` หน่วยของเกม (0.85) ขนาด hitbox ไม่เปลี่ยนตามภาพ
+
+### Visual refresh — 2026-10-14
+
+ฉากระหว่างเล่นปรับ palette และรายละเอียดผ่าน Canvas caches เดิม; sprite คงขนาด/anchor/ความสามารถเดิม Bobo ไม่มีปาก, Mew ตาเขียว, Aclaire ตาฟ้าทั้งสองข้าง ภาพ Castle menu ใช้ `assets/2026-10-14_castle-menu.webp` (89,438 bytes) ส่วนภาพอ้างอิงใน `assets/concepts/` ไม่โหลดใน runtime
+
+ตรวจ sprite contract: `node tools/2026-10-14_check-sprites.js` (27 poses) รายงานและข้อจำกัด: `.logs/2026-10-14_visual-art-direction.md`

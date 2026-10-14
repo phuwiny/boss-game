@@ -288,8 +288,8 @@
     // ─────────────── Bobo ───────────────
     bobo: function (g, pose, tint) {
       const body = tint.a;
-      const band = { l: '#8db6ff', b: '#3a78ea', s: '#2a58c0', d: '#1d3f92' };
-      const face = { l: '#fff1e0', b: '#ffd3ad', s: '#f2ae84', d: '#d98c66' };
+      const band = { l: '#97d1ff', b: '#3985df', s: '#2956aa', d: '#24396d' };
+      const face = { l: '#fff4d0', b: '#ffdcaa', s: '#edb481', d: '#c98262' };
       const feet = { l: '#8a4b33', b: '#5f2e1c', s: '#46200f', d: '#2f1408' };
       const L = (function () {
         if (pose.run) {
@@ -335,7 +335,7 @@
 
     // ─────────────── Mew ───────────────
     mew: function (g, pose, tint) {
-      const hair = { l: '#fff6b8', b: '#ffd84a', s: '#e8a923', d: '#b8780f' };
+      const hair = { l: '#fff2b1', b: '#f9cd57', s: '#d99732', d: '#99591f' };
       const shirt = tint.a;
       const skirt = tint.b;
       const beret = { l: '#5c5a76', b: '#33313f', s: '#24222e', d: '#17151f' };
@@ -365,6 +365,8 @@
       g.begin('collar');
       const cm = { w: '#ffffff', W: '#d3dbf0', u: '#ffd23f', U: '#d39b00' };
       g.stampAt(0.6, -15.2 + by, ['wwwW.Wwww', '.wwWuWww.', '..wuUuw..', '...uUu...'], cm);
+      g.begin('skirtPleats');
+      [-4, 0, 4].forEach(function (x) { g.stampAt(x, -7 + by, ['s', 's'], { s: skirt.s }); });
       drawArm(g, 'armF', L.handF, shirt, MAT.skin, { lineSkip: ['collar'], sx: 3.2, sy: -15 + by });
       // หัว
       g.begin('face', { line: true, lineSkip: ['hairBack', 'torso', 'collar', 'armF', 'armB'] });
@@ -403,7 +405,7 @@
 
     // ─────────────── Aclaire ───────────────
     aclaire: function (g, pose, tint) {
-      const hair = { l: '#ffc27a', b: '#ff8c32', s: '#e0661a', d: '#a8440c' };
+      const hair = { l: '#ffd185', b: '#f69b3f', s: '#d6692c', d: '#944125' };
       const shirt = tint.a;
       const pants = tint.b;
       const shoe = { l: '#ffffff', b: '#f3f5fb', s: '#c6cede', d: '#9aa4bb' };
@@ -429,6 +431,8 @@
       g.poly([[-5.4, -16.6 + by], [5.4, -16.6 + by], [5.8, -9.6 + by], [-5.8, -9.6 + by]], shirt);
       g.begin('print');
       g.stampAt(-1.2, -12.4 + by, ['w.w', 'www', '.w.'], { w: '#ffffff' });
+      g.begin('hem');
+      g.stampAt(0, -9.8 + by, ['ssssssss'], { s: shirt.s });
       drawArm(g, 'armF', L.handF, shirt, MAT.skin, { lineSkip: ['print'], sx: 3.2, sy: -15 + by });
       // หัว
       g.begin('face', { line: true, lineSkip: ['tail', 'torso', 'armF', 'armB', 'print'] });
@@ -464,9 +468,9 @@
   // จึงสร้างรูปทรงครั้งเดียวแล้วสลับสีรุ้งตอนได้ดาวได้ทันที
   const SLOT = { a: { l: '@a.l', b: '@a.b', s: '@a.s', d: '@a.d' }, b: { l: '@b.l', b: '@b.b', s: '@b.s', d: '@b.d' } };
   const NORMAL = {
-    bobo: { a: { l: '#ffa47e', b: '#ff6a3d', s: '#e04e26', d: '#b8381a' }, b: { l: '#ffa47e', b: '#ff6a3d', s: '#e04e26', d: '#b8381a' } },
-    mew: { a: { l: '#6a9cff', b: '#3563d8', s: '#24459e', d: '#182f70' }, b: { l: '#ffb36b', b: '#ff8a2a', s: '#db6617', d: '#a84a10' } },
-    aclaire: { a: { l: '#ffc4de', b: '#ff8fc0', s: '#e5619e', d: '#b83c78' }, b: { l: '#5f86f0', b: '#2f56cc', s: '#203f9c', d: '#162c70' } }
+    bobo: { a: { l: '#ffb675', b: '#f77c35', s: '#d95329', d: '#9a3529' }, b: { l: '#ffb675', b: '#f77c35', s: '#d95329', d: '#9a3529' } },
+    mew: { a: { l: '#85b4ef', b: '#4279c2', s: '#2b5191', d: '#29365c' }, b: { l: '#ffc178', b: '#ed933f', s: '#bd632f', d: '#84422b' } },
+    aclaire: { a: { l: '#ffc5db', b: '#e782b0', s: '#ba518e', d: '#783c70' }, b: { l: '#779fde', b: '#416eaf', s: '#304b7f', d: '#263353' } }
   };
   function rainbow(h) {
     const tones = function (hh) {
