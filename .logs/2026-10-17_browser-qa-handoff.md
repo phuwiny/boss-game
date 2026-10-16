@@ -22,3 +22,9 @@ Checkpoint follow-up: direct diff review, fresh checks and the exact file select
 Scope limits: representative deterministic seeds and one live-play viewport; not every seed, hardware configuration or minigame ending for every character. Browser emulation and local RAF measurements do not prove physical-phone performance.
 
 Final audit: all 12 remaining-case records have valid completion conditions, replay/home success, zero browser errors and an existing final screenshot; the outer browser summary also has zero errors. Syntax checks passed for the three touched QA scripts, and `git diff --check` passed with line-ending notices only.
+
+### Physical-device follow-up — 2026-10-17
+
+พินรายงานผลทดสอบ https://phuwiny.github.io/boss-game/ บน Samsung Galaxy A26 5G, OneUI 8.5, Chrome 155.0.8059.81 วันที่ 17/10/2026: ผ่านทุกข้อที่ทดสอบได้ใน checklist (7 ข้อ) รวม multitouch, rotation, setting persistence, background/resume และ result/replay/home ส่วน fullscreen ไม่ได้ทดสอบเพราะไม่มีตัวเลือกให้เปิด ไม่ถือเป็น failure หรือหลักฐานว่า browser ไม่รองรับ
+
+รายละเอียด: `.logs/2026-10-16_real-device-checklist.md` ผลนี้เป็นรายงานของผู้ใช้บนอุปกรณ์จริงหนึ่งเครื่อง ไม่ใช่การตรวจโดย agent และยังไม่ยืนยัน commit/build ที่ GitHub Pages ให้บริการขณะทดสอบ จึงยังไม่ผูกผลกับ commit ของ Draft Release v2.0.0 โดยอัตโนมัติ การทดสอบ iOS และ fullscreen ยังไม่มีผลยืนยัน

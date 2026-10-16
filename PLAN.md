@@ -323,3 +323,9 @@ Preview: `http://127.0.0.1:8001` ขณะ local preview process ยังทำ
 - [x] แก้ปีกถูกตัวละครบังด้วยขนาด/ตำแหน่งวาด และตรวจภาพซ้ำทั้งสองแนวจอ; คง Bobo ไม่มีปากและ Aclaire ตาฟ้า
 
 ผลและภาพอยู่ใน `.logs/2026-10-14_boss-special-qa.md` และ `.logs/2026-10-14_boss-special/` ใช้ fixture ย้ายตัวละครเข้าลานบอส/เก็บเหรียญก่อนลาน และจัดเวลาไอเทม จึงไม่ถือเป็นการเล่นทั้งด่านโดยไม่จัด state หรือทดสอบมือถือจริง รายการ V4 ที่กว้างกว่าขอบเขตนี้ยังคงว่าง
+
+### Physical-device follow-up — 2026-10-17
+
+พินรายงานผลทดสอบ https://phuwiny.github.io/boss-game/ บน Samsung Galaxy A26 5G, OneUI 8.5, Chrome 155.0.8059.81 วันที่ 17/10/2026: ผ่านทุกข้อที่ทดสอบได้ใน checklist (7 ข้อ) รวม multitouch, rotation, setting persistence, background/resume และ result/replay/home ส่วน fullscreen ไม่ได้ทดสอบเพราะไม่มีตัวเลือกให้เปิด ไม่ถือเป็น failure หรือหลักฐานว่า browser ไม่รองรับ
+
+รายละเอียด: `.logs/2026-10-16_real-device-checklist.md` ผลนี้เป็นรายงานของผู้ใช้บนอุปกรณ์จริงหนึ่งเครื่อง ไม่ใช่การตรวจโดย agent และยังไม่ยืนยัน commit/build ที่ GitHub Pages ให้บริการขณะทดสอบ จึงยังไม่ผูกผลกับ commit ของ Draft Release v2.0.0 โดยอัตโนมัติ การทดสอบ iOS และ fullscreen ยังไม่มีผลยืนยัน
