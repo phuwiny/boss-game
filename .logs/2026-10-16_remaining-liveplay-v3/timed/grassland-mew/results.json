@@ -1,0 +1,108 @@
+{
+  "stage": "grassland",
+  "character": "mew",
+  "mode": "timed",
+  "state": "won",
+  "time": 120,
+  "limit": 120,
+  "collected": 58,
+  "goal": 80,
+  "deaths": 1,
+  "bossDefeated": false,
+  "remaining": [
+    {
+      "x": 7920,
+      "y": 432
+    },
+    {
+      "x": 8208,
+      "y": 432
+    },
+    {
+      "x": 8464,
+      "y": 400
+    },
+    {
+      "x": 8624,
+      "y": 368
+    },
+    {
+      "x": 8816,
+      "y": 368
+    },
+    {
+      "x": 9008,
+      "y": 432
+    },
+    {
+      "x": 9264,
+      "y": 496
+    },
+    {
+      "x": 9104,
+      "y": 432
+    },
+    {
+      "x": 9392,
+      "y": 432
+    },
+    {
+      "x": 9552,
+      "y": 400
+    },
+    {
+      "x": 9744,
+      "y": 400
+    },
+    {
+      "x": 9840,
+      "y": 368
+    },
+    {
+      "x": 10000,
+      "y": 432
+    },
+    {
+      "x": 10096,
+      "y": 368
+    },
+    {
+      "x": 10320,
+      "y": 400
+    },
+    {
+      "x": 10416,
+      "y": 432
+    },
+    {
+      "x": 10672,
+      "y": 400
+    },
+    {
+      "x": 10512,
+      "y": 400
+    },
+    {
+      "x": 10960,
+      "y": 432
+    },
+    {
+      "x": 10800,
+      "y": 304
+    },
+    {
+      "x": 11056,
+      "y": 432
+    },
+    {
+      "x": 11248,
+      "y": 400
+    }
+  ],
+  "complete": true,
+  "maxX": 8283.263888888881,
+  "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+  "replayAndHome": true,
+  "errors": [],
+  "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\timed\\grassland-mew"
+}

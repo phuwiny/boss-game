@@ -1,10 +1,26 @@
 # Coin Quest — Visual & Mobile Experience Plan
 
-วันที่: 2026-10-13 · สถานะ: **รวม main และลงงานภาพฉาก/ตัวละครแล้ว; ตรวจ QA ตามรายการที่มีหลักฐาน**
+วันที่: 2026-10-13 · อัปเดต 2026-10-17 · สถานะ: **ภาพละเอียดขึ้นและท่าวิ่งเดิมผ่าน QA ห้าขนาดจอ; gameplay matrix บน Chrome ครบแล้ว เหลือตรวจอุปกรณ์จริง**
+
+## ขอบเขตที่พินอนุมัติเพิ่ม — 2026-10-15
+
+**ปรับขอบเขตล่าสุด 2026-10-16:** พินยกเลิกการเปลี่ยนท่าวิ่งหลังพบสัดส่วนของชุดทดลองผิดไป ใช้ภาพ source ชุดเดิม 9 ท่าต่อตัว (วิ่ง 4 เฟรม) และจังหวะเดิม เพิ่มเฉพาะความละเอียดจาก 54×48 เป็น backing pixels 108×96 โดยคง logical frame 54×48 และ anchor เดิม ไม่ใช้ภาพ `run-v2-source` หรือ run5–8 ในเกม ตรวจเทียบขอบเขตภาพกับข้อมูล v1 พร้อม QA แยกใน `.logs/2026-10-16_resolution-only.md`
+
+- [x] ตรวจภาพ density=2 ครบห้าขนาดจอหลังพินรับภาพ: shared portraits, Castle crossfire และ art-load fallback ครบสามตัว; ไม่มี uncaught errors ดู `.logs/2026-10-16_resolution-final-qa.md`
+- [x] เทียบความลื่น density=1/2 ด้วย renderer เดียวกัน: แก้ต้นทุนสร้างแคชภาพ แล้วผล RAF p95 ผ่านเกณฑ์ +20% ครบสามฉาก × สามรอบ (Chrome เครื่องนี้ ไม่ใช่มือถือจริง)
+
+งาน V3 เดิมด้านล่างเป็นการปรับ procedural sprite และมีผลตรวจของรุ่นนั้นเท่านั้น ยังไม่ถือว่าภาพตรง concept ที่อนุมัติ พินอนุมัติให้ทำภาพจริงตามลำดับต่อไปนี้แล้ว:
+
+- [x] V3.1 พินอนุมัติ seed pose ทั้งสามตัวใน `assets/concepts/2026-10-15_character-seeds-v1.png` หลังตรวจหน้าเทียบ concept และตัวอย่างขนาดเล็ก
+- [x] V3.2 สร้างภาพชุด 9 ท่าต่อตัวด้วย imagegen แล้ว normalize ด้วยสเกลร่วมกันต่อตัว; ภาพ preview และ PNG ครบ 27 เฟรมอยู่ใน `assets/characters/`
+- [x] V3.3 โหลดข้อมูลพิกเซลที่สร้างจากภาพผ่าน `js/2026-10-15_character-art.js` ใช้ API frame เดิมทุกหน้า พร้อม procedural fallback; ไม่เปลี่ยน hitbox/ค่าการเล่น
+- [x] V3.4 ตรวจภาพร่วมกันห้าขนาดจอ, 18 stage/character/mode smoke cases, Castle crossfire 15 กรณี, fallback ครบสามตัว และภาพซ้าย/ขวา 216 ช่อง; แก้สีดาวไม่ให้เปลี่ยนผม Mew แล้วตรวจเอฟเฟกต์ซ้ำสองแนวจอ ดู `.logs/2026-10-15_character-concept-rebuild.md` (ไม่ใช่เล่นครบทุกด่าน)
+
+ต้องคง Bobo ไม่มีปาก, Mew ตาเขียว, Aclaire ตาฟ้า ใช้ภาพ raster โปร่งใสตาม concept เป็นเป้าหมายใหม่; ข้อเสนอเดิมที่จำกัดเฉพาะ procedural sprite ถูกแทนที่สำหรับงานตัวละครรอบนี้ ผล QA เก่ายังเก็บไว้เป็นหลักฐานของรุ่นเดิม ไม่ใช้รับรองภาพใหม่ล่วงหน้า
 
 ## อัปเดตหลังรวม main — 2026-10-13
 
-ฐานล่าสุดในเครื่องคือ `0e6c593` (PR #20) รวมจาก `main` เข้า `codex/visual-mobile-refresh` แบบ fast-forward แล้วนำงานภาพเดิมกลับมารวม โดยมี stash สำรอง งานยังไม่ commit/push
+ฐานที่รวมจาก main คือ `0e6c593` (PR #20) รวมเข้า `codex/visual-mobile-refresh` แบบ fast-forward แล้วนำงานภาพเดิมกลับมารวม โดยมี stash สำรอง; บันทึก checkpoint `df3faff` แล้ววันที่ 2026-10-15 ยังไม่ push งาน QA หลัง checkpoint อยู่ใน working tree
 
 เวอร์ชันล่าสุดมี **Grassland, Forest, Castle/Boss Stage**, ระบบยิงและ HP, RPS, Coin Rain, Memory Match และ `manual.html` จึงต้องครอบคลุมสิ่งเหล่านี้ในการทำภาพรอบใหม่ ส่วน checklist และผล QA ในหัวข้อ 1–7 ด้านล่างเป็นประวัติงานบนฐานเก่า `ca9f362` ไม่ใช่หลักฐานว่าฟีเจอร์ใหม่ผ่าน QA แล้ว ดูผลรวมเวอร์ชันใน `.logs/2026-10-13_main-integration.md`
 
@@ -42,8 +58,8 @@
 
 - [x] ปรับ Grassland ก่อน แล้ว Forest และ Castle ตาม concept ที่อนุมัติ: background layers, tile surfaces, decorations และสีแสง
 - [x] คง API `renderer.setLevel(lv, theme)`, camera และ touch bottom inset เดิม; ห้ามเปลี่ยน tile collision หรือ spawn เพื่อแก้ปัญหาภาพ
-- [ ] ทำขอบพื้นและ moving platforms ให้อ่านออก ลด contrast ของ background; ตรวจศัตรู/หนาม/ธง/ไอเทมบนพื้นทุกแบบ
-- [ ] ตรวจ Castle ขณะมีบอส กระสุนหลายชนิด HP และปุ่มยิงขนาดใหญ่พร้อมกัน ทั้งแนวตั้ง/แนวนอน
+- [x] ตรวจภาพตัวอย่างชนิดพื้นและ moving platforms รวมศัตรู/หนาม/ธง/ไอเทมที่มีในทั้งสามฉาก ผ่าน camera fixtures 34 จุด; ไม่ใช่การตรวจทุกตำแหน่งหรือการเล่นผ่านอุปสรรคจริง
+- [x] ตรวจ Castle ขณะมีบอส กระสุนผู้เล่นทั้งสามชนิด HP และปุ่มยิงขนาดใหญ่พร้อมกัน ทั้งแนวตั้ง/แนวนอน รวม 15 character/viewport cases
 - [x] บันทึก before/after ทีละฉากและผล frame-time ด้วย viewport/seed/state เดียวกัน
 
 **ตรวจรับ:** ทั้งสามฉากผ่านเกมจริง normal/timed ไม่มี artwork บังขอบพื้นหรือเส้นทาง; p95 frame-time ไม่เกิน baseline ใหม่ +20% บนเครื่องเดียวกัน หากเกินต้องลดรายละเอียดแล้วตรวจซ้ำ
@@ -56,8 +72,8 @@
 
 - [x] ปรับทีละตัว Bobo → Mew → Aclaire ตาม lineup ที่อนุมัติ ครบ idle, blink, run1–4, jump, fall, dead
 - [x] ตรวจซ้าย/ขวาทุก pose และตัวอย่าง hue ดาว 0/120/240; contact sheet 216 ช่องอยู่ใน `.logs/2026-10-15_visual-followup/` (ไม่ใช่การตรวจทุกเฉดระหว่าง animation)
-- [ ] รักษาปีก ท่าลอยตัว guard/อมตะ และการยิงแสง/ลม/ไฟให้มองออก โดยไม่เปลี่ยน cooldown/damage/physics
-- [ ] ตรวจภาพเดียวกันใน character picker, title preview, RPS, Coin Rain และ Memory Match ที่ใช้ภาพตัวละครร่วมกัน
+- [x] รักษาปีก ท่าลอยตัว guard/อมตะ และการยิงแสง/ลม/ไฟให้มองออก โดยไม่เปลี่ยน cooldown/damage/physics; หลักฐาน 2026-10-14 boss-special และ 2026-10-15 remaining-qa
+- [x] ตรวจภาพเดียวกันใน character picker, title preview, RPS, Coin Rain และ Memory Match ที่ใช้ภาพตัวละครร่วมกัน; Memory ใช้ deck fixture ให้มีตัวละครครบ
 - [x] เพิ่ม Node checks เฉพาะ contract ของ frame: จำนวน pixel = w×h, anchor อยู่ใน frame, pose ทุกตัวสร้างได้, สีโปร่งใสและ hue ทำงาน; ไม่ใช้ test แทนการตรวจภาพ
 
 **ตรวจรับ:** ภาพทั้งสามตัวได้รับการตรวจที่ขนาดแสดงจริงและ contact sheet; ไม่มีเท้าเลื่อน/ภาพตัดขอบ; ความสามารถและการยิงทำงานเหมือนฐาน main
@@ -67,10 +83,19 @@
 **Files:** `tools/2026-10-13_qa-integration.cjs`, เครื่องมือ QA ที่เกี่ยวข้อง, `README.md`, `MANUAL.md` เฉพาะภาพ/คำอธิบายที่เปลี่ยน, `.logs/YYYY-MM-DD_visual-gameplay-qa.md`
 
 - [x] รัน syntax และ unit checks ของ input/settings/RPS/Rain/Memory รวม frame contract ใหม่
-- [ ] เล่นทั้งสามฉาก สองโหมด และสามตัวละคร; ตรวจ Boss ยิง/โดนโจมตี/แพ้/ชนะ และมินิเกมครบสามเกม
-- [ ] ตรวจ 360×640, 390×844, 640×360, 844×390, 1366×768: HUD, HP, controls ทั้งสองขนาด, safe area, pause/result และหมุนจอขณะกด
-- [ ] ตรวจ asset failure, reload settings, reduced motion, สถิติเก่า และคู่มือ; เก็บ console errors และ resource failures
-- [ ] ทดสอบโทรศัพท์จริงอย่างน้อยหนึ่งเครื่องก่อนอ้างผลรองรับอุปกรณ์จริง; แยกผล emulator และข้อจำกัดในรายงาน
+- [x] เล่นทั้งสามฉาก สองโหมด และสามตัวละครบน Chrome: โหมดปกติเก็บครบทุกคู่ ส่วนจับเวลาจบด้วยเก็บครบหรือหมดเวลา; Boss ยิง/โดนโจมตี/แพ้/ชนะและมินิเกมครบสามเกมมีหลักฐานแยกตามรายการด้านล่าง ไม่ใช่ทุก seed/อุปกรณ์/ผลลัพธ์ของมินิเกมทุกตัวละคร
+- [x] เล่นโหมดปกติจบจริงครบ 3 ฉาก × 3 ตัวละครที่ 844×390 รวมผลเดิมและอีก 6 คู่ใน `.logs/2026-10-16_remaining-liveplay.md`; Castle ปราบบอสครบทั้งสามตัว พร้อม result/replay/home และไม่มี uncaught errors (หนึ่ง seed ต่อคู่ ไม่ใช่ทุก seed หรืออุปกรณ์จริง)
+- [x] โหมดจับเวลาอีก 6 คู่ผ่าน: Grassland/Mew 58 เหรียญ, Grassland/Aclaire 38, Forest/Bobo 46, Forest/Aclaire 66 จบเมื่อครบ 120 วินาที; Castle/Bobo และ Castle/Mew เก็บครบ 45/45 ก่อนหมดเวลา รวมกับผลเดิมครบ 9 คู่ รายงานสรุป `.logs/2026-10-17_browser-qa-handoff.md`
+- [x] เล่น Grassland/Mew โหมดปกติจบจริง 40/40 เหรียญใน 97.27 วินาที พลาดหนึ่งครั้ง พร้อม replay/home ที่ 844×390; ไม่แก้สถานะเกมและไม่มี uncaught errors รายงาน `.logs/2026-10-16_normal-liveplay.md` (ยังไม่ครบทุกคู่ด่าน/ตัวละคร)
+- [x] เล่น Forest/Mew โหมดปกติจบจริง 40/40 เหรียญใน 99.98 วินาที พลาดหนึ่งครั้ง พร้อม result/replay/home ที่ 844×390; ไม่มี uncaught errors และตรวจภาพ result หลัง transition แล้ว
+- [x] เล่น Castle/Aclaire โหมดปกติจากต้นด่านจนปราบบอสและเก็บครบ 25/25 ใน 43.76 วินาที พลาดหนึ่งครั้ง พร้อม result/replay/home ที่ 844×390; ไม่ย้ายเข้าลานบอส ไม่เติมเหรียญ/HP และไม่มี uncaught errors (ยังเหลือคู่ตัวละครอื่น)
+- [x] เล่นจับเวลาจริงครบ 120 วินาทีที่ 844×390: Grassland/Bobo, Forest/Mew, Castle/Aclaire พร้อม result/replay/pause/home; ไม่เขียนทับสถานะเกมและไม่มี uncaught errors แต่ยังไม่ถึงท้ายด่านหรือปราบบอส ดู `.logs/2026-10-15_liveplay.md`
+- [x] ผลมินิเกมจริง: Memory ชนะ/replay ครบสามตัวละคร × ห้าขนาดจอ; RPS ชนะ 17 รอบ และ Coin Rain แพ้ตามกติกา/replay ที่ 844×390 ด้วย Aclaire (ไม่ใช่ทุกผลลัพธ์ของทุกตัวละคร)
+- [x] แก้หัวข้อและปุ่มหน้า Memory result ถูกตัดในจอเตี้ย พร้อม assertion ขอบกรอบที่ล้มเหลวก่อนแก้และผ่านหลังแก้ครบ 15 กรณี
+- [x] ตรวจ 360×640, 390×844, 640×360, 844×390, 1366×768: HUD, HP, controls ทั้งสองขนาด, pause และหมุนจอขณะกด; safe area จำลอง 360×640/640×360 และ fullscreen desktop ผ่าน
+- [x] ตรวจหน้า result บนฐานล่าสุดครบห้าขนาดจอ × สามฉาก × normal/timed รวม 30 กรณี พร้อม replay/home; ใช้สถานะจบจำลองเพื่อทดสอบ UI ไม่ใช่การเล่นจบด่าน (Boss encounter จริงมีหลักฐานแยก)
+- [x] ตรวจ asset/font/storage failure ทั้งสามฉาก, reload settings, reduced motion, สถิติเก่า และคู่มือครบห้าขนาดจอ; ไม่มี uncaught errors ใน flow ที่ตรวจ
+- [ ] ทดสอบโทรศัพท์จริงอย่างน้อยหนึ่งเครื่องก่อนอ้างผลรองรับอุปกรณ์จริง; ขั้นตอนและช่องบันทึกผลอยู่ใน `.logs/2026-10-16_real-device-checklist.md` ยังไม่มีผลจากอุปกรณ์จริง
 
 **Review focus:** background กลืนวัตถุ, frame anchor กระตุก, ปุ่มยิงชนปุ่มเดิน, เอฟเฟกต์ดาว/guard บังตัวละคร และการเปลี่ยน sprite ส่งผลต่อมินิเกม แต่ละกรณีต้องมีภาพและ flow ตรวจตาม V2–V4
 

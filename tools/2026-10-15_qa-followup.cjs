@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-module.exports=async({page,results,width,height})=>{
- const dir=path.resolve('.logs/2026-10-15_visual-followup');fs.mkdirSync(dir,{recursive:true});
+module.exports=async({page,results,width,height,outputDir})=>{
+ const dir=path.resolve(outputDir||'.logs/2026-10-15_visual-followup');fs.mkdirSync(dir,{recursive:true});
  const shot=label=>page.screenshot({path:path.join(dir,`${width}x${height}-${label}.png`)});
  // Use the production frame generator and exact pixel painting, with foot anchors marked.
  for(const id of ['bobo','mew','aclaire']){

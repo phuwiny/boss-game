@@ -1,0 +1,15 @@
+[
+  {
+    "stage": "grassland",
+    "character": "mew",
+    "mode": "normal",
+    "state": "playing",
+    "time": 239.93333333327945,
+    "collected": 39,
+    "goal": 40,
+    "deaths": 1,
+    "complete": false,
+    "maxX": 11134.395833333332,
+    "input": "real keyboard; read-only live state; copied physics forecast with stationary platform/enemy approximation"
+  }
+]

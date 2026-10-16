@@ -1,0 +1,22 @@
+[
+  {
+    "stage": "forest",
+    "character": "mew",
+    "mode": "normal",
+    "state": "won",
+    "time": 99.98333333335897,
+    "collected": 40,
+    "goal": 40,
+    "deaths": 1,
+    "remaining": [],
+    "complete": true,
+    "maxX": 11062.152777777785,
+    "input": "real keyboard; read-only live state; copied physics forecast with stationary platform/enemy approximation",
+    "replayAndHome": true
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "errors": []
+  }
+]

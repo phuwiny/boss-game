@@ -1670,16 +1670,16 @@
   };
 
   // ── ตัวละคร (pixel art จาก js/sprites.js) ───────────────────────
-  // เก็บ frame เป็น canvas 1 พิกเซลต่อ 1 art px แล้วขยายตอนวาดด้วยจำนวนเต็ม (this.pixel) ภาพจึงคมทุกจอ
+  // เก็บ backing canvas ตาม density ของภาพ แต่ขนาดวาดและ anchor ใช้ logical pixel เดิม
   const heroCache = {};
   function heroFrame(id, pose, hue) {
     const key = id + '|' + pose + '|' + (hue == null ? '' : hue);
     let fr = heroCache[key];
     if (!fr) {
       const f = CQ.Sprites.build(id, pose, hue);
-      const c = makeCanvas(f.w, f.h);
-      CQ.Sprites.paint(c.getContext('2d'), f, 0, 0, 1);
-      fr = heroCache[key] = { c: c, w: f.w, h: f.h, ax: f.ax };
+      const density = f.density || 1, c = makeCanvas(f.w * density, f.h * density);
+      CQ.Sprites.paint(c.getContext('2d'), f, 0, 0, density);
+      fr = heroCache[key] = { c: c, w: f.w, h: f.h, ax: f.ax, density: density };
     }
     return fr;
   }
@@ -1748,6 +1748,8 @@
       ctx.drawImage(wf.c, (-6 - wf.w * 2) * k, sy - 27 * k, wf.w * 2 * k, wf.h * 2 * k);
     }
     const fr = heroFrame(p.ch || 'bobo', heroPose(p, g, time, dead), hue);
+    ctx.imageSmoothingEnabled = fr.density > 1;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(fr.c, -fr.ax * k, sy - (fr.h - 1) * k, fr.w * k, fr.h * k);
     ctx.restore();
   };
@@ -1769,6 +1771,8 @@
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = 'rgba(16,28,52,0.16)';
     ctx.fillRect(Math.round(W / 2 - 7 * k), base - k, 14 * k, 2 * k);
+    ctx.imageSmoothingEnabled = fr.density > 1;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(fr.c, Math.round(W / 2) - fr.ax * k, base - (fr.h - 1) * k, fr.w * k, fr.h * k);
   };
 

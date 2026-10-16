@@ -1,0 +1,406 @@
+[
+  {
+    "width": 360,
+    "height": 640,
+    "id": "bobo",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "bobo",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "mew",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "mew",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "aclaire",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "aclaire",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "id": "bobo",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "mew",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "aclaire",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "artFallback": "PASS all three characters; restored art after reload"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "bobo",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "bobo",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "mew",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "mew",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "aclaire",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "aclaire",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "artFallback": "PASS all three characters; restored art after reload"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "errors": []
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "bobo",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "bobo",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "mew",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "mew",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "aclaire",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "aclaire",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "artFallback": "PASS all three characters; restored art after reload"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "errors": []
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "id": "bobo",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "id": "bobo",
+    "stage": "grassland",
+    "mode": "normal",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "bobo",
+    "stage": "grassland",
+    "mode": "timed",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "bobo",
+    "stage": "forest",
+    "mode": "normal",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "bobo",
+    "stage": "forest",
+    "mode": "timed",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "bobo",
+    "stage": "castle",
+    "mode": "normal",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "bobo",
+    "stage": "castle",
+    "mode": "timed",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "id": "bobo",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "id": "mew",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "id": "mew",
+    "stage": "grassland",
+    "mode": "normal",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "mew",
+    "stage": "grassland",
+    "mode": "timed",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "mew",
+    "stage": "forest",
+    "mode": "normal",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "mew",
+    "stage": "forest",
+    "mode": "timed",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "mew",
+    "stage": "castle",
+    "mode": "normal",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "mew",
+    "stage": "castle",
+    "mode": "timed",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "id": "mew",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "id": "aclaire",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "id": "aclaire",
+    "stage": "grassland",
+    "mode": "normal",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "aclaire",
+    "stage": "grassland",
+    "mode": "timed",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "aclaire",
+    "stage": "forest",
+    "mode": "normal",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "aclaire",
+    "stage": "forest",
+    "mode": "timed",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "aclaire",
+    "stage": "castle",
+    "mode": "normal",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "id": "aclaire",
+    "stage": "castle",
+    "mode": "timed",
+    "realInputExploration": "PASS: move/jump/fire 1 second, pause/home; not full-level completion"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "id": "aclaire",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "id": "bobo",
+    "width": 844,
+    "height": 390,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 844,
+        "h": 390
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "mew",
+    "width": 844,
+    "height": 390,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 844,
+        "h": 390
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "aclaire",
+    "width": 844,
+    "height": 390,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 844,
+        "h": 390
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "bobo",
+    "contactSheetFrames": 72
+  },
+  {
+    "id": "mew",
+    "contactSheetFrames": 72
+  },
+  {
+    "id": "aclaire",
+    "contactSheetFrames": 72
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "castleFallback": "PASS: image blocked, menu usable, Castle starts, restored asset decodes",
+    "assetBytes": 89438,
+    "failures": [
+      {
+        "url": "http://127.0.0.1:8001/assets/2026-10-14_castle-menu.webp",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:8001/assets/2026-10-14_castle-menu.webp",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:8001/js/2026-10-15_character-art.js",
+        "error": "net::ERR_FAILED"
+      }
+    ],
+    "conceptRequests": 0
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "artFallback": "PASS all three characters; restored art after reload"
+  }
+]

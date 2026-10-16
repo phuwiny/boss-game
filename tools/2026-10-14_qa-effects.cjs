@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-module.exports=async({page,results,width,height})=>{
- const dir=path.resolve('.logs/2026-10-14_boss-special');fs.mkdirSync(dir,{recursive:true});
+module.exports=async({page,results,width,height,outputDir})=>{
+ const dir=path.resolve(outputDir||'.logs/2026-10-14_boss-special');fs.mkdirSync(dir,{recursive:true});
  const shot=async label=>page.screenshot({path:path.join(dir,`${width}x${height}-${label}.png`)});
  for(let i=0;i<3;i++){
   const id=['bobo','mew','aclaire'][i];await page.goto('http://127.0.0.1:8001/?seed=qa-effects-2026-10-14');

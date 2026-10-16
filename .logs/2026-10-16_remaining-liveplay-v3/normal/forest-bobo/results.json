@@ -1,0 +1,19 @@
+{
+  "stage": "forest",
+  "character": "bobo",
+  "mode": "normal",
+  "state": "won",
+  "time": 70.34166666666871,
+  "limit": 0,
+  "collected": 40,
+  "goal": 40,
+  "deaths": 0,
+  "bossDefeated": false,
+  "remaining": [],
+  "complete": true,
+  "maxX": 11058.062499999996,
+  "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+  "replayAndHome": true,
+  "errors": [],
+  "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\normal\\forest-bobo"
+}

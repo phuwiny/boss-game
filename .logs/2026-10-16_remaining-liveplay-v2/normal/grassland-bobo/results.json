@@ -1,0 +1,18 @@
+{
+  "stage": "grassland",
+  "character": "bobo",
+  "mode": "normal",
+  "state": "won",
+  "time": 140.2916666667034,
+  "limit": 0,
+  "collected": 40,
+  "goal": 40,
+  "deaths": 13,
+  "bossDefeated": false,
+  "remaining": [],
+  "complete": true,
+  "maxX": 11152.541666666642,
+  "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+  "replayAndHome": true,
+  "errors": []
+}

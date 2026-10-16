@@ -16,7 +16,7 @@ const phase = process.argv[2] || 'baseline';
 const assert = require('node:assert/strict');
 const out = path.join(root, '.logs', '2026-10-13_screenshots');
 fs.mkdirSync(out, { recursive: true });
-const sizes = ['extended','resilience'].includes(phase) ? [] : process.argv[3] ? [process.argv[3].split('x').map(Number)] : [[360,640],[390,844],[640,360],[844,390],[1366,768]];
+const sizes = phase==='resolution-remaining' ? [[390,844],[640,360],[1366,768]] : ['extended','resilience'].includes(phase) ? [] : process.argv[3] && process.argv[3] !== 'all' ? [process.argv[3].split('x').map(Number)] : [[360,640],[390,844],[640,360],[844,390],[1366,768]];
 (async () => {
   const server = require('node:http').createServer((req,res) => {
     const pathname = decodeURIComponent(new URL(req.url, 'http://127.0.0.1').pathname);
@@ -57,6 +57,35 @@ const sizes = ['extended','resilience'].includes(phase) ? [] : process.argv[3] ?
     await page.locator('#btn-mg-rps').click();
     await page.waitForTimeout(350);
     await page.screenshot({path:path.join(out, `${phase}-${width}x${height}-rps.png`)});
+    if (phase === 'concept') await require('./2026-10-15_qa-concept.cjs')({page,context,width,height,results});
+    if (phase === 'resolution') await require('./2026-10-15_qa-concept.cjs')({page,context,width,height,results,outputDir:'.logs/2026-10-16_resolution-qa'});
+    if (phase === 'resolution-remaining') await require('./2026-10-15_qa-concept.cjs')({page,context,width,height,results,outputDir:'.logs/2026-10-16_resolution-qa'});
+    if (phase === 'resolution-performance') await require('./2026-10-16_qa-resolution-performance.cjs')({page,results});
+    if (phase === 'pixel-upload') {
+      await require('./2026-10-16_qa-pixel-upload.cjs')({page,results});
+      await require('./2026-10-14_qa-effects.cjs')({page,results,width,height,outputDir:'.logs/2026-10-16_pixel-upload'});
+    }
+    if (phase === 'concept-effects') {
+      const outputDir='.logs/2026-10-15_concept-qa/final-effects';
+      await require('./2026-10-14_qa-effects.cjs')({page,results,width,height,outputDir});
+      await require('./2026-10-15_qa-followup.cjs')({page,results,width,height,outputDir});
+      await page.goto('http://127.0.0.1:8001/assets/characters/2026-10-15_animation-preview.html');
+      await page.locator('#face').click();await page.locator('#star').click();await page.waitForTimeout(250);
+      assert.equal(await page.locator('canvas').count(),3);
+      await page.screenshot({path:path.join(outputDir,`${width}x${height}-animation-preview.png`),fullPage:true});
+    }
+    if (phase === 'liveplay') await require('./2026-10-15_qa-liveplay.cjs')({page,width,height,results});
+    if (phase === 'normal-liveplay') await require('./2026-10-16_qa-normal-liveplay.cjs')({page,width,height,results});
+    if (phase === 'remaining-liveplay') await require('./2026-10-16_qa-remaining-liveplay.cjs')({page,width,height,results});
+    if (phase === 'minigames-complete') await require('./2026-10-15_qa-minigames.cjs')({page,width,height,results});
+    if (phase === 'results') await require('./2026-10-15_qa-results.cjs')({page,width,height,results});
+    if (phase === 'environment') await require('./2026-10-15_qa-environment.cjs')({page,results});
+    if (phase === 'regression') {
+      const currentOut=path.join(root,'.logs','2026-10-15_regression');fs.mkdirSync(currentOut,{recursive:true});
+      await require('./2026-10-13_qa-flows.cjs')({page,context,width,height,out:currentOut,results});
+      await require('./2026-10-15_qa-resilience.cjs')({browser,page,width,height,out:currentOut,results});
+    }
+    if (phase === 'matrix') await require('./2026-10-15_qa-matrix.cjs')({page,context,results,width,height});
     if (phase === 'followup') await require('./2026-10-15_qa-followup.cjs')({page,results,width,height});
     if (phase === 'effects') await require('./2026-10-14_qa-effects.cjs')({page,results,width,height});
     if (phase === 'boss-special') await require('./2026-10-14_qa-boss-special.cjs')({page,results,width,height});

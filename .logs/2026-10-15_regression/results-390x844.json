@@ -1,0 +1,59 @@
+[
+  {
+    "width": 360,
+    "height": 640,
+    "functional": "PASS",
+    "hud": {
+      "map": {
+        "x": 12,
+        "y": 64,
+        "w": 300,
+        "h": 23.011363636363637
+      },
+      "powerBottom": 224,
+      "button": {
+        "x": 300,
+        "y": 13,
+        "w": 45,
+        "h": 45
+      }
+    },
+    "checks": "stage/character persistence; both modes; Mew air jump; Aclaire guard; settings/toggles; native keyboard; touch cancel/rotate; fit; reduced motion"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "resilience": "PASS: all 3 stages start with assets/fonts/storage blocked; old records unchanged; setting reload and manual"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "functional": "PASS",
+    "hud": {
+      "map": {
+        "x": 12,
+        "y": 64,
+        "w": 300,
+        "h": 23.011363636363637
+      },
+      "powerBottom": 224,
+      "button": {
+        "x": 330,
+        "y": 13,
+        "w": 45,
+        "h": 45
+      }
+    },
+    "checks": "stage/character persistence; both modes; Mew air jump; Aclaire guard; settings/toggles; native keyboard; touch cancel/rotate; fit; reduced motion"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "resilience": "PASS: all 3 stages start with assets/fonts/storage blocked; old records unchanged; setting reload and manual"
+  }
+]

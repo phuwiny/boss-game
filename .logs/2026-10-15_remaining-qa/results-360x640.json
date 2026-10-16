@@ -1,0 +1,38 @@
+[
+  {
+    "width": 360,
+    "height": 640,
+    "id": "bobo",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "bobo",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "mew",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "mew",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "aclaire",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "aclaire",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  }
+]

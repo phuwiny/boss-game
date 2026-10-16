@@ -426,7 +426,8 @@
       ellipse(sx, base - 21 * px, 22 * px, 26 * px); ctx.stroke();
     }
     ctx.save();
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = fr.density > 1;
+    ctx.imageSmoothingQuality = 'high';
     ctx.translate(sx, 0);
     ctx.scale(p.face || 1, 1);
     ctx.drawImage(fr.c, -fr.ax * px, base - (fr.h - 1) * px, fr.w * px, fr.h * px);

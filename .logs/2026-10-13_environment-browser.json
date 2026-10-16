@@ -1,0 +1,205 @@
+[
+  {
+    "stage": "grassland",
+    "targets": [
+      {
+        "name": "GROUND",
+        "x": 0,
+        "y": 448
+      },
+      {
+        "name": "BRICK",
+        "x": 4000,
+        "y": 224
+      },
+      {
+        "name": "ONEWAY",
+        "x": 6560,
+        "y": 64
+      },
+      {
+        "name": "SPIKE",
+        "x": 2688,
+        "y": 480
+      },
+      {
+        "name": "SPRING",
+        "x": 10752,
+        "y": 352
+      },
+      {
+        "name": "moving-platform",
+        "x": 5154.333333333332,
+        "y": 384
+      },
+      {
+        "name": "enemy-slime",
+        "x": 1921.9500000000003,
+        "y": 430
+      },
+      {
+        "name": "checkpoint",
+        "x": 2496,
+        "y": 416
+      },
+      {
+        "name": "item-mush",
+        "x": 1840,
+        "y": 400
+      },
+      {
+        "name": "item-star",
+        "x": 3696,
+        "y": 368
+      },
+      {
+        "name": "item-wing",
+        "x": 4240,
+        "y": 368
+      }
+    ],
+    "fixture": "paused world; camera positioned on existing objects; original renderer; no traversal claim"
+  },
+  {
+    "stage": "forest",
+    "targets": [
+      {
+        "name": "GROUND",
+        "x": 6848,
+        "y": 288
+      },
+      {
+        "name": "BRICK",
+        "x": 9280,
+        "y": 320
+      },
+      {
+        "name": "ONEWAY",
+        "x": 2784,
+        "y": 160
+      },
+      {
+        "name": "SPIKE",
+        "x": 3264,
+        "y": 320
+      },
+      {
+        "name": "SPRING",
+        "x": 2880,
+        "y": 384
+      },
+      {
+        "name": "moving-platform",
+        "x": 5473.749999999999,
+        "y": 352
+      },
+      {
+        "name": "enemy-boar",
+        "x": 8320.083333333332,
+        "y": 332
+      },
+      {
+        "name": "enemy-slime",
+        "x": 2210.3,
+        "y": 430
+      },
+      {
+        "name": "checkpoint",
+        "x": 1344,
+        "y": 416
+      },
+      {
+        "name": "item-mush",
+        "x": 848,
+        "y": 304
+      },
+      {
+        "name": "item-wing",
+        "x": 5488,
+        "y": 336
+      },
+      {
+        "name": "item-star",
+        "x": 7568,
+        "y": 368
+      }
+    ],
+    "fixture": "paused world; camera positioned on existing objects; original renderer; no traversal claim"
+  },
+  {
+    "stage": "castle",
+    "targets": [
+      {
+        "name": "GROUND",
+        "x": 0,
+        "y": 448
+      },
+      {
+        "name": "BRICK",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "name": "ONEWAY",
+        "x": 3168,
+        "y": 256
+      },
+      {
+        "name": "SPIKE",
+        "x": 2816,
+        "y": 416
+      },
+      {
+        "name": "moving-platform",
+        "x": 1761.7499999999998,
+        "y": 384
+      },
+      {
+        "name": "enemy-slime",
+        "x": 898.3,
+        "y": 430
+      },
+      {
+        "name": "enemy-boar",
+        "x": 2464.083333333333,
+        "y": 428
+      },
+      {
+        "name": "checkpoint",
+        "x": 1344,
+        "y": 416
+      },
+      {
+        "name": "item-mush",
+        "x": 496,
+        "y": 272
+      },
+      {
+        "name": "item-heart",
+        "x": 1584,
+        "y": 336
+      },
+      {
+        "name": "item-wing",
+        "x": 4944,
+        "y": 432
+      }
+    ],
+    "fixture": "paused world; camera positioned on existing objects; original renderer; no traversal claim"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "insets": "PASS: simulated left/right 24px and bottom 20px; large Castle controls fit and separate"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "insets": "PASS: simulated left/right 24px and bottom 20px; large Castle controls fit and separate"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "errors": []
+  }
+]

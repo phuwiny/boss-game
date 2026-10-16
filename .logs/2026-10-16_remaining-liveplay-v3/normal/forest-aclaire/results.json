@@ -1,0 +1,19 @@
+{
+  "stage": "forest",
+  "character": "aclaire",
+  "mode": "normal",
+  "state": "won",
+  "time": 115.59166666670473,
+  "limit": 0,
+  "collected": 40,
+  "goal": 40,
+  "deaths": 2,
+  "bossDefeated": false,
+  "remaining": [],
+  "complete": true,
+  "maxX": 11072,
+  "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+  "replayAndHome": true,
+  "errors": [],
+  "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\normal\\forest-aclaire"
+}

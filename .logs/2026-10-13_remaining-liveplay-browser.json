@@ -1,0 +1,687 @@
+[
+  {
+    "stage": "grassland",
+    "character": "bobo",
+    "mode": "normal",
+    "state": "won",
+    "time": 140.2916666667034,
+    "limit": 0,
+    "collected": 40,
+    "goal": 40,
+    "deaths": 13,
+    "bossDefeated": false,
+    "remaining": [],
+    "complete": true,
+    "maxX": 11152.541666666642,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v2\\normal\\grassland-bobo"
+  },
+  {
+    "stage": "grassland",
+    "character": "aclaire",
+    "mode": "normal",
+    "state": "won",
+    "time": 218.09999999996597,
+    "limit": 0,
+    "collected": 40,
+    "goal": 40,
+    "deaths": 48,
+    "bossDefeated": false,
+    "remaining": [],
+    "complete": true,
+    "maxX": 11122.433333333405,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\normal\\grassland-aclaire"
+  },
+  {
+    "stage": "forest",
+    "character": "bobo",
+    "mode": "normal",
+    "state": "won",
+    "time": 70.34166666666871,
+    "limit": 0,
+    "collected": 40,
+    "goal": 40,
+    "deaths": 0,
+    "bossDefeated": false,
+    "remaining": [],
+    "complete": true,
+    "maxX": 11058.062499999996,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\normal\\forest-bobo"
+  },
+  {
+    "stage": "forest",
+    "character": "aclaire",
+    "mode": "normal",
+    "state": "won",
+    "time": 115.59166666670473,
+    "limit": 0,
+    "collected": 40,
+    "goal": 40,
+    "deaths": 2,
+    "bossDefeated": false,
+    "remaining": [],
+    "complete": true,
+    "maxX": 11072,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\normal\\forest-aclaire"
+  },
+  {
+    "stage": "castle",
+    "character": "bobo",
+    "mode": "normal",
+    "state": "won",
+    "time": 45.11666666666475,
+    "limit": 0,
+    "collected": 25,
+    "goal": 25,
+    "deaths": 0,
+    "bossDefeated": true,
+    "remaining": [],
+    "complete": true,
+    "maxX": 5371.229166666659,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\normal\\castle-bobo"
+  },
+  {
+    "stage": "castle",
+    "character": "mew",
+    "mode": "normal",
+    "state": "won",
+    "time": 41.958333333331595,
+    "limit": 0,
+    "collected": 25,
+    "goal": 25,
+    "deaths": 0,
+    "bossDefeated": true,
+    "remaining": [],
+    "complete": true,
+    "maxX": 5329.354166666637,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\normal\\castle-mew"
+  },
+  {
+    "stage": "grassland",
+    "character": "mew",
+    "mode": "timed",
+    "state": "won",
+    "time": 120,
+    "limit": 120,
+    "collected": 58,
+    "goal": 80,
+    "deaths": 1,
+    "bossDefeated": false,
+    "remaining": [
+      {
+        "x": 7920,
+        "y": 432
+      },
+      {
+        "x": 8208,
+        "y": 432
+      },
+      {
+        "x": 8464,
+        "y": 400
+      },
+      {
+        "x": 8624,
+        "y": 368
+      },
+      {
+        "x": 8816,
+        "y": 368
+      },
+      {
+        "x": 9008,
+        "y": 432
+      },
+      {
+        "x": 9264,
+        "y": 496
+      },
+      {
+        "x": 9104,
+        "y": 432
+      },
+      {
+        "x": 9392,
+        "y": 432
+      },
+      {
+        "x": 9552,
+        "y": 400
+      },
+      {
+        "x": 9744,
+        "y": 400
+      },
+      {
+        "x": 9840,
+        "y": 368
+      },
+      {
+        "x": 10000,
+        "y": 432
+      },
+      {
+        "x": 10096,
+        "y": 368
+      },
+      {
+        "x": 10320,
+        "y": 400
+      },
+      {
+        "x": 10416,
+        "y": 432
+      },
+      {
+        "x": 10672,
+        "y": 400
+      },
+      {
+        "x": 10512,
+        "y": 400
+      },
+      {
+        "x": 10960,
+        "y": 432
+      },
+      {
+        "x": 10800,
+        "y": 304
+      },
+      {
+        "x": 11056,
+        "y": 432
+      },
+      {
+        "x": 11248,
+        "y": 400
+      }
+    ],
+    "complete": true,
+    "maxX": 8283.263888888881,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\timed\\grassland-mew"
+  },
+  {
+    "stage": "grassland",
+    "character": "aclaire",
+    "mode": "timed",
+    "state": "won",
+    "time": 120,
+    "limit": 120,
+    "collected": 38,
+    "goal": 80,
+    "deaths": 19,
+    "bossDefeated": false,
+    "remaining": [
+      {
+        "x": 4208,
+        "y": 176
+      },
+      {
+        "x": 5584,
+        "y": 368
+      },
+      {
+        "x": 5840,
+        "y": 432
+      },
+      {
+        "x": 5712,
+        "y": 368
+      },
+      {
+        "x": 6096,
+        "y": 368
+      },
+      {
+        "x": 5968,
+        "y": 400
+      },
+      {
+        "x": 6448,
+        "y": 240
+      },
+      {
+        "x": 6352,
+        "y": 368
+      },
+      {
+        "x": 6608,
+        "y": 400
+      },
+      {
+        "x": 6608,
+        "y": 112
+      },
+      {
+        "x": 6800,
+        "y": 144
+      },
+      {
+        "x": 6800,
+        "y": 432
+      },
+      {
+        "x": 7216,
+        "y": 400
+      },
+      {
+        "x": 7120,
+        "y": 432
+      },
+      {
+        "x": 7472,
+        "y": 432
+      },
+      {
+        "x": 7344,
+        "y": 400
+      },
+      {
+        "x": 7632,
+        "y": 368
+      },
+      {
+        "x": 7856,
+        "y": 272
+      },
+      {
+        "x": 8176,
+        "y": 336
+      },
+      {
+        "x": 7920,
+        "y": 432
+      },
+      {
+        "x": 8208,
+        "y": 432
+      },
+      {
+        "x": 8272,
+        "y": 304
+      },
+      {
+        "x": 8464,
+        "y": 400
+      },
+      {
+        "x": 8624,
+        "y": 368
+      },
+      {
+        "x": 8816,
+        "y": 368
+      },
+      {
+        "x": 9008,
+        "y": 432
+      },
+      {
+        "x": 9264,
+        "y": 496
+      },
+      {
+        "x": 9104,
+        "y": 432
+      },
+      {
+        "x": 9392,
+        "y": 432
+      },
+      {
+        "x": 9552,
+        "y": 400
+      },
+      {
+        "x": 9744,
+        "y": 400
+      },
+      {
+        "x": 9840,
+        "y": 368
+      },
+      {
+        "x": 10000,
+        "y": 432
+      },
+      {
+        "x": 10096,
+        "y": 368
+      },
+      {
+        "x": 10320,
+        "y": 400
+      },
+      {
+        "x": 10416,
+        "y": 432
+      },
+      {
+        "x": 10672,
+        "y": 400
+      },
+      {
+        "x": 10512,
+        "y": 400
+      },
+      {
+        "x": 10960,
+        "y": 432
+      },
+      {
+        "x": 10800,
+        "y": 304
+      },
+      {
+        "x": 11056,
+        "y": 432
+      },
+      {
+        "x": 11248,
+        "y": 400
+      }
+    ],
+    "complete": true,
+    "maxX": 5540.8083333333225,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\timed\\grassland-aclaire"
+  },
+  {
+    "stage": "forest",
+    "character": "bobo",
+    "mode": "timed",
+    "state": "won",
+    "time": 120,
+    "limit": 120,
+    "collected": 46,
+    "goal": 80,
+    "deaths": 2,
+    "bossDefeated": false,
+    "remaining": [
+      {
+        "x": 5520,
+        "y": 336
+      },
+      {
+        "x": 5872,
+        "y": 304
+      },
+      {
+        "x": 6928,
+        "y": 240
+      },
+      {
+        "x": 7056,
+        "y": 432
+      },
+      {
+        "x": 7152,
+        "y": 368
+      },
+      {
+        "x": 7376,
+        "y": 112
+      },
+      {
+        "x": 7696,
+        "y": 400
+      },
+      {
+        "x": 7472,
+        "y": 432
+      },
+      {
+        "x": 7952,
+        "y": 272
+      },
+      {
+        "x": 7856,
+        "y": 336
+      },
+      {
+        "x": 8048,
+        "y": 208
+      },
+      {
+        "x": 8240,
+        "y": 336
+      },
+      {
+        "x": 8400,
+        "y": 272
+      },
+      {
+        "x": 8528,
+        "y": 272
+      },
+      {
+        "x": 8752,
+        "y": 400
+      },
+      {
+        "x": 8624,
+        "y": 240
+      },
+      {
+        "x": 9008,
+        "y": 432
+      },
+      {
+        "x": 8880,
+        "y": 368
+      },
+      {
+        "x": 9328,
+        "y": 272
+      },
+      {
+        "x": 9328,
+        "y": 400
+      },
+      {
+        "x": 9488,
+        "y": 336
+      },
+      {
+        "x": 9584,
+        "y": 368
+      },
+      {
+        "x": 9840,
+        "y": 368
+      },
+      {
+        "x": 9936,
+        "y": 368
+      },
+      {
+        "x": 10192,
+        "y": 368
+      },
+      {
+        "x": 10032,
+        "y": 432
+      },
+      {
+        "x": 10480,
+        "y": 368
+      },
+      {
+        "x": 10512,
+        "y": 144
+      },
+      {
+        "x": 10768,
+        "y": 240
+      },
+      {
+        "x": 10640,
+        "y": 368
+      },
+      {
+        "x": 10992,
+        "y": 368
+      },
+      {
+        "x": 11024,
+        "y": 240
+      },
+      {
+        "x": 11216,
+        "y": 432
+      },
+      {
+        "x": 11376,
+        "y": 432
+      }
+    ],
+    "complete": true,
+    "maxX": 6828,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\timed\\forest-bobo"
+  },
+  {
+    "stage": "forest",
+    "character": "aclaire",
+    "mode": "timed",
+    "state": "won",
+    "time": 120,
+    "limit": 120,
+    "collected": 66,
+    "goal": 80,
+    "deaths": 3,
+    "bossDefeated": false,
+    "remaining": [
+      {
+        "x": 4176,
+        "y": 240
+      },
+      {
+        "x": 5520,
+        "y": 336
+      },
+      {
+        "x": 5872,
+        "y": 304
+      },
+      {
+        "x": 9936,
+        "y": 368
+      },
+      {
+        "x": 10192,
+        "y": 368
+      },
+      {
+        "x": 10032,
+        "y": 432
+      },
+      {
+        "x": 10480,
+        "y": 368
+      },
+      {
+        "x": 10512,
+        "y": 144
+      },
+      {
+        "x": 10768,
+        "y": 240
+      },
+      {
+        "x": 10640,
+        "y": 368
+      },
+      {
+        "x": 10992,
+        "y": 368
+      },
+      {
+        "x": 11024,
+        "y": 240
+      },
+      {
+        "x": 11216,
+        "y": 432
+      },
+      {
+        "x": 11376,
+        "y": 432
+      }
+    ],
+    "complete": true,
+    "maxX": 9823.483333333328,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\timed\\forest-aclaire"
+  },
+  {
+    "stage": "castle",
+    "character": "bobo",
+    "mode": "timed",
+    "state": "won",
+    "time": 97.54166666669036,
+    "limit": 120,
+    "collected": 45,
+    "goal": 45,
+    "deaths": 4,
+    "bossDefeated": true,
+    "remaining": [],
+    "complete": true,
+    "maxX": 5397.868055555558,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\timed\\castle-bobo"
+  },
+  {
+    "stage": "castle",
+    "character": "mew",
+    "mode": "timed",
+    "state": "won",
+    "time": 52.974999999997635,
+    "limit": 120,
+    "collected": 45,
+    "goal": 45,
+    "deaths": 0,
+    "bossDefeated": true,
+    "remaining": [],
+    "complete": true,
+    "maxX": 5363.652777777784,
+    "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+    "replayAndHome": true,
+    "errors": [],
+    "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\timed\\castle-mew"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "errors": []
+  }
+]

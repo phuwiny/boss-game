@@ -1,0 +1,177 @@
+[
+  {
+    "width": 360,
+    "height": 640,
+    "id": "bobo",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "bobo",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "mew",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "mew",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "aclaire",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "id": "aclaire",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "id": "bobo",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "mew",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "aclaire",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "artFallback": "PASS all three characters; restored art after reload"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "bobo",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "bobo",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "mew",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "mew",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "aclaire",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "id": "aclaire",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "artFallback": "PASS all three characters; restored art after reload"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "errors": []
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "bobo",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "bobo",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "mew",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "mew",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "aclaire",
+    "sharedPortraits": "screenshots captured; RPS canvas and all Memory hero pixels present"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "id": "aclaire",
+    "castle": "PASS: original boss attacks + player shots; standard/large control bounds; staged arena position"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "artFallback": "PASS all three characters; restored art after reload"
+  }
+]
