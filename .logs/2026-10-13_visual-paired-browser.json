@@ -1,0 +1,52 @@
+[
+  {
+    "stage": "grassland",
+    "width": 640,
+    "height": 360,
+    "timing": {
+      "baseline": {
+        "median": 0.3999999985098839,
+        "p95": 1.1000000014901161
+      },
+      "updated": {
+        "median": 0.30000000447034836,
+        "p95": 4
+      }
+    }
+  },
+  {
+    "stage": "forest",
+    "width": 640,
+    "height": 360,
+    "timing": {
+      "baseline": {
+        "median": 0.5,
+        "p95": 4.399999998509884
+      },
+      "updated": {
+        "median": 0.5,
+        "p95": 3.7999999970197678
+      }
+    }
+  },
+  {
+    "stage": "castle",
+    "width": 640,
+    "height": 360,
+    "timing": {
+      "baseline": {
+        "median": 0.3999999985098839,
+        "p95": 3.7999999970197678
+      },
+      "updated": {
+        "median": 0.3999999985098839,
+        "p95": 4.200000002980232
+      }
+    }
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "errors": []
+  }
+]

@@ -1,0 +1,267 @@
+[
+  {
+    "width": 360,
+    "height": 640,
+    "stage": "grassland",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "stage": "grassland",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "stage": "forest",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "stage": "forest",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "stage": "castle",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "stage": "castle",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "stage": "grassland",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "stage": "grassland",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "stage": "forest",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "stage": "forest",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "stage": "castle",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "stage": "castle",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "errors": []
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "stage": "grassland",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "stage": "grassland",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "stage": "forest",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "stage": "forest",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "stage": "castle",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "stage": "castle",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "errors": []
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "stage": "grassland",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "stage": "grassland",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "stage": "forest",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "stage": "forest",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "stage": "castle",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "stage": "castle",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "errors": []
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "stage": "grassland",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "stage": "grassland",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "stage": "forest",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "stage": "forest",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "stage": "castle",
+    "mode": "normal",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "all but final coin staged; final coin overlaps player; Castle boss completion NOT asserted"
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "stage": "castle",
+    "mode": "timed",
+    "result": "PASS: staged result layout, replay reset, result home",
+    "fixture": "timer advanced to limit"
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "errors": []
+  }
+]

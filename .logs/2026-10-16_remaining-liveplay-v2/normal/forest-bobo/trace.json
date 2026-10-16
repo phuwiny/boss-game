@@ -1,0 +1,41 @@
+[
+  {
+    "state": "playing",
+    "time": 0.041666666666666664,
+    "x": 70,
+    "y": 420,
+    "onGround": true,
+    "dead": false,
+    "collected": 0,
+    "goal": 40,
+    "deaths": 0,
+    "ms": 17,
+    "target": null
+  },
+  {
+    "state": "playing",
+    "time": 5.175000000000047,
+    "x": 841.1388888888891,
+    "y": 272.15972222222223,
+    "onGround": false,
+    "dead": false,
+    "collected": 4,
+    "goal": 40,
+    "deaths": 0,
+    "ms": 5143,
+    "target": 5
+  },
+  {
+    "state": "playing",
+    "time": 10.22500000000006,
+    "x": 134.33333333333331,
+    "y": 343.7361111111111,
+    "onGround": false,
+    "dead": false,
+    "collected": 5,
+    "goal": 40,
+    "deaths": 1,
+    "ms": 10193,
+    "target": 4
+  }
+]

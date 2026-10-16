@@ -1,10 +1,11 @@
 /*
  * Coin Quest — ตัวสร้าง sprite ตัวละครแบบ pixel art (สไตล์ 16-bit)
  *
- * ไม่ใช้ไฟล์ภาพ: วาดรูปทรง (วงรี รูปหลายเหลี่ยม เส้นหนา) ลงตารางพิกเซล -> ลงเงา 3-4 ระดับตามทิศแสง (ซ้ายบน)
+ * ใช้ข้อมูล pixel จากภาพ concept ที่ normalize ไว้ล่วงหน้า หากไม่มีข้อมูลใช้ procedural fallback ด้านล่าง
+ * fallback: วาดรูปทรง (วงรี รูปหลายเหลี่ยม เส้นหนา) ลงตารางพิกเซล -> ลงเงา 3-4 ระดับตามทิศแสง (ซ้ายบน)
  * -> เส้นในระหว่างชิ้นส่วน -> เส้นขอบเข้มรอบตัว แล้ววางลายที่วาดมือ (ตา ปาก ปกเสื้อ) ทับ
  * พิกัดที่ส่งให้ฟังก์ชันวาดเป็นหน่วยของเกม: (0,0) = กึ่งกลางเท้า, y ติดลบขึ้นด้านบน
- * 1 พิกเซลของ sprite = UNIT หน่วยของเกม ตัวละครสูงราว 40 พิกเซล (hitbox ยังเป็น 20x28 เท่าเดิม)
+ * 1 logical pixel = UNIT หน่วยของเกม; density=2 เก็บภาพละเอียดสองเท่าโดยไม่ขยายตัวละคร (hitbox เดิม)
  *
  * แก้หน้าตาตัวละครได้ที่ DEFS (สี = ชุดโทน l/b/s/d ของแต่ละส่วน) ไม่ยุ่งกับ DOM
  */
@@ -288,8 +289,8 @@
     // ─────────────── Bobo ───────────────
     bobo: function (g, pose, tint) {
       const body = tint.a;
-      const band = { l: '#8db6ff', b: '#3a78ea', s: '#2a58c0', d: '#1d3f92' };
-      const face = { l: '#fff1e0', b: '#ffd3ad', s: '#f2ae84', d: '#d98c66' };
+      const band = { l: '#97d1ff', b: '#3985df', s: '#2956aa', d: '#24396d' };
+      const face = { l: '#fff4d0', b: '#ffdcaa', s: '#edb481', d: '#c98262' };
       const feet = { l: '#8a4b33', b: '#5f2e1c', s: '#46200f', d: '#2f1408' };
       const L = (function () {
         if (pose.run) {
@@ -335,7 +336,7 @@
 
     // ─────────────── Mew ───────────────
     mew: function (g, pose, tint) {
-      const hair = { l: '#fff6b8', b: '#ffd84a', s: '#e8a923', d: '#b8780f' };
+      const hair = { l: '#fff2b1', b: '#f9cd57', s: '#d99732', d: '#99591f' };
       const shirt = tint.a;
       const skirt = tint.b;
       const beret = { l: '#5c5a76', b: '#33313f', s: '#24222e', d: '#17151f' };
@@ -365,6 +366,8 @@
       g.begin('collar');
       const cm = { w: '#ffffff', W: '#d3dbf0', u: '#ffd23f', U: '#d39b00' };
       g.stampAt(0.6, -15.2 + by, ['wwwW.Wwww', '.wwWuWww.', '..wuUuw..', '...uUu...'], cm);
+      g.begin('skirtPleats');
+      [-4, 0, 4].forEach(function (x) { g.stampAt(x, -7 + by, ['s', 's'], { s: skirt.s }); });
       drawArm(g, 'armF', L.handF, shirt, MAT.skin, { lineSkip: ['collar'], sx: 3.2, sy: -15 + by });
       // หัว
       g.begin('face', { line: true, lineSkip: ['hairBack', 'torso', 'collar', 'armF', 'armB'] });
@@ -403,7 +406,7 @@
 
     // ─────────────── Aclaire ───────────────
     aclaire: function (g, pose, tint) {
-      const hair = { l: '#ffc27a', b: '#ff8c32', s: '#e0661a', d: '#a8440c' };
+      const hair = { l: '#ffd185', b: '#f69b3f', s: '#d6692c', d: '#944125' };
       const shirt = tint.a;
       const pants = tint.b;
       const shoe = { l: '#ffffff', b: '#f3f5fb', s: '#c6cede', d: '#9aa4bb' };
@@ -429,6 +432,8 @@
       g.poly([[-5.4, -16.6 + by], [5.4, -16.6 + by], [5.8, -9.6 + by], [-5.8, -9.6 + by]], shirt);
       g.begin('print');
       g.stampAt(-1.2, -12.4 + by, ['w.w', 'www', '.w.'], { w: '#ffffff' });
+      g.begin('hem');
+      g.stampAt(0, -9.8 + by, ['ssssssss'], { s: shirt.s });
       drawArm(g, 'armF', L.handF, shirt, MAT.skin, { lineSkip: ['print'], sx: 3.2, sy: -15 + by });
       // หัว
       g.begin('face', { line: true, lineSkip: ['tail', 'torso', 'armF', 'armB', 'print'] });
@@ -464,9 +469,9 @@
   // จึงสร้างรูปทรงครั้งเดียวแล้วสลับสีรุ้งตอนได้ดาวได้ทันที
   const SLOT = { a: { l: '@a.l', b: '@a.b', s: '@a.s', d: '@a.d' }, b: { l: '@b.l', b: '@b.b', s: '@b.s', d: '@b.d' } };
   const NORMAL = {
-    bobo: { a: { l: '#ffa47e', b: '#ff6a3d', s: '#e04e26', d: '#b8381a' }, b: { l: '#ffa47e', b: '#ff6a3d', s: '#e04e26', d: '#b8381a' } },
-    mew: { a: { l: '#6a9cff', b: '#3563d8', s: '#24459e', d: '#182f70' }, b: { l: '#ffb36b', b: '#ff8a2a', s: '#db6617', d: '#a84a10' } },
-    aclaire: { a: { l: '#ffc4de', b: '#ff8fc0', s: '#e5619e', d: '#b83c78' }, b: { l: '#5f86f0', b: '#2f56cc', s: '#203f9c', d: '#162c70' } }
+    bobo: { a: { l: '#ffb675', b: '#f77c35', s: '#d95329', d: '#9a3529' }, b: { l: '#ffb675', b: '#f77c35', s: '#d95329', d: '#9a3529' } },
+    mew: { a: { l: '#85b4ef', b: '#4279c2', s: '#2b5191', d: '#29365c' }, b: { l: '#ffc178', b: '#ed933f', s: '#bd632f', d: '#84422b' } },
+    aclaire: { a: { l: '#ffc5db', b: '#e782b0', s: '#ba518e', d: '#783c70' }, b: { l: '#779fde', b: '#416eaf', s: '#304b7f', d: '#263353' } }
   };
   function rainbow(h) {
     const tones = function (hh) {
@@ -483,9 +488,38 @@
    *          แถวล่างสุด (h-1) คือเส้นขอบใต้เท้า
    */
   const raw = {};
+  const artCache = new WeakMap();
+  function conceptFrame(id, poseName, hue) {
+    const art = CQ.CharacterArt;
+    const frame = art && art.frames && art.frames[id] && art.frames[id][poseName];
+    if (!frame || typeof frame !== 'object' || art.w !== 54 || art.h !== 48 || art.ax !== 32 || !Array.isArray(art.palette)) return null;
+    const density = art.density || 1;
+    if (density !== 1 && density !== 2) return null;
+    const count = 54 * 48 * density * density;
+    let decoded = artCache.get(frame);
+    if (!decoded) {
+      if (typeof frame.pixels !== 'string' || frame.pixels.length !== count*3 || !/^[0-9a-f]+$/.test(frame.pixels) || typeof frame.mask !== 'string' || frame.mask.length !== count || !/^[.ab]+$/.test(frame.mask)) return null;
+      const px = [], light = [];
+      for (let i = 0; i < count; i++) {
+        const index = parseInt(frame.pixels.slice(i * 3, i * 3 + 3), 16);
+        const color = art.palette[index];
+        if (index !== 0 && (typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color))) return null;
+        px.push(index === 0 ? null : color);
+        const rgb = index === 0 ? [0,0,0] : [1,3,5].map(function (n) { return parseInt(color.slice(n,n+2),16); });
+        light.push(Math.round((Math.max.apply(null,rgb) + Math.min.apply(null,rgb)) / 5.1));
+      }
+      decoded = { px: px, light: light }; artCache.set(frame, decoded);
+    }
+    return {w:54,h:48,ax:32,density:density,source:art.version,px:decoded.px.map(function(color,i){
+      if (!color || hue == null || frame.mask[i] === '.') return color;
+      return 'hsl(' + ((hue + (frame.mask[i] === 'b' ? 120 : 0)) % 360) + ',95%,' + decoded.light[i] + '%)';
+    })};
+  }
   function build(id, poseName, hue) {
     if (!DEFS[id]) id = 'bobo';
     if (!POSES[poseName]) poseName = 'idle';
+    const concept = conceptFrame(id, poseName, hue);
+    if (concept) return concept;
     const key = id + '|' + poseName;
     let f = raw[key];
     if (!f) {
@@ -511,13 +545,39 @@
   ];
 
   /** วาดตาราง (frame หรือปีก) ลง ctx ช่องละ z พิกเซล */
+  const rgbaCache = new Map();
+  function rgba(color) {
+    if (rgbaCache.has(color)) return rgbaCache.get(color);
+    let value;
+    if (/^#[0-9a-f]{6}$/i.test(color)) value = [1,3,5].map(function(n){return parseInt(color.slice(n,n+2),16);});
+    else {
+      const match = /^hsl\(([-\d.]+),95%,([\d.]+)%\)$/.exec(color);
+      if (!match) return null;
+      const h = ((Number(match[1]) % 360) + 360) % 360 / 30, l = Number(match[2]) / 100, a = .95 * Math.min(l,1-l);
+      value = [0,8,4].map(function(n){const k=(n+h)%12;return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1))));});
+    }
+    rgbaCache.set(color,value);return value;
+  }
   function paint(ctx, f, x, y, z) {
-    for (let r = 0; r < f.h; r++) {
-      for (let c = 0; c < f.w; c++) {
-        const col = f.px[r * f.w + c];
+    const density = f.density || 1, width = f.w * density, height = f.h * density, step = z / density;
+    // Renderer-owned backing canvases have identity transform and one physical pixel per sample.
+    // Upload once instead of issuing thousands of fillStyle/fillRect calls for each star frame.
+    if (f.source && step === 1 && x === 0 && y === 0 && ctx.canvas && ctx.canvas.width === width && ctx.canvas.height === height && ctx.globalAlpha === 1 && ctx.globalCompositeOperation === 'source-over' && ctx.getTransform().isIdentity) {
+      const data = ctx.createImageData(width,height);
+      for (let i=0;i<f.px.length;i++) {
+        if (!f.px[i]) continue;
+        const rgb = rgba(f.px[i]);
+        if (!rgb) throw new Error('Unsupported character color');
+        data.data.set(rgb,i*4);data.data[i*4+3]=255;
+      }
+      ctx.putImageData(data,0,0);return;
+    }
+    for (let r = 0; r < height; r++) {
+      for (let c = 0; c < width; c++) {
+        const col = f.px[r * width + c];
         if (!col) continue;
         ctx.fillStyle = col;
-        ctx.fillRect(x + c * z, y + r * z, z, z);
+        ctx.fillRect(x + c * step, y + r * step, step, step);
       }
     }
   }

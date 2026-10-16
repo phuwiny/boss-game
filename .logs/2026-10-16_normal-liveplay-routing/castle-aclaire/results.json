@@ -1,0 +1,18 @@
+[
+  {
+    "stage": "castle",
+    "character": "aclaire",
+    "mode": "normal",
+    "state": "won",
+    "time": 43.75833333333149,
+    "collected": 25,
+    "goal": 25,
+    "deaths": 1,
+    "bossDefeated": true,
+    "remaining": [],
+    "complete": true,
+    "maxX": 5344.966666666665,
+    "input": "real keyboard; read-only live state; copied physics forecast with stationary platform/enemy approximation",
+    "replayAndHome": true
+  }
+]

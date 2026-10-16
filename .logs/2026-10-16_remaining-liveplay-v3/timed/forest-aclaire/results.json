@@ -1,0 +1,76 @@
+{
+  "stage": "forest",
+  "character": "aclaire",
+  "mode": "timed",
+  "state": "won",
+  "time": 120,
+  "limit": 120,
+  "collected": 66,
+  "goal": 80,
+  "deaths": 3,
+  "bossDefeated": false,
+  "remaining": [
+    {
+      "x": 4176,
+      "y": 240
+    },
+    {
+      "x": 5520,
+      "y": 336
+    },
+    {
+      "x": 5872,
+      "y": 304
+    },
+    {
+      "x": 9936,
+      "y": 368
+    },
+    {
+      "x": 10192,
+      "y": 368
+    },
+    {
+      "x": 10032,
+      "y": 432
+    },
+    {
+      "x": 10480,
+      "y": 368
+    },
+    {
+      "x": 10512,
+      "y": 144
+    },
+    {
+      "x": 10768,
+      "y": 240
+    },
+    {
+      "x": 10640,
+      "y": 368
+    },
+    {
+      "x": 10992,
+      "y": 368
+    },
+    {
+      "x": 11024,
+      "y": 240
+    },
+    {
+      "x": 11216,
+      "y": 432
+    },
+    {
+      "x": 11376,
+      "y": 432
+    }
+  ],
+  "complete": true,
+  "maxX": 9823.483333333328,
+  "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+  "replayAndHome": true,
+  "errors": [],
+  "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\timed\\forest-aclaire"
+}

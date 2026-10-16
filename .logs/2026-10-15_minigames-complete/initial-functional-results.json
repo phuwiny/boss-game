@@ -1,0 +1,26 @@
+[
+  {
+    "id": "bobo",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "mew",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "aclaire",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "aclaire",
+    "rps": "PASS: real rules outcome/replay/exit",
+    "outcome": "🏆 คุณชนะ!\nทำให้ COM หมด HP ได้ใน 17 รอบ",
+    "choices": 55,
+    "elapsedMs": 84616
+  },
+  {
+    "id": "aclaire",
+    "rain": "PASS: natural idle loss, result, replay, pause/exit; no state writes",
+    "stats": "Aclaire · เก็บได้ 20 ชิ้น · คอมโบสูงสุด 2 · เวลา 0:53"
+  }
+]

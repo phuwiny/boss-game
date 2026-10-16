@@ -1,0 +1,73 @@
+[
+  {
+    "id": "bobo",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "mew",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "aclaire",
+    "width": 360,
+    "height": 640,
+    "effects": "PASS",
+    "setup": "wing/star timers staged; jump, airjump, facing and Mew float activated by keyboard; Aclaire guard triggered by positioned real enemy",
+    "ui": {
+      "canvas": {
+        "w": 360,
+        "h": 640
+      },
+      "overflow": false
+    }
+  },
+  {
+    "id": "bobo",
+    "contactSheetFrames": 72
+  },
+  {
+    "id": "mew",
+    "contactSheetFrames": 72
+  },
+  {
+    "id": "aclaire",
+    "contactSheetFrames": 72
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "castleFallback": "PASS: image blocked, menu usable, Castle starts, restored asset decodes",
+    "assetBytes": 89438,
+    "failures": [
+      {
+        "url": "http://127.0.0.1:8001/assets/2026-10-14_castle-menu.webp",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:8001/assets/2026-10-14_castle-menu.webp",
+        "error": "net::ERR_FAILED"
+      }
+    ],
+    "conceptRequests": 0
+  }
+]

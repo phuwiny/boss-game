@@ -1,0 +1,34 @@
+[
+  {
+    "stage": "grassland",
+    "width": 640,
+    "height": 360,
+    "timing": {
+      "median": 0.29999999701976776,
+      "p95": 3.9000000059604645
+    }
+  },
+  {
+    "stage": "forest",
+    "width": 640,
+    "height": 360,
+    "timing": {
+      "median": 0.20000000298023224,
+      "p95": 3.6999999955296516
+    }
+  },
+  {
+    "stage": "castle",
+    "width": 640,
+    "height": 360,
+    "timing": {
+      "median": 0.5,
+      "p95": 6.100000001490116
+    }
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "errors": []
+  }
+]

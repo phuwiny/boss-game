@@ -1,0 +1,19 @@
+{
+  "stage": "castle",
+  "character": "bobo",
+  "mode": "timed",
+  "state": "won",
+  "time": 97.54166666669036,
+  "limit": 120,
+  "collected": 45,
+  "goal": 45,
+  "deaths": 4,
+  "bossDefeated": true,
+  "remaining": [],
+  "complete": true,
+  "maxX": 5397.868055555558,
+  "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+  "replayAndHome": true,
+  "errors": [],
+  "evidenceDirectory": ".logs\\2026-10-16_remaining-liveplay-v3\\timed\\castle-bobo"
+}

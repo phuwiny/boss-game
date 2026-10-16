@@ -1,0 +1,12 @@
+[
+  {
+    "fallback": "PASS: missing art/font + blocked localStorage"
+  },
+  {
+    "denseRecordsAndSimulatedInsets": "PASS"
+  },
+  {
+    "mewFloat": "PASS; input activated, screenshot captured",
+    "baselineResult": "staged visual reference"
+  }
+]

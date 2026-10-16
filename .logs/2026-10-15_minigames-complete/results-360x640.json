@@ -1,0 +1,14 @@
+[
+  {
+    "id": "bobo",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "mew",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "aclaire",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  }
+]

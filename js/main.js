@@ -84,6 +84,7 @@
   let lastMode = CQ.store.get(MODE_KEY) === 'timed' ? 'timed' : 'normal';
   let charCards = [];
   let stageBtns = [];
+  const uiSettings = CQ.UISettings.load(CQ.store);
   let navPrev = 0;
   const events = [];
 
@@ -762,6 +763,15 @@
     ui.descNormal.textContent = stage.boss ? 'ชนะบอสและเก็บครบ ' + nNormal + ' เหรียญ' : 'เก็บให้ครบทั้ง ' + nNormal + ' เหรียญในฉาก';
     ui.descTimed.textContent = 'เก็บให้มากที่สุดใน ' + Spawn.TIMED_TIME + ' วินาที';
     ui.btnTimed.title = 'มีเหรียญ ' + (Spawn.coinsFor(stage, 'timed') + extra) + ' เหรียญในฉาก มากกว่าโหมดปกติ';
+    const selectedStage = CQ.getStage(stageId);
+    const landscape = $('title-landscape');
+    const art = selectedStage.theme === 'castle' ? 'assets/2026-10-14_castle-menu.webp' : 'assets/2026-10-13_' + selectedStage.theme + '-menu.webp';
+    landscape.hidden = !art;
+    if (art && landscape.getAttribute('src') !== art) landscape.src = art;
+    landscape.parentElement.dataset.stage = selectedStage.theme;
+    $('title-world-number').textContent = String(selectedStage.no).padStart(2, '0');
+    $('title-world-name').textContent = selectedStage.name;
+
     stageBtns.forEach(function (b) {
       const on = b.id === stageId;
       b.btn.classList.toggle('selected', on);
@@ -771,6 +781,7 @@
       const line = bestLine(stageId, m[0], charId, info);
       m[1].hidden = !line;
       m[1].textContent = line;
+      m[1].title = line;
       m[2].classList.toggle('btn-primary', m[0] === lastMode);
     });
   }
@@ -861,7 +872,7 @@
       btn.type = 'button';
       btn.className = 'stage-btn stage-' + st.theme;
       btn.setAttribute('role', 'radio');
-      btn.innerHTML = '<span class="stage-text"><span class="stage-no"></span><span class="stage-name"></span></span>';
+      btn.innerHTML = '<span class="stage-text"><span class="stage-no"></span><span class="stage-name"></span></span><span class="stage-check" aria-hidden="true">✓</span>';
       btn.querySelector('.stage-no').textContent = 'สเตจ ' + st.no;
       btn.querySelector('.stage-name').textContent = st.name;
       btn.title = st.name + ' (' + st.th + ')';
@@ -955,10 +966,19 @@
 
   // ── หน้าจอและสถานะ ─────────────────────────────────────────────
   function setScreen(el) {
+    Input.reset();
+    pendingJump = false;
     [ui.title, ui.chars, ui.minigames, ui.rps, ui.rain, ui.memory, ui.pause, ui.win].forEach(function (s) { s.hidden = s !== el; });
     document.body.classList.toggle('overlay', !!el);
+    const card = el && el.querySelector('.card');
+    if (card) card.scrollTop = 0;
     const focusBtn = el && visiblePrimary(el);
-    if (focusBtn) setTimeout(function () { try { focusBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 30);
+    if (focusBtn) setTimeout(function () {
+      // A player may already have focused a setting before this deferred step.
+      if (el.hidden || el.contains(document.activeElement)) return;
+      try { focusBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+    }, 30);
+
   }
 
   function currentScreen() {
@@ -1202,8 +1222,11 @@
   }
 
   function resize() {
+    Input.reset();
+    pendingJump = false;
     const touch = document.body.classList.contains('touch');
     renderer.bottomCrop = touch ? 0 : T * 1.5;
+
     const r = canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     renderer.resize(Math.max(1, r.width), Math.max(1, r.height), dpr, { touch: touch, bottomInset: touch ? touchInset(r) : 0 });
@@ -1230,6 +1253,18 @@
     ui.btnSound.setAttribute('aria-pressed', String(Sound.sfxOn));
     ui.btnMusic.classList.toggle('off', !Sound.musicOn);
     ui.btnMusic.setAttribute('aria-pressed', String(Sound.musicOn));
+    [['btn-pause-music', Sound.musicOn], ['btn-pause-sound', Sound.sfxOn]].forEach(function (entry) {
+      const button = $(entry[0]);
+      button.setAttribute('aria-pressed', String(entry[1]));
+      button.querySelector('.setting-state').textContent = entry[1] ? 'เปิด' : 'ปิด';
+    });
+  }
+
+  function applyUISettings() {
+    document.body.dataset.touchSize = uiSettings.touchSize;
+    document.querySelectorAll('input[name="touch-size"]').forEach(function (input) {
+      input.checked = input.value === uiSettings.touchSize;
+    });
   }
 
   const docEl = document.documentElement;
@@ -1254,10 +1289,25 @@
       document.body.classList.add('touch');
     }
     Input.on('firsttouch', function () {
+      if (document.body.classList.contains('touch')) return;
       document.body.classList.add('touch');
       resize();
     });
     Input.bindTouch($('touch'));
+    applyUISettings();
+    document.querySelectorAll('input[name="touch-size"]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        if (!input.checked) return;
+        uiSettings.touchSize = CQ.UISettings.normalize({ touchSize: input.value }).touchSize;
+        CQ.UISettings.save(CQ.store, uiSettings);
+        applyUISettings();
+        resize();
+      });
+    });
+    $('title-landscape').addEventListener('error', function () { this.style.visibility = 'hidden'; });
+    $('title-landscape').addEventListener('load', function () { this.style.visibility = ''; });
+    // Cached failures can happen before the script attaches the error listener.
+    if ($('title-landscape').complete && !$('title-landscape').naturalWidth) $('title-landscape').style.visibility = 'hidden';
     // Space / Enter / ปุ่ม A ของจอย: กดปุ่มที่ focus อยู่ ถ้าไม่มีกดปุ่มหลักของหน้านั้น
     Input.on('confirm', function () {
       if (state !== 'title' && state !== 'chars' && state !== 'minigames' && state !== 'rps' && state !== 'rain' && state !== 'memory' && state !== 'won') return;
@@ -1304,8 +1354,15 @@
     bindButton('btn-pause', function () { if (state === 'playing') pauseGame(); else if (state === 'paused') resumeGame(); });
     bindButton('btn-sound', function () { Sound.setSfx(!Sound.sfxOn); refreshToggles(); });
     bindButton('btn-music', function () { Sound.setMusic(!Sound.musicOn); refreshToggles(); });
-    if (canFullscreen) bindButton('btn-fullscreen', toggleFullscreen);
-    else ui.btnFullscreen.hidden = true;
+    bindButton('btn-pause-sound', function () { Sound.setSfx(!Sound.sfxOn); refreshToggles(); });
+    bindButton('btn-pause-music', function () { Sound.setMusic(!Sound.musicOn); refreshToggles(); });
+    if (canFullscreen) {
+      bindButton('btn-fullscreen', toggleFullscreen);
+      bindButton('btn-pause-fullscreen', toggleFullscreen);
+    } else {
+      ui.btnFullscreen.hidden = true;
+      $('btn-pause-fullscreen').hidden = true;
+    }
     refreshToggles();
 
     document.addEventListener('visibilitychange', function () {
@@ -1316,6 +1373,7 @@
     document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     document.addEventListener('dblclick', function (e) { e.preventDefault(); });
     window.addEventListener('resize', resize);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
     window.addEventListener('orientationchange', function () { setTimeout(resize, 200); });
     document.addEventListener('fullscreenchange', function () { setTimeout(resize, 50); });
 

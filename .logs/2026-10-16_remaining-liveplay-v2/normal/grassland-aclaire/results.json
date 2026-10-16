@@ -1,0 +1,22 @@
+{
+  "stage": "grassland",
+  "character": "aclaire",
+  "mode": "normal",
+  "state": "playing",
+  "time": 240.049999999946,
+  "limit": 0,
+  "collected": 39,
+  "goal": 40,
+  "deaths": 18,
+  "bossDefeated": false,
+  "remaining": [
+    {
+      "x": 1872,
+      "y": 240
+    }
+  ],
+  "complete": false,
+  "maxX": 11145.65,
+  "input": "real keyboard; read-only live state; copied physics and moving-platform forecast; stationary enemy approximation",
+  "errors": []
+}

@@ -140,7 +140,8 @@
     cv.width = fr.w * k;
     cv.height = fr.h * k;
     const c = cv.getContext('2d');
-    c.imageSmoothingEnabled = false;
+    c.imageSmoothingEnabled = fr.density > 1;
+    c.imageSmoothingQuality = 'high';
     c.drawImage(fr.c, 0, 0, fr.w * k, fr.h * k);
   }
 

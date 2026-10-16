@@ -1,0 +1,82 @@
+[
+  {
+    "id": "bobo",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "mew",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "aclaire",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "width": 360,
+    "height": 640,
+    "errors": []
+  },
+  {
+    "id": "bobo",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "mew",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "aclaire",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "errors": []
+  },
+  {
+    "id": "bobo",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "mew",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "aclaire",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "width": 640,
+    "height": 360,
+    "errors": []
+  },
+  {
+    "id": "bobo",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "mew",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "aclaire",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "errors": []
+  },
+  {
+    "id": "bobo",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "mew",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  },
+  {
+    "id": "aclaire",
+    "memory": "PASS: remember visible preview, click all pairs, actual win/result/replay/exit; no state writes"
+  }
+]

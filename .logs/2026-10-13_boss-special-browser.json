@@ -1,0 +1,73 @@
+[
+  {
+    "id": "bobo",
+    "loss": "PASS",
+    "minHP": 0,
+    "guardObserved": false,
+    "setup": "position player near boss; original HP/damage/timers; keyboard contact; automatic respawn"
+  },
+  {
+    "id": "bobo",
+    "bossDead": true,
+    "hp": 4,
+    "deaths": 0,
+    "damageSeen": true,
+    "shotsSeen": true,
+    "attackSeen": true,
+    "elapsed": 10777
+  },
+  {
+    "id": "bobo",
+    "resultAndReplay": "PASS",
+    "setup": "non-boss coins precollected before combat; boss coins collected with keyboard"
+  },
+  {
+    "id": "mew",
+    "loss": "PASS",
+    "minHP": 0,
+    "guardObserved": false,
+    "setup": "position player near boss; original HP/damage/timers; keyboard contact; automatic respawn"
+  },
+  {
+    "id": "mew",
+    "bossDead": true,
+    "hp": 2,
+    "deaths": 0,
+    "damageSeen": true,
+    "shotsSeen": true,
+    "attackSeen": true,
+    "elapsed": 13688
+  },
+  {
+    "id": "mew",
+    "resultAndReplay": "PASS",
+    "setup": "non-boss coins precollected before combat; boss coins collected with keyboard"
+  },
+  {
+    "id": "aclaire",
+    "loss": "PASS",
+    "minHP": 0,
+    "guardObserved": true,
+    "setup": "position player near boss; original HP/damage/timers; keyboard contact; automatic respawn"
+  },
+  {
+    "id": "aclaire",
+    "bossDead": true,
+    "hp": 5,
+    "deaths": 0,
+    "damageSeen": true,
+    "shotsSeen": true,
+    "attackSeen": true,
+    "elapsed": 7730
+  },
+  {
+    "id": "aclaire",
+    "resultAndReplay": "PASS",
+    "setup": "non-boss coins precollected before combat; boss coins collected with keyboard"
+  },
+  {
+    "width": 844,
+    "height": 390,
+    "errors": []
+  }
+]

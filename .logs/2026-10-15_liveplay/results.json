@@ -1,0 +1,47 @@
+[
+  {
+    "stage": "grassland",
+    "id": "bobo",
+    "mode": "timed",
+    "state": "won",
+    "time": 120,
+    "limit": 120,
+    "collected": 7,
+    "deaths": 2,
+    "bossDefeated": false,
+    "levelWidth": 11264,
+    "maxX": 1867.2847222222217,
+    "wallSeconds": 121.965,
+    "input": "real keyboard; read-only debug; no game state writes"
+  },
+  {
+    "stage": "forest",
+    "id": "mew",
+    "mode": "timed",
+    "state": "won",
+    "time": 120,
+    "limit": 120,
+    "collected": 18,
+    "deaths": 26,
+    "bossDefeated": false,
+    "levelWidth": 11392,
+    "maxX": 5879.465277777773,
+    "wallSeconds": 121.996,
+    "input": "real keyboard; read-only debug; no game state writes"
+  },
+  {
+    "stage": "castle",
+    "id": "aclaire",
+    "mode": "timed",
+    "state": "won",
+    "time": 120,
+    "limit": 120,
+    "collected": 10,
+    "deaths": 13,
+    "bossDefeated": false,
+    "levelWidth": 5632,
+    "maxX": 2086.079166666664,
+    "wallSeconds": 121.904,
+    "input": "real keyboard; read-only debug; no game state writes"
+  }
+]

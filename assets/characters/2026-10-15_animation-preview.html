@@ -1,0 +1,13 @@
+<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coin Quest — ตัวละครใหม่</title>
+<style>body{margin:0;background:#f7f4e8;color:#263e38;font:16px/1.6 system-ui,sans-serif}main{max-width:980px;margin:auto;padding:24px}h1{font-size:26px}.row{display:flex;flex-wrap:wrap;gap:18px}.hero{background:#d5e7cf;border-radius:16px;text-align:center;padding:18px}canvas{width:216px;height:192px;image-rendering:pixelated}select,button{font:inherit;min-height:44px;padding:6px 14px;border:1px solid #789481;border-radius:8px;background:white;color:#263e38}img{max-width:100%}.muted{color:#5b7067}</style>
+<main><h1>ตัวละครตาม concept — เพิ่มความละเอียด</h1><p>ใช้ท่าวิ่งเดิม 4 เฟรมและสัดส่วนเดิม · ภาพละเอียดขึ้น 2 เท่าต่อด้าน<br>Bobo ไม่มีปาก · Mew ตาเขียว · Aclaire ตาฟ้า</p>
+<p><label>ท่าทาง <select id="pose"><option value="run">วิ่ง</option><option value="idle">ยืน</option><option value="blink">กะพริบตา</option><option value="jump">กระโดด</option><option value="fall">ตก</option><option value="dead">พลาด</option></select></label> <button id="face">กลับด้าน</button> <button id="star">สีดาว: ปิด</button></p>
+<div class="row"><section class="hero"><h2>Bobo</h2><canvas data-id="bobo" width="216" height="192"></canvas></section><section class="hero"><h2>Mew</h2><canvas data-id="mew" width="216" height="192"></canvas></section><section class="hero"><h2>Aclaire</h2><canvas data-id="aclaire" width="216" height="192"></canvas></section></div>
+<p class="muted">ขยาย 4 เท่าจากเฟรมที่เกมใช้จริง เพื่อดูการเปลี่ยนท่า ขนาดบนสนามขึ้นกับจอและการซูมของเกม</p>
+<h2>ครบ 9 ท่าต่อตัว</h2><img src="2026-10-15_normalized-preview.png" alt="ภาพรวมตัวละครครบ 27 ท่า">
+</main><script src="../../js/2026-10-15_character-art.js"></script><script src="../../js/sprites.js"></script><script>
+let direction=1,star=false;document.querySelector('#face').onclick=()=>direction*=-1;document.querySelector('#star').onclick=e=>{star=!star;e.target.textContent='สีดาว: '+(star?'เปิด':'ปิด');};
+function draw(t){const choice=document.querySelector('#pose').value,pose=choice==='run'?'run'+(1+Math.floor(t/100)%4):choice;
+for(const c of document.querySelectorAll('canvas')){const ctx=c.getContext('2d'),f=CQ.Sprites.build(c.dataset.id,pose,star?Math.floor(t/100)%12*30:null);ctx.clearRect(0,0,216,192);ctx.save();ctx.translate(128,188);ctx.scale(direction,1);CQ.Sprites.paint(ctx,f,-f.ax*4,-(f.h-1)*4,4);ctx.restore();}requestAnimationFrame(draw);}requestAnimationFrame(draw);
+</script></html>
