@@ -926,6 +926,11 @@
     setScreen(ui.title);
   }
 
+  /** หน้าเมนู/เลือกตัวละคร/รวมมินิเกม และมินิเกมเป่ายิ้งฉุบ ใช้เพลงสังเคราะห์เดิม */
+  function isMenuMusicState() {
+    return state === 'title' || state === 'chars' || state === 'minigames' || state === 'rps';
+  }
+
   // ── มินิเกม ──────────────────────────────────────────────────
   function openMinigames() {
     if (state !== 'title' && state !== 'rps' && state !== 'rain' && state !== 'memory') return;
@@ -934,6 +939,7 @@
     if (state === 'memory') CQ.Memory.stop();
     state = 'minigames';
     setScreen(ui.minigames);
+    Sound.startMusic();
   }
 
   function closeMinigames() {
@@ -947,6 +953,7 @@
     if (state !== 'minigames') return;
     state = 'rps';
     setScreen(ui.rps);
+    Sound.startMusic();
     CQ.RPS.start(charId);
   }
 
@@ -954,6 +961,7 @@
     if (state !== 'minigames') return;
     state = 'rain';
     setScreen(ui.rain);
+    Sound.stopMusic(); // Coin Rain เปิดเพลงเองตอนเริ่มเล่น
     CQ.Rain.start(charId);
   }
 
@@ -961,6 +969,7 @@
     if (state !== 'minigames') return;
     state = 'memory';
     setScreen(ui.memory);
+    Sound.stopMusic();
     CQ.Memory.start(charId);
   }
 
@@ -1011,7 +1020,8 @@
     Input.reset();
     pendingJump = false;
     acc = 0;
-    Sound.startMusic();
+    Sound.stopMusic(); // เริ่มเกมใหม่ให้เพลงเริ่มจากต้น
+    Sound.startMusic(g.stage.music);
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
 
@@ -1019,7 +1029,7 @@
     if (state !== 'playing') return;
     state = 'paused';
     setScreen(ui.pause);
-    Sound.stopMusic();
+    Sound.stopMusic(true);
   }
 
   function resumeGame() {
@@ -1030,13 +1040,14 @@
     Input.reset();
     pendingJump = false;
     lastTime = performance.now();
-    Sound.startMusic();
+    Sound.startMusic(g.stage.music);
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
 
   function goTitle() {
     state = 'title';
     Sound.stopMusic();
+    Sound.startMusic();
     newGame(lastMode);
     ui.hud.hidden = true;
     document.body.classList.remove('in-game');
@@ -1366,10 +1377,24 @@
     refreshToggles();
 
     document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) return;
+      if (!document.hidden) {
+        if (isMenuMusicState()) Sound.startMusic();
+        return;
+      }
       pauseGame();
       if (state === 'rain') CQ.Rain.pause();
+      if (isMenuMusicState()) Sound.stopMusic(true);
     });
+    // เบราว์เซอร์ไม่ให้เล่นเสียงก่อนผู้เล่นแตะ/กดครั้งแรก จึงเริ่มเพลงเมนูหลังจากนั้น
+    function onFirstGesture() {
+      document.removeEventListener('click', onFirstGesture, true);
+      document.removeEventListener('keydown', onFirstGesture, true);
+      Sound.unlock();
+      // รอให้ปุ่มที่ถูกกดทำงานก่อน เช่นกดเริ่มเกมทันที จะได้ไม่มีเพลงเมนูหลุดมา
+      setTimeout(function () { if (isMenuMusicState()) Sound.startMusic(); }, 0);
+    }
+    document.addEventListener('click', onFirstGesture, true);
+    document.addEventListener('keydown', onFirstGesture, true);
     document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     document.addEventListener('dblclick', function (e) { e.preventDefault(); });
     window.addEventListener('resize', resize);

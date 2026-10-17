@@ -103,6 +103,7 @@
     hp: 5,                   // ระบบพลังชีวิต: เริ่มต้น/สูงสุด 5 ขีด
     coinScale: 0.5,          // ด่านยาวครึ่งเดียว เหรียญสุ่มจึงครึ่งเดียว
     bossCoins: 5,            // เหรียญที่ได้เมื่อชนะบอส (นับรวมในเป้าหมาย)
-    items: ['heart', 'heart', 'heart', 'wing', 'mush'] // หัวใจ = พลังชีวิต +1 (ไม่มีดาว)
+    items: ['heart', 'heart', 'heart', 'wing', 'mush'], // หัวใจ = พลังชีวิต +1 (ไม่มีดาว)
+    music: 'assets/audio/2026-10-17_siege-of-the-stone-keep.mp3'
   });
 })(typeof window !== 'undefined' ? window : globalThis);
