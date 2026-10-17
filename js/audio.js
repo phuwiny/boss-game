@@ -14,7 +14,7 @@
 
   const SFX_VOL = 0.55;
   const MUSIC_VOL = 0.14;
-  const TRACK_VOL = 0.35; // ความดังของไฟล์เพลง (<audio>.volume)
+  const TRACK_VOL = 0.2; // ความดังของไฟล์เพลง (<audio>.volume)
 
   let ac = null;
   let sfxBus = null;
