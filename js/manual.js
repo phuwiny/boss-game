@@ -3,7 +3,7 @@
  *
  * เนื้อหามีแหล่งเดียวคือ MANUAL.md (แก้ไฟล์นั้นไฟล์เดียว หน้าเว็บเปลี่ยนตาม)
  * ตัวแปลง Markdown รองรับเฉพาะรูปแบบที่คู่มือใช้: หัวข้อ, ย่อหน้า, รายการ (ซ้อนได้ 1 ชั้น),
- * ตาราง, blockquote, เส้นคั่น, **ตัวหนา**, `code`, [ลิงก์](url), URL เปล่า และ HTML ในบรรทัด (<kbd>, <details>)
+ * ตาราง, blockquote, เส้นคั่น, **ตัวหนา**, `code`, [ลิงก์](url), ภาพ portrait, URL เปล่า และ HTML ในบรรทัด (<kbd>, <details>)
  * anchor ของหัวข้อสร้างแบบเดียวกับ GitHub ลิงก์ในสารบัญจึงใช้ได้ทั้งบน GitHub และหน้านี้
  */
 (function () {
@@ -35,6 +35,9 @@
     let s = text.replace(/`([^`]+)`/g, function (m, c) { return hold('<code>' + esc(c) + '</code>'); });
     s = s.replace(/<\/?(kbd|b|br|summary|details)\b[^>]*>/g, function (m) { return hold(m); });
     s = esc(s);
+    s = s.replace(/!\[([^\]]*)\]\((assets\/portraits\/[\w.-]+\.png)\)/g, function (m, alt, src) {
+      return hold('<img class="manual-portrait" src="' + src + '" alt="' + alt.replace(/"/g, '&quot;') + '" width="160" height="160" loading="lazy" decoding="async">');
+    });
     s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (m, label, url) {
       const href = fixHref(url);
       const ext = /^https?:/.test(href) ? ' target="_blank" rel="noopener"' : '';

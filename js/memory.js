@@ -101,8 +101,11 @@
   // ── เริ่มเกม / กระดาน ───────────────────────────────────────────
   function faceHtml(f) {
     const info = FACE_INFO[f];
-    if (CHARS[f]) return '<span class="mem-portrait"><canvas class="mem-hero" data-hero="' + f + '" aria-hidden="true"></canvas>' +
-      '<img class="mem-portrait-image" src="assets/portraits/2026-10-17_' + f + '-memory-portrait.png" alt="" aria-hidden="true" decoding="async"></span>';
+    if (CHARS[f]) {
+      const portrait = f === 'mew' ? '2026-10-17_mew-memory-portrait-v2.png' : '2026-10-17_' + f + '-memory-portrait.png';
+      return '<span class="mem-portrait"><canvas class="mem-hero" data-hero="' + f + '" aria-hidden="true"></canvas>' +
+        '<img class="mem-portrait-image" src="assets/portraits/' + portrait + '" alt="" aria-hidden="true" decoding="async"></span>';
+    }
     if (info.svg) return '<span class="mem-svg">' + info.svg + '</span>';
     return '<span class="mem-emoji" aria-hidden="true">' + info.icon + '</span>';
   }

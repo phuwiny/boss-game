@@ -105,6 +105,17 @@ body {
 .manual a { color: var(--link); text-underline-offset: 2px; word-break: break-word; }
 .manual hr { border: 0; border-top: 1px dashed var(--line); margin: 32px 0 0; }
 
+.manual-portrait {
+  display: block;
+  width: 160px;
+  height: 160px;
+  max-width: 100%;
+  object-fit: contain;
+  margin: 8px 0 14px;
+  border-radius: 16px;
+  background: var(--head-bg);
+}
+
 .manual code {
   padding: 1px 6px;
   border-radius: 6px;
