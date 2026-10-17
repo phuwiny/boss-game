@@ -9,17 +9,17 @@
 
 **เวอร์ชันล่าสุด:** [v1.0 — ปรับภาพและการใช้งานบนมือถือ](https://github.com/phuwiny/boss-game/releases/tag/v1.0) · [ดูทุกเวอร์ชัน](https://github.com/phuwiny/boss-game/releases)
 
-**รุ่นที่กำลังเตรียม:** v1.1 — เพิ่ม portrait บนการ์ด Memory Match และปรับฉากหลัง Grassland ตามภาพ concept; อ่าน [release notes ฉบับร่าง](.logs/2026-10-17_release-v1.1.md)
+**pre-release:** [v1.1 — portrait ใน Memory Match และฉากหลัง Grassland](https://github.com/phuwiny/boss-game/releases/tag/v1.1) เผยแพร่ release notes แล้ว ส่วนเกมบน GitHub Pages ยังเป็น v1.0 จนกว่า [PR #22](https://github.com/phuwiny/boss-game/pull/22) จะ merge และ deploy
 
 เกมแพลตฟอร์มเลื่อนฉากด้านข้าง (side-scrolling) แบบผู้เล่นคนเดียว
 
-## มีอะไรใหม่ใน v1.1 (รอเผยแพร่)
+## มีอะไรใหม่ใน v1.1 (pre-release)
 
 - **Memory Match:** การ์ด Bobo, Mew และ Aclaire ใช้ภาพ portrait พิกเซลโปร่งใสที่เห็นใบหน้าชัดขึ้น หากโหลดภาพไม่ได้จะแสดง sprite เดิมแทน
 - **Stage 1 Grassland:** ฉากหลังแสดงภูเขาสีฟ้าและเนินเขียวจาก [ภาพ concept](assets/concepts/2026-10-14_scene-concepts.png) ในชั้น parallax โดยไล่รอยต่อท้องฟ้าบนจอแนวตั้ง ถ้าโหลดภาพไม่ได้จะกลับไปใช้ฉากเดิม
 - **การเล่นเดิม:** ตำแหน่งพื้น บล็อก เหรียญ ศัตรู และท่าวิ่งของตัวละครไม่ได้เปลี่ยน
 
-รายละเอียดและขอบเขตการตรวจอยู่ใน [release notes v1.1](.logs/2026-10-17_release-v1.1.md)
+รายละเอียดและขอบเขตการตรวจอยู่ใน [release notes v1.1](https://github.com/phuwiny/boss-game/releases/tag/v1.1)
 
 ## สเตจ
 
@@ -169,7 +169,7 @@
 
 | เวอร์ชัน | วันที่ | สิ่งที่เปลี่ยน |
 |---|---|---|
-| v1.1 (เตรียมเผยแพร่) | — | portrait ตัวละครใน Memory Match และฉากหลัง Grassland ตามภาพ concept; ดู [release notes ฉบับร่าง](.logs/2026-10-17_release-v1.1.md) |
+| [v1.1 pre-release](https://github.com/phuwiny/boss-game/releases/tag/v1.1) | 17 ต.ค. 2569 | portrait ตัวละครใน Memory Match และฉากหลัง Grassland ตามภาพ concept; PR #22 รอ merge/deploy |
 | [v1.0](https://github.com/phuwiny/boss-game/releases/tag/v1.0) | 17 ต.ค. 2569 | ปรับภาพฉาก/เมนู ตัวละครความละเอียดสูงขึ้นโดยคงท่าวิ่งเดิม และปรับการใช้งานบนมือถือ |
 | [v0.9.0-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.9.0-beta) | 9 ต.ค. 2569 | มินิเกมใหม่ 2 เกม เล่นคนเดียวด้วยนิ้วเดียวบนมือถือ: **Coin Rain** (ลากนิ้วรับเหรียญ/เพชร/หัวใจที่ตกจากฟ้า หลบหิน คอมโบคูณแต้มสูงสุด x5 ยิ่งนานยิ่งเร็ว) และ **Memory Match** (จับคู่การ์ด 3 ระดับ 3×4 / 4×4 / 4×5 วัดเวลาและให้ดาวตามจำนวนครั้งที่เปิด), ตัวละครแต่ละตัวมีความสามารถเฉพาะในทั้งสองเกม, บันทึกสถิติแยกตามตัวละคร (Memory Match แยกตามระดับด้วย) |
 | [v0.8.3-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.8.3-beta) | 9 ต.ค. 2569 | ปรับการซูมบน**มือถือ**: จอแนวนอนที่เตี้ย (เช่นมีแถบเบราว์เซอร์) ไม่ซูมออกจนภาพกว้างและตัวละครเล็กอีกต่อไป และปุ่มเดิน/กระโดดบังแค่ชั้นดินใต้พื้น ไม่บังตัวละครหรือพื้นที่เล่น |
