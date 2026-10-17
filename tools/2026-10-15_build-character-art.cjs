@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path');
 let sharp;try{sharp=require('sharp');}catch{sharp=require(path.resolve(path.dirname(process.execPath),'../node_modules/sharp'));}
 const poses=['idle','blink','run1','run2','run3','run4','jump','fall','dead'];
 const D=2,W=54*D,H=48*D,AX=32*D;
-const out={version:'concept-2026-10-16-resolution',w:54,h:48,ax:32,density:D,palette:[null],frames:{}};
+const out={version:'concept-2026-10-17-aclaire-arm-swing',w:54,h:48,ax:32,density:D,palette:[null],frames:{}};
 const colors=new Map(),sheets=[];
 function bounds(data,w,h){let x0=w,y0=h,x1=-1,y1=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(data[(y*w+x)*4+3]>=128){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}if(x1<0)throw Error('Empty sprite');return {left:x0,top:y0,width:x1-x0+1,height:y1-y0+1};}
 (async()=>{
@@ -20,6 +20,17 @@ for(const id of ['bobo','mew','aclaire']){
  }
  // One shared scale for all poses; never stretch individual animation frames.
  const scale=Math.min((id==='bobo'?31:43)/Math.max(...cells.map(c=>c.box.height)),48/Math.max(...cells.map(c=>c.box.width)));
+ // Keep the shipped nine-pose scale. Only Aclaire's center Run frame comes from the revised sheet.
+ if(id==='aclaire'){
+  const file='assets/characters/2026-10-17_aclaire-arm-swing-source.png';
+  const meta=await sharp(file).metadata(),i=poses.indexOf('run3');
+  const left=Math.round(i%3*meta.width/3),top=Math.round(Math.floor(i/3)*meta.height/3);
+  const width=Math.round((i%3+1)*meta.width/3)-left,height=Math.round((Math.floor(i/3)+1)*meta.height/3)-top;
+  const {data,info}=await sharp(file).extract({left,top,width,height}).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+  const box=bounds(data,info.width,info.height);
+  if(box.left===0||box.top===0||box.left+box.width===width||box.top+box.height===height)throw Error('aclaire/run3 touches slot edge');
+  cells[i]={data,info,box};
+ }
  out.frames[id]={};
  for(let i=0;i<poses.length;i++){
   // Preserve the original rounded logical bounds exactly; only sample density changes.
