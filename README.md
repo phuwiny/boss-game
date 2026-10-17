@@ -7,29 +7,19 @@
 
 **คู่มือเกม:** https://phuwiny.github.io/boss-game/manual.html (หรือปุ่ม **คู่มือเกมฉบับเต็ม** ในหน้าแรกของเกม) ต้นฉบับอยู่ที่ [MANUAL.md](MANUAL.md) — วิธีเล่น กติกา ตัวละคร ไอเทม ศัตรู ทุกสเตจ บอส และมินิเกม แบบละเอียด
 
-**เวอร์ชันล่าสุด:** [v1.0 — ปรับภาพและการใช้งานบนมือถือ](https://github.com/phuwiny/boss-game/releases/tag/v1.0) · [ดูทุกเวอร์ชัน](https://github.com/phuwiny/boss-game/releases)
+**Release ล่าสุด:** [v1.1.1 pre-release — Mew portrait และคู่มือภาพประกอบ](https://github.com/phuwiny/boss-game/releases/tag/v1.1.1) · [ดูทุกเวอร์ชัน](https://github.com/phuwiny/boss-game/releases)
 
-**รุ่นที่กำลังเตรียม:** v1.2 — เพลงประกอบสเตจ 1–3 (เพลง mp3) และย้ายเพลงสังเคราะห์เดิมไปหน้าเมนู/เป่า-ยิ้ง-ฉุบ; อ่าน [release notes ฉบับร่าง](.logs/2026-10-17_release-v1.2.md)
-
-**รุ่นที่กำลังเตรียม:** v1.1 — เพิ่ม portrait บนการ์ด Memory Match และปรับฉากหลัง Grassland ตามภาพ concept; อ่าน [release notes ฉบับร่าง](.logs/2026-10-17_release-v1.1.md)
+**สถานะ v1.1.1:** เผยแพร่ release notes แล้ว; [PR #25](https://github.com/phuwiny/boss-game/pull/25) ยังรอ merge เข้า `main` ก่อนเกมบน GitHub Pages จะใช้ภาพ Mew ใหม่ รุ่นนี้รวมเพลงใหม่สำหรับทั้ง 3 สเตจจาก PR #23, ภาพประกอบตัวละครในคู่มือ และ sprite sheet ท่าวิ่ง Aclaire ฉบับปรับแขน (ไฟล์ต้นฉบับสำหรับงานภาพ)
 
 เกมแพลตฟอร์มเลื่อนฉากด้านข้าง (side-scrolling) แบบผู้เล่นคนเดียว
 
-## มีอะไรใหม่ใน v1.2 (รอเผยแพร่)
-
-- **เพลงประกอบสเตจ:** สเตจ 1 *Morning Over Meadow Hills*, สเตจ 2 *Beyond the Treeline*, สเตจ 3 *Siege of the Stone Keep* เล่นวนซ้ำ พักเมื่อหยุดเกม และปิดได้ด้วยปุ่มเพลง
-- **เพลงเดิมย้ายที่:** เพลงสังเคราะห์เดิมเล่นที่หน้าแรก หน้าเลือกตัวละคร หน้ามินิเกม และเป่า-ยิ้ง-ฉุบ Battle (เริ่มหลังกดหรือแตะครั้งแรก) Coin Rain ยังมีเพลงของตัวเองตอนเล่น ส่วน Memory Match ยังไม่มีเพลง
-- **สิ่งที่เปลี่ยนไป:** เพลงสเตจไม่เร่งจังหวะตอนได้ดาว ใกล้หมดเวลา หรือบอสตื่น (เพลงสังเคราะห์ยังเร่งเหมือนเดิมในที่ที่ยังใช้อยู่) และบน iOS ปรับความดังเพลง mp3 ไม่ได้
-
-รายละเอียดและขอบเขตการตรวจอยู่ใน [release notes v1.2](.logs/2026-10-17_release-v1.2.md)
-
-## มีอะไรใหม่ใน v1.1 (รอเผยแพร่)
+## มีอะไรใหม่ใน v1.1 (pre-release)
 
 - **Memory Match:** การ์ด Bobo, Mew และ Aclaire ใช้ภาพ portrait พิกเซลโปร่งใสที่เห็นใบหน้าชัดขึ้น หากโหลดภาพไม่ได้จะแสดง sprite เดิมแทน
 - **Stage 1 Grassland:** ฉากหลังแสดงภูเขาสีฟ้าและเนินเขียวจาก [ภาพ concept](assets/concepts/2026-10-14_scene-concepts.png) ในชั้น parallax โดยไล่รอยต่อท้องฟ้าบนจอแนวตั้ง ถ้าโหลดภาพไม่ได้จะกลับไปใช้ฉากเดิม
 - **การเล่นเดิม:** ตำแหน่งพื้น บล็อก เหรียญ ศัตรู และท่าวิ่งของตัวละครไม่ได้เปลี่ยน
 
-รายละเอียดและขอบเขตการตรวจอยู่ใน [release notes v1.1](.logs/2026-10-17_release-v1.1.md)
+รายละเอียดและขอบเขตการตรวจอยู่ใน [release notes v1.1](https://github.com/phuwiny/boss-game/releases/tag/v1.1)
 
 ## สเตจ
 
@@ -194,8 +184,8 @@
 
 | เวอร์ชัน | วันที่ | สิ่งที่เปลี่ยน |
 |---|---|---|
-| v1.2 (เตรียมเผยแพร่) | — | เพลงประกอบสเตจ 1–3 (mp3), เพลงสังเคราะห์เดิมย้ายไปหน้าเมนู/เป่า-ยิ้ง-ฉุบ; ดู [release notes ฉบับร่าง](.logs/2026-10-17_release-v1.2.md) |
-| v1.1 (เตรียมเผยแพร่) | — | portrait ตัวละครใน Memory Match และฉากหลัง Grassland ตามภาพ concept; ดู [release notes ฉบับร่าง](.logs/2026-10-17_release-v1.1.md) |
+| [v1.1.1 pre-release](https://github.com/phuwiny/boss-game/releases/tag/v1.1.1) | 17 ต.ค. 2569 | เพลงประกอบ 3 สเตจจาก [PR #23](https://github.com/phuwiny/boss-game/pull/23), Mew portrait แบบสบตาใน Memory Match, portrait ตัวละครในคู่มือ และต้นฉบับท่าวิ่ง Aclaire; [PR #25](https://github.com/phuwiny/boss-game/pull/25) รอ merge |
+| [v1.1 pre-release](https://github.com/phuwiny/boss-game/releases/tag/v1.1) | 17 ต.ค. 2569 | portrait ตัวละครใน Memory Match และฉากหลัง Grassland ตามภาพ concept |
 | [v1.0](https://github.com/phuwiny/boss-game/releases/tag/v1.0) | 17 ต.ค. 2569 | ปรับภาพฉาก/เมนู ตัวละครความละเอียดสูงขึ้นโดยคงท่าวิ่งเดิม และปรับการใช้งานบนมือถือ |
 | [v0.9.0-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.9.0-beta) | 9 ต.ค. 2569 | มินิเกมใหม่ 2 เกม เล่นคนเดียวด้วยนิ้วเดียวบนมือถือ: **Coin Rain** (ลากนิ้วรับเหรียญ/เพชร/หัวใจที่ตกจากฟ้า หลบหิน คอมโบคูณแต้มสูงสุด x5 ยิ่งนานยิ่งเร็ว) และ **Memory Match** (จับคู่การ์ด 3 ระดับ 3×4 / 4×4 / 4×5 วัดเวลาและให้ดาวตามจำนวนครั้งที่เปิด), ตัวละครแต่ละตัวมีความสามารถเฉพาะในทั้งสองเกม, บันทึกสถิติแยกตามตัวละคร (Memory Match แยกตามระดับด้วย) |
 | [v0.8.3-beta](https://github.com/phuwiny/boss-game/releases/tag/v0.8.3-beta) | 9 ต.ค. 2569 | ปรับการซูมบน**มือถือ**: จอแนวนอนที่เตี้ย (เช่นมีแถบเบราว์เซอร์) ไม่ซูมออกจนภาพกว้างและตัวละครเล็กอีกต่อไป และปุ่มเดิน/กระโดดบังแค่ชั้นดินใต้พื้น ไม่บังตัวละครหรือพื้นที่เล่น |
