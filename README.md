@@ -136,6 +136,21 @@
 - บันทึกสถิติแยกตามระดับและตัวละคร (localStorage key `coinquest.memory.best.<ระดับ>.<ตัวละคร>`)
 - กติกาอยู่ใน `js/memory-rules.js` ตรวจด้วย `node tools/check-memory.js`
 
+## เพลงประกอบ
+
+| ที่ไหน | เพลง |
+|---|---|
+| สเตจ 1 Grassland | Morning Over Meadow Hills (`assets/audio/2026-10-17_morning-over-meadow-hills.mp3`) |
+| สเตจ 2 Forest | Beyond the Treeline (`assets/audio/2026-10-17_beyond-the-treeline.mp3`) |
+| สเตจ 3 Boss Stage | Siege of the Stone Keep (`assets/audio/2026-10-17_siege-of-the-stone-keep.mp3`) |
+| หน้าแรก เลือกตัวละคร หน้ามินิเกม และเป่า-ยิ้ง-ฉุบ Battle | เพลงสังเคราะห์เดิม (Web Audio API) |
+| Coin Rain | เพลงสังเคราะห์เดิม เล่นเฉพาะตอนเล่น |
+| Memory Match | ไม่มีเพลง |
+
+- เพลงสเตจเล่นผ่าน `<audio>` จึงเปิดผ่าน `file://` ได้เหมือนเดิม ผู้เล่นโหลดเฉพาะไฟล์ของสเตจที่เล่น (รวมทั้ง 3 ไฟล์ราว 12.5 MB)
+- ผูกเพลงกับสเตจด้วย field `music` ใน definition ของสเตจ (`js/level.js`, `js/stage-*.js`) สเตจที่ไม่ระบุจะใช้เพลงสังเคราะห์
+- ความดังเพลงไฟล์ตั้งที่ `TRACK_VOL` ใน `js/audio.js` (iOS ไม่รับค่านี้ เพลงจึงเล่นด้วยความดังเต็มของไฟล์)
+
 ## ตัวละคร
 
 เลือกได้ที่ปุ่ม **ตัวละคร** ในหน้าแรก ระบบจะจำตัวที่เลือกไว้ ทุกตัวใช้ขนาดตัวสำหรับการชนเท่ากัน
@@ -161,7 +176,7 @@
   Boss Stage มีหัวใจ 3 ดวง ปีก 1 และเห็ด 1 (ไม่มีดาว)
 
 - เขียนด้วย HTML5 Canvas + CSS + JavaScript ล้วน **ไม่ต้อง build** ไม่มี dependency
-- สนามและ HUD วาดด้วย Canvas 2D และเสียงใช้ Web Audio API; ตัวละครใช้ข้อมูลพิกเซลจากภาพ concept ที่เตรียมไว้ และมี procedural fallback; ภาพประกอบเมนูใช้ WebP ที่สร้างด้วย imagegen
+- สนามและ HUD วาดด้วย Canvas 2D เสียงเอฟเฟกต์และเพลงเมนูสังเคราะห์ด้วย Web Audio API ส่วนเพลงประกอบสเตจเป็นไฟล์ mp3; ตัวละครใช้ข้อมูลพิกเซลจากภาพ concept ที่เตรียมไว้ และมี procedural fallback; ภาพประกอบเมนูใช้ WebP ที่สร้างด้วย imagegen
 - รองรับคอมพิวเตอร์ มือถือ (ปุ่มสัมผัสแบบ multi-touch) และจอยเกม (Gamepad API)
 - พร้อมเผยแพร่บน GitHub Pages ทันที
 
