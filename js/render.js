@@ -61,8 +61,8 @@
   const THEMES = {
     grassland: {
       id: 'grassland',
-      sky: ['#51b4ee', '#a4dff2', '#edf5d7'],
-      ground: { dirt: '#855337', dark: '#68402e', light: '#b77a48', grassDark: '#306647', grass: '#62ab4c', grassLight: '#b1d86e' },
+      sky: ['#48ade8', '#9ad9ef', '#e8f4cf'],
+      ground: { dirt: '#795035', dark: '#5c3c2b', light: '#ae794c', grassDark: '#286b46', grass: '#57b552', grassLight: '#b8df74' },
       plank: { edge: '#8e5a2c', mid: '#c88a4e', light: '#e4ad70', grain: 'rgba(90,50,20,0.35)', knot: '#6b4220', leg: '#7a4c25' },
       tuft: '#3f9a40'
     },
@@ -666,27 +666,56 @@
     } else {
       this.layers = {
         far: mk(1024, 240, function (c, w, h) {
-          ridge(c, w, h, 120, [[46, 3, 0.4], [22, 7, 1.3], [10, 13, 2]], '#badfec');
-          ridge(c, w, h, 160, [[38, 4, 2.1], [16, 9, 0.2], [7, 17, 1]], '#8fc5db');
+          ridge(c, w, h, 128, [[37, 3, 0.4], [16, 7, 1.3], [7, 13, 2]], '#d1e9e3');
+          ridge(c, w, h, 174, [[31, 4, 2.1], [13, 9, 0.2], [5, 17, 1]], '#a8d4cc');
+          // Sunlit contours keep the far ridge legible without competing with coins.
+          c.strokeStyle = 'rgba(248,255,220,0.48)';
+          c.lineWidth = 3;
+          for (let i = 0; i < 7; i++) {
+            const x = 54 + i * 151;
+            c.beginPath(); c.moveTo(x - 24, 184 + i % 3 * 6);
+            c.quadraticCurveTo(x, 169 + i % 3 * 6, x + 30, 180 + i % 3 * 6); c.stroke();
+          }
+          // A quiet landmark in the distant meadow; it has no collision or gameplay role.
+          const wx = 405, wy = 93;
+          c.fillStyle = '#8eaa93';
+          c.beginPath(); c.moveTo(wx - 12, 174); c.lineTo(wx - 8, wy + 7);
+          c.lineTo(wx + 8, wy + 7); c.lineTo(wx + 12, 174); c.closePath(); c.fill();
+          c.fillStyle = '#dce8c9';
+          c.beginPath(); c.moveTo(wx - 8, 169); c.lineTo(wx - 5, wy + 9);
+          c.lineTo(wx + 5, wy + 9); c.lineTo(wx + 8, 169); c.closePath(); c.fill();
+          c.fillStyle = '#6d947f';
+          c.beginPath(); c.moveTo(wx - 13, wy + 9); c.lineTo(wx, wy - 3);
+          c.lineTo(wx + 13, wy + 9); c.closePath(); c.fill();
+          c.save(); c.translate(wx, wy + 25);
+          c.fillStyle = '#f4f2d5';
+          for (let i = 0; i < 4; i++) {
+            c.save(); c.rotate(i * Math.PI / 2);
+            c.beginPath(); c.moveTo(-3, -3); c.lineTo(-6, -30);
+            c.lineTo(5, -30); c.lineTo(3, -3); c.closePath(); c.fill(); c.restore();
+          }
+          c.fillStyle = '#78967c'; ellipse(c, 0, 0, 4, 4); c.fill(); c.restore();
         }),
         near: mk(768, 170, function (c, w, h) {
-          ridge(c, w, h, 80, [[22, 3, 1.1], [10, 7, 0.3]], '#97d68d');
+          ridge(c, w, h, 78, [[20, 3, 1.1], [8, 7, 0.3]], '#a1d784');
           const r = rng(7);
-          c.fillStyle = '#74bf6d';
+          c.fillStyle = '#67ba63';
           for (let i = 0; i < 14; i++) {
             const x = r() * w, y = 70 + r() * 30, s = 0.7 + r() * 0.6;
-            ellipse(c, x, y, 9 * s, 13 * s);
-            c.fill();
-            c.fillRect(x - 1.5, y + 10 * s, 3, 8);
-            c.fillStyle = '#9ed27a';
-            c.fillRect(Math.floor(x - 6 * s), Math.floor(y - 8 * s), 7 * s, 3 * s);
-            c.fillStyle = '#74bf6d';
+            c.fillStyle = '#668c58'; c.fillRect(x - 2 * s, y + 4 * s, 4 * s, 15 * s);
+            c.fillStyle = '#5db65b'; ellipse(c, x, y, 10 * s, 12 * s); c.fill();
+            c.fillStyle = '#8cd075'; ellipse(c, x - 3 * s, y - 4 * s, 5 * s, 5 * s); c.fill();
           }
-          ridge(c, w, h, 118, [[16, 2, 2.4], [8, 6, 0.9]], '#7cc775');
+          ridge(c, w, h, 121, [[16, 2, 2.4], [8, 6, 0.9]], '#78c66d');
+          c.strokeStyle = 'rgba(218,242,147,0.58)'; c.lineWidth = 2;
+          for (let i = 0; i < 8; i++) {
+            const x = i * 101 + 12;
+            c.beginPath(); c.moveTo(x, 150); c.quadraticCurveTo(x + 30, 142, x + 64, 151); c.stroke();
+          }
         })
       };
-      this.layers.far.fill = '#8fc5db';
-      this.layers.near.fill = '#7cc775';
+      this.layers.far.fill = '#a8d4cc';
+      this.layers.near.fill = '#78c66d';
     }
     this.cloudSprite = mk(120, 50, function (c) {
       c.fillStyle = 'rgba(255,255,255,0.95)';
@@ -887,14 +916,18 @@
       switch (d.k) {
         case 'tree': {
           const s = d.s;
-          ctx.fillStyle = '#7a4f2c';
-          ctx.fillRect(d.x - 4 * s, d.y - 40 * s, 8 * s, 40 * s);
-          ctx.fillStyle = '#3f9a49';
-          ellipse(ctx, d.x, d.y - 58 * s, 26 * s, 24 * s); ctx.fill();
-          ctx.fillStyle = '#4fb257';
-          ellipse(ctx, d.x - 8 * s, d.y - 64 * s, 16 * s, 15 * s); ctx.fill();
-          ctx.fillStyle = 'rgba(255,255,255,0.18)';
-          ellipse(ctx, d.x - 12 * s, d.y - 70 * s, 7 * s, 5 * s); ctx.fill();
+          ctx.fillStyle = '#785439';
+          ctx.fillRect(d.x - 5 * s, d.y - 43 * s, 10 * s, 43 * s);
+          ctx.fillStyle = '#aa7847';
+          ctx.fillRect(d.x - 3 * s, d.y - 40 * s, 2 * s, 30 * s);
+          ctx.fillStyle = '#2d894b';
+          ellipse(ctx, d.x, d.y - 59 * s, 28 * s, 25 * s); ctx.fill();
+          ctx.fillStyle = '#43a957';
+          ellipse(ctx, d.x - 12 * s, d.y - 63 * s, 17 * s, 17 * s); ctx.fill();
+          ellipse(ctx, d.x + 12 * s, d.y - 67 * s, 15 * s, 18 * s); ctx.fill();
+          ctx.fillStyle = '#77c976';
+          ellipse(ctx, d.x - 10 * s, d.y - 73 * s, 9 * s, 6 * s); ctx.fill();
+          ellipse(ctx, d.x + 8 * s, d.y - 79 * s, 6 * s, 4 * s); ctx.fill();
           break;
         }
         case 'bush':

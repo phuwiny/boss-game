@@ -1,5 +1,17 @@
 # Coin Quest — Visual & Mobile Experience Plan
 
+## งานใหม่ 2026-10-17 — Memory portraits และภาพ Stage 1
+
+ขอบเขต: ใช้ภาพอ้างอิงตัวละครที่อนุมัติแล้วสร้าง portrait โปร่งใสเฉพาะการ์ด Memory Match; คง sprite และ animation ระหว่างเล่นตามชุดเดิมที่พินขอรักษาไว้ ปรับกราฟิก Grassland ใน renderer โดยไม่เปลี่ยน collision, spawn, physics, จำนวนเหรียญ หรือฉาก Forest/Castle
+
+- [x] เก็บภาพ Stage 1 เดิมและรายการตรวจ QA ใน `.logs/2026-10-17_portrait-stage1-qa.md`
+- [x] สร้าง portrait Bobo/Mew/Aclaire แยกไฟล์ 256×256 แบบโปร่งใสและรักษาเอกลักษณ์ใบหน้า
+- [x] ใช้ portrait บนการ์ด Memory พร้อม fallback เป็น sprite เดิมเมื่อโหลดภาพไม่สำเร็จ
+- [x] เพิ่มมิติฉากหลัง Grassland และปรับต้นไม้/สีพื้นโดยคงข้อมูลด่านเดิม
+- [x] ตรวจใน browser ทั้ง desktop/mobile, การหงาย/จับคู่การ์ด, ภาพหาย, Stage 1 ขณะเล่น และ regression test; บันทึกหลักฐานและขอบเขตที่ยังไม่ได้ตรวจใน log
+
+ภาพใช้ imagegen built-in จาก `assets/concepts/2026-10-14_character-lineup-final.png` เป็น style/identity reference. แนวทางการเขียน prompt และตรวจ alpha อ้างอิง OpenAI Docs เรื่อง image prompting และ image generation. งานนี้ไม่รวมการแก้ 9 ท่าเดิมของตัวละคร
+
 วันที่: 2026-10-13 · อัปเดต 2026-10-17 · สถานะ: **ภาพละเอียดขึ้นและท่าวิ่งเดิมผ่าน QA ห้าขนาดจอ; gameplay matrix บน Chrome ครบแล้ว เหลือตรวจอุปกรณ์จริง**
 
 ## ขอบเขตที่พินอนุมัติเพิ่ม — 2026-10-15

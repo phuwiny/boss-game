@@ -536,7 +536,11 @@ h1 {
 .mem-emoji { font-size: calc(var(--cw) * 0.52); line-height: 1; }
 .mem-svg { display: block; width: 62%; }
 .mem-svg svg { display: block; width: 100%; height: auto; }
+.mem-portrait { position: relative; display: grid; place-items: center; width: 94%; height: 94%; }
 .mem-hero { display: block; width: auto; height: calc(var(--cw) * 0.95); max-width: 90%; object-fit: contain; image-rendering: pixelated; }
+.mem-portrait-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; opacity: 0; }
+.mem-portrait.ready .mem-portrait-image { opacity: 1; }
+.mem-portrait.ready .mem-hero { visibility: hidden; }
 .mem-card.pop .mem-face { animation: mem-pop 0.35s ease-out; }
 .mem-card.shake { animation: mem-shake 0.3s; }
 @keyframes mem-pop { 50% { transform: rotateY(180deg) scale(1.12); } }
