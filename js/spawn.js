@@ -22,9 +22,16 @@
     return Math.round(n * ((stage && stage.coinScale) || 1));
   }
 
-  /** ไอเทมของสเตจ (สเตจที่ไม่กำหนด items ใช้ชุดมาตรฐาน) */
-  function itemsFor(stage) {
-    return (stage && stage.items) || ITEMS;
+  /** ไอเทมของสเตจ ปรับสัดส่วนปีก/เห็ดตามตัวละครโดยคงจำนวนรวมไว้ */
+  function itemsFor(stage, ch) {
+    const items = ((stage && stage.items) || ITEMS).slice();
+    const id = ch && ch.id;
+    const from = id === 'mew' ? 'wing' : id === 'aclaire' ? 'mush' : null;
+    if (from) {
+      const index = items.indexOf(from);
+      if (index >= 0) items[index] = from === 'wing' ? 'mush' : 'wing';
+    }
+    return items;
   }
 
   function hashString(str) {

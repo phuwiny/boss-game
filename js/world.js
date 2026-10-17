@@ -37,6 +37,7 @@
     BOAR_SPEED: 55,        // เร็วกว่าสไลม์เล็กน้อย
     STUN_TIME: 5,          // หมูป่าสลบหลังโดนเหยียบ (วินาที)
     GUARD_TIME: 5,         // อมตะหลังกันตาย (ความสามารถของ Aclaire)
+    GUARD_REGEN: 10,       // เวลาฟื้นโล่หลังใช้งาน
     HURT_BOUNCE: 380,      // แรงเด้งตอนกันตายได้
     HURT_INVULN: 1.5,      // อมตะชั่วคราวหลังเสียพลังชีวิต (Boss Stage)
     COIN_R: 10
@@ -159,8 +160,9 @@
       floatMax: ab.float || 0,           // ลอยตัวได้กี่วินาทีต่อการอยู่กลางอากาศหนึ่งช่วง
       floatT: ab.float || 0,
       floating: false,
-      guard: ab.guard || 0,              // กันตายได้อีกกี่ครั้ง (ได้คืนเมื่อเกิดใหม่)
+      guard: ab.guard || 0,              // กันตายได้อีกกี่ครั้ง
       guardMax: ab.guard || 0,
+      guardCooldown: 0,
       hp: hp || 0,                       // พลังชีวิต (Boss Stage)
       hpMax: hp || 0,
       safeX: x, safeY: y,                // จุดยืนปลอดภัยล่าสุด (ตกเหวแล้วกลับมาที่นี่)
@@ -189,6 +191,7 @@
   function hurt(p, ev, cause) {
     if (p.guard > 0) {
       p.guard--;
+      p.guardCooldown = P.GUARD_REGEN;
       p.invuln = P.GUARD_TIME;
       bounce(p, P.HURT_BOUNCE);
       if (ev) ev.push({ type: 'guard', cause: cause });
@@ -212,6 +215,10 @@
    * inp = { left, right, jump, jumpPressed }  ev = array สำหรับเก็บเหตุการณ์ (jump/land/spring/die/bonk)
    */
   function stepPlayer(p, inp, lv, dt, ev) {
+    if (p.guardCooldown > 0) {
+      p.guardCooldown = Math.max(0, p.guardCooldown - dt);
+      if (p.guardCooldown === 0) p.guard = p.guardMax;
+    }
     p.prevBottom = p.y + p.h;
 
     // ยืนบนแพลตฟอร์มเคลื่อนที่ → เคลื่อนตาม
