@@ -4,7 +4,7 @@
 
 - **เล่นเกม:** https://phuwiny.github.io/boss-game/
 - **อ่านคู่มือแบบหน้าเว็บ:** https://phuwiny.github.io/boss-game/manual.html
-- **Release ล่าสุด:** [v1.1 pre-release](https://github.com/phuwiny/boss-game/releases/tag/v1.1) · **คู่มือและภาพ Mew ใหม่:** v1.1.1 (อยู่ระหว่างจัดทำ PR)
+- **Release ล่าสุด:** [v1.1.1 pre-release](https://github.com/phuwiny/boss-game/releases/tag/v1.1.1) · [PR #25](https://github.com/phuwiny/boss-game/pull/25) รอ merge เพื่อให้ภาพ Mew ใหม่แสดงในเกมบน GitHub Pages
 - ตัวเลขทุกค่าในคู่มือนี้นำมาจากโค้ดของเกม
 - หน่วย **"ช่อง"** ในคู่มือ = ขนาดบล็อกอิฐ 1 ก้อน (ตัวละครสูงเกือบ 1 ช่อง)
 
