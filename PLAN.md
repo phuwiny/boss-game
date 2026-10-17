@@ -12,6 +12,14 @@
 
 ภาพใช้ imagegen built-in จาก `assets/concepts/2026-10-14_character-lineup-final.png` เป็น style/identity reference. แนวทางการเขียน prompt และตรวจ alpha อ้างอิง OpenAI Docs เรื่อง image prompting และ image generation. งานนี้ไม่รวมการแก้ 9 ท่าเดิมของตัวละคร
 
+### ต่อยอดฉากหลัง Grassland ให้ตรง concept
+
+หลัง checkpoint commit `1cbfcba` พินขอให้ฉากหลัง Stage 1 เหมือนภาพ concept มากขึ้น ใช้เฉพาะส่วนท้องฟ้า ภูเขา และเนินของแผง Grassland ใน `assets/concepts/2026-10-14_scene-concepts.png` เป็นภาพ parallax ที่แคชใน Canvas; ไม่ใช้พื้นและบล็อกจากภาพอ้างอิง เพื่อให้ geometry ของเกมยังตรงกับภาพที่แสดง
+
+- [x] ตรวจ concept เทียบกับฉากก่อนแก้และเลือกส่วน background ที่ไม่มีพื้น/บล็อก
+- [x] ใส่ภาพ concept ลงฉาก Stage 1 พร้อม fade ขอบบนสำหรับจอมือถือ และฉาก procedural สำรองเมื่อไฟล์โหลดไม่ได้
+- [x] ตรวจ Chrome desktop/mobile, เดิน/กระโดด, Forest/Castle smoke และกรณีโหลดภาพล้มเหลว; ผลอยู่ใน `.logs/2026-10-17_stage1-concept-background.md`
+
 วันที่: 2026-10-13 · อัปเดต 2026-10-17 · สถานะ: **ภาพละเอียดขึ้นและท่าวิ่งเดิมผ่าน QA ห้าขนาดจอ; gameplay matrix บน Chrome ครบแล้ว เหลือตรวจอุปกรณ์จริง**
 
 ## ขอบเขตที่พินอนุมัติเพิ่ม — 2026-10-15

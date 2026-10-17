@@ -716,6 +716,31 @@
       };
       this.layers.far.fill = '#a8d4cc';
       this.layers.near.fill = '#78c66d';
+      if (this.grasslandConcept && this.grasslandConcept.naturalWidth) {
+        // The upper Grassland panel is the approved concept. Sample only its
+        // sky/mountain/meadow region, leaving the illustrated floor and brick out.
+        const sx = 180, sy = 8, sw = 1260, sh = 247;
+        const pw = 1701, ph = 334;
+        const cv = makeCanvas(pw * 2, ph);
+        const c = cv.getContext('2d');
+        c.imageSmoothingEnabled = false;
+        c.drawImage(this.grasslandConcept, sx, sy, sw, sh, 0, 0, pw, ph);
+        c.save();
+        c.translate(pw * 2, 0);
+        c.scale(-1, 1);
+        c.drawImage(this.grasslandConcept, sx, sy, sw, sh, 0, 0, pw, ph);
+        c.restore();
+        // Tall mobile viewports expose the top edge of this anchored layer.
+        // Fade it into the existing sky instead of showing a hard rectangle.
+        c.globalCompositeOperation = 'destination-in';
+        const fade = c.createLinearGradient(0, 0, 0, 95);
+        fade.addColorStop(0, 'rgba(0,0,0,0)');
+        fade.addColorStop(1, 'rgba(0,0,0,1)');
+        c.fillStyle = fade;
+        c.fillRect(0, 0, pw * 2, ph);
+        this.layers.far = { cv: cv, w: pw * 2, h: ph, fill: '#8bc872' };
+        this.layers.near = null;
+      }
     }
     this.cloudSprite = mk(120, 50, function (c) {
       c.fillStyle = 'rgba(255,255,255,0.95)';
@@ -1125,6 +1150,12 @@
   // ── วาดทั้งเฟรม ────────────────────────────────────────────────
   Renderer.prototype.render = function (g, time) {
     const ctx = this.ctx, S = this.S;
+    if (this.theme.id === 'grassland' && !this.grasslandConcept && typeof Image !== 'undefined') {
+      const img = new Image();
+      this.grasslandConcept = img;
+      img.onload = () => { this.layers = null; };
+      img.src = 'assets/concepts/2026-10-14_scene-concepts.png';
+    }
     if (!this.layers) this.buildLayers();
     let cx = this.cam.x, cy = this.cam.y;
     if (g.shake > 0) {
@@ -1138,7 +1169,16 @@
     ctx.imageSmoothingEnabled = true;
     this.drawSky(g, time);
     this.drawLayer(this.layers.far, 0.12, 0.25, 30);
-    this.drawLayer(this.layers.near, 0.3, 0.45, 40);
+    if (this.layers.near) this.drawLayer(this.layers.near, 0.3, 0.45, 40);
+    else if (this.theme.id === 'grassland') {
+      // The concept panorama covers the desktop sky; restore its sun above it.
+      const sx = this.viewW * 0.8 - this.cx * 0.01;
+      const sy = 64 - (this.cy - this.camMaxY()) * 0.05;
+      ctx.fillStyle = 'rgba(255,245,190,0.28)';
+      ellipse(ctx, sx, sy, 43, 43); ctx.fill();
+      ctx.fillStyle = '#fff3bd';
+      ellipse(ctx, sx, sy, 26, 26); ctx.fill();
+    }
 
     ctx.setTransform(S, 0, 0, S, -cx * S, -cy * S);
     this.drawPits();
