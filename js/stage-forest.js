@@ -201,5 +201,6 @@
     ]
   ];
 
-  CQ.STAGES.push({ id: 'forest', no: 2, name: 'Forest', th: 'ป่า', theme: 'forest', noPits: true, sections: SECTIONS });
+  CQ.STAGES.push({ id: 'forest', no: 2, name: 'Forest', th: 'ป่า', theme: 'forest', noPits: true, sections: SECTIONS,
+    music: 'assets/audio/2026-10-17_beyond-the-treeline.mp3' });
 })(typeof window !== 'undefined' ? window : globalThis);
