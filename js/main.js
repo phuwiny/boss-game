@@ -123,7 +123,7 @@
     }
     const seedInfo = currentSeed();
     const rng = Spawn.makeRng(Spawn.modeSeed(seedInfo.seed, timed ? 'timed' : 'normal', stage.id));
-    const picked = Spawn.pick(getPool(stage), lv.w, rng, { coins: Spawn.coinsFor(stage, timed ? 'timed' : 'normal'), items: Spawn.itemsFor(stage) });
+    const picked = Spawn.pick(getPool(stage), lv.w, rng, { coins: Spawn.coinsFor(stage, timed ? 'timed' : 'normal'), items: Spawn.itemsFor(stage, ch) });
     const center = function (o) { return { tx: o.tx, ty: o.ty, x: o.tx * T + T / 2, y: o.ty * T + T / 2 }; };
     const coins = lv.coins.map(center).concat(picked.coins.map(center));
     // Boss Stage: เหรียญจากบอส ซ่อนไว้จนกว่าจะชนะบอส (นับรวมในเป้าหมาย)

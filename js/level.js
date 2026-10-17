@@ -320,7 +320,7 @@
       lv.tracks.forEach(function (tr) {
         const minX = tr.tx0 * T;
         const maxX = Math.max(minX, (tr.tx1 + 1) * T - PW);
-        lv.platforms.push({ x: minX, y: tr.ty * T, w: PW, h: 14, minX: minX, maxX: maxX, dir: 1, speed: 70, wait: 0.5, waitT: 0, dx: 0, vx: 0 });
+        lv.platforms.push({ x: minX, y: tr.ty * T, w: PW, h: 14, minX: minX, maxX: maxX, dir: 1, speed: 80, wait: 0.5, waitT: 0, dx: 0, vx: 0 });
       });
     }
 

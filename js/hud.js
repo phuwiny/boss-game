@@ -218,13 +218,11 @@
       y += POWER_H + 1;
     }
     if (p.guardMax > 0) {
-      // Aclaire: โล่พร้อม = แถบเต็ม, กำลังอมตะ = แถบลดลง, ใช้แล้ว = ไอคอนจาง
+      // Aclaire: โล่พร้อม = แถบเต็ม, ใช้แล้ว = แถบเติมตามเวลาฟื้น
       const broken = p.guard <= 0;
-      const left = broken ? Math.max(0, p.invuln) : 0;
-      const blink = broken && left > 0 && left < 2 && Math.floor(time * 8) % 2 === 0;
       pt.panel(0, y, POWER_W, POWER_H);
-      pt.icon('guard', 3, y + 3, broken && left <= 0);
-      if (!blink) pt.bar(14, y + 5, POWER_W - 18, 5, broken ? left / CQ.PHYS.GUARD_TIME : 1, POWER_COLOR.guard);
+      pt.icon('guard', 3, y + 3, broken);
+      pt.bar(14, y + 5, POWER_W - 18, 5, broken ? 1 - p.guardCooldown / CQ.PHYS.GUARD_REGEN : 1, POWER_COLOR.guard);
       y += POWER_H + 1;
     }
     // ไอเทมที่ใช้งานอยู่ (กะพริบช่วง 2 วินาทีสุดท้าย)
