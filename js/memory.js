@@ -101,7 +101,8 @@
   // ── เริ่มเกม / กระดาน ───────────────────────────────────────────
   function faceHtml(f) {
     const info = FACE_INFO[f];
-    if (CHARS[f]) return '<canvas class="mem-hero" data-hero="' + f + '" aria-hidden="true"></canvas>';
+    if (CHARS[f]) return '<span class="mem-portrait"><canvas class="mem-hero" data-hero="' + f + '" aria-hidden="true"></canvas>' +
+      '<img class="mem-portrait-image" src="assets/portraits/2026-10-17_' + f + '-memory-portrait.png" alt="" aria-hidden="true" decoding="async"></span>';
     if (info.svg) return '<span class="mem-svg">' + info.svg + '</span>';
     return '<span class="mem-emoji" aria-hidden="true">' + info.icon + '</span>';
   }
@@ -126,6 +127,11 @@
     ui.board.innerHTML = h;
     cardEls = Array.prototype.slice.call(ui.board.querySelectorAll('.mem-card'));
     ui.board.querySelectorAll('canvas[data-hero]').forEach(drawHero);
+    ui.board.querySelectorAll('.mem-portrait-image').forEach(function (img) {
+      const ready = function () { if (img.naturalWidth) img.parentElement.classList.add('ready'); };
+      img.addEventListener('load', ready, { once: true });
+      if (img.complete) ready();
+    });
     ui.peek.hidden = !s.perks.peeks;
     say('จำตำแหน่งการ์ดไว้ให้ดี…');
     layout();
