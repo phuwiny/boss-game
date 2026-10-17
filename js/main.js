@@ -1011,7 +1011,8 @@
     Input.reset();
     pendingJump = false;
     acc = 0;
-    Sound.startMusic();
+    Sound.stopMusic(); // เริ่มเกมใหม่ให้เพลงเริ่มจากต้น
+    Sound.startMusic(g.stage.music);
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
 
@@ -1019,7 +1020,7 @@
     if (state !== 'playing') return;
     state = 'paused';
     setScreen(ui.pause);
-    Sound.stopMusic();
+    Sound.stopMusic(true);
   }
 
   function resumeGame() {
@@ -1030,7 +1031,7 @@
     Input.reset();
     pendingJump = false;
     lastTime = performance.now();
-    Sound.startMusic();
+    Sound.startMusic(g.stage.music);
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
 

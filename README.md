@@ -276,7 +276,7 @@ js/hud.js           HUD แบบพิกเซล: กรอบ ตัวเ�
 js/spawn.js         หาจุดที่วางของได้ และสุ่มวางเหรียญ/ไอเทมตาม seed รายวัน
 js/render.js        การวาดภาพทั้งหมด: ธีมฉากแต่ละสเตจ (parallax, tile, ของตกแต่ง), ศัตรู, ตัวละคร (จาก sprites.js), อนุภาค, มินิแมพ, HUD
 js/input.js         คีย์บอร์ด, ปุ่มสัมผัส multi-touch, จอยเกม
-js/audio.js         เสียงเอฟเฟกต์และดนตรีประกอบ (Web Audio API)
+js/audio.js         เสียงเอฟเฟกต์และดนตรีประกอบ (Web Audio API; สเตจที่ระบุ music ใน js/level.js เล่นไฟล์ mp3 จาก assets/audio/ แทน — ตอนนี้คือสเตจ 1 เพลง Morning Over Meadow Hills)
 js/rps-rules.js     มินิเกมเป่า-ยิ้ง-ฉุบ Battle: กติกาและ AI ของ COM (ไม่ยุ่งกับ DOM)
 js/rps.js           มินิเกมเป่า-ยิ้ง-ฉุบ Battle: หน้าจอและลำดับเฟส
 js/rain-rules.js    มินิเกม Coin Rain: กติกา การสุ่มของที่ตก ความยาก ความสามารถตัวละคร (ไม่ยุ่งกับ DOM)

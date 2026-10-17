@@ -1,5 +1,6 @@
 /*
- * Coin Quest — เสียง (สังเคราะห์ด้วย Web Audio API ไม่ต้องใช้ไฟล์เสียง)
+ * Coin Quest — เสียง (เสียงเอฟเฟกต์และเพลงเริ่มต้นสังเคราะห์ด้วย Web Audio API
+ * เฉพาะสเตจที่ระบุ music ไว้จะเล่นไฟล์เพลงผ่าน <audio> แทน เพื่อให้เปิดผ่าน file:// ได้เหมือนเดิม)
  */
 (function (root) {
   'use strict';
@@ -13,6 +14,7 @@
 
   const SFX_VOL = 0.55;
   const MUSIC_VOL = 0.14;
+  const TRACK_VOL = 0.35; // ความดังของไฟล์เพลง (<audio>.volume)
 
   let ac = null;
   let sfxBus = null;
@@ -203,6 +205,7 @@
   let musicTimer = null;
   let nextTime = 0;
   let stepIdx = 0;
+  let trackEl = null; // <audio> ของไฟล์เพลงสเตจ
 
   function scheduleMusic() {
     while (nextTime < ac.currentTime + 0.2) {
@@ -219,16 +222,41 @@
     }
   }
 
-  function startMusic() {
+  function syncTrack() {
+    if (!trackEl) return;
+    trackEl.muted = !musicOn;
+    trackEl.volume = TRACK_VOL;
+  }
+
+  function startTrack(src) {
+    if (!trackEl) {
+      trackEl = new root.Audio();
+      trackEl.loop = true;
+      trackEl.preload = 'auto';
+    }
+    if (trackEl.getAttribute('src') !== src) trackEl.src = src;
+    syncTrack();
+    const p = trackEl.play();
+    if (p && p.catch) p.catch(function () { /* เบราว์เซอร์บล็อกเล่นอัตโนมัติ ไม่มีเพลงในรอบนี้ */ });
+  }
+
+  /** เริ่มเพลง: ระบุ src = เล่นไฟล์เพลง (ต่อจากตำแหน่งเดิมถ้าเพิ่งหยุดชั่วคราว) ไม่ระบุ = เพลงสังเคราะห์ */
+  function startMusic(src) {
+    if (src) { startTrack(src); return; }
     if (!ac || musicTimer) return;
     nextTime = ac.currentTime + 0.06;
     musicTimer = setInterval(scheduleMusic, 50);
     scheduleMusic();
   }
 
-  function stopMusic() {
+  /** หยุดเพลง: keepPos = true คือพักไว้ (ใช้ตอนหยุดเกมชั่วคราว) ไม่งั้นเริ่มจากต้นเพลงในรอบหน้า */
+  function stopMusic(keepPos) {
     if (musicTimer) clearInterval(musicTimer);
     musicTimer = null;
+    if (trackEl) {
+      trackEl.pause();
+      if (!keepPos) trackEl.currentTime = 0;
+    }
   }
 
   /** เร่ง/ผ่อนจังหวะเพลง (ใช้ตอนได้ดาว) */
@@ -246,6 +274,7 @@
     musicOn = on;
     store.set('coinquest.music', on ? '1' : '0');
     if (musicBus) musicBus.gain.value = on ? MUSIC_VOL : 0;
+    syncTrack();
   }
 
   CQ.Audio = {

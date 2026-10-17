@@ -219,9 +219,11 @@
   /**
    * รายชื่อสเตจ: id ใช้ใน seed และ key ของสถิติ, theme ใช้เลือกภาพฉาก (js/render.js)
    * noPits = ห้ามมีเหว (ตัวตรวจด่านจะตรวจว่าแถวล่างสุดเป็นพื้นทุกคอลัมน์)
+   * music = ไฟล์เพลงประกอบสเตจ (ถ้าไม่ระบุจะใช้เพลงสังเคราะห์จาก js/audio.js)
    */
   CQ.STAGES = [
-    { id: 'grassland', no: 1, name: 'Grassland', th: 'ทุ่งหญ้า', theme: 'grassland', sections: CQ.LEVEL_SECTIONS }
+    { id: 'grassland', no: 1, name: 'Grassland', th: 'ทุ่งหญ้า', theme: 'grassland', sections: CQ.LEVEL_SECTIONS,
+      music: 'assets/audio/2026-10-17_morning-over-meadow-hills.mp3' }
   ];
 
   /** หาสเตจจาก id ถ้าไม่พบคืนสเตจแรก */
