@@ -152,4 +152,59 @@ t('switch: setState ล้าง pending แล้วคำนวณใหม่
   Switches.setState(lv, 'purple', []); assert.strictEqual(lv.swPending.size, 0); assert.ok(W.isSolid(lv, 4, 11));
 });
 
+// ── แพลตฟอร์มแนวตั้ง ──────────────────────────────────────────────
+// ด่านจำลอง: รางแนวตั้ง | ที่ tx 4 แถว 4-12 (แพลตฟอร์มกว้าง 3 ช่อง คอลัมน์ 3-5) พื้นแถว 14
+function vfixture() {
+  const rows = [];
+  for (let y = 0; y < 18; y++) {
+    let r = '..........';
+    if (y >= 4 && y <= 12) r = '....|.....';
+    else if (y >= 14) r = '##########';
+    rows.push(r);
+  }
+  return CQ.parseLevel([rows]);
+}
+// ราง ~ แนวนอนแถว 11 คอลัมน์ 2-8 พื้นแถว 14
+const HFIXTURE = (function () {
+  const rows = [];
+  for (let y = 0; y < 18; y++) {
+    let r = '..........';
+    if (y === 11) r = '..~~~~~~~.';
+    else if (y >= 14) r = '##########';
+    rows.push(r);
+  }
+  return rows;
+})();
+// วางผู้เล่นเหนือแพลตฟอร์มแล้วให้ตกลงมายืนบนนั้น (ไม่ขยับแพลตฟอร์ม)
+function standOn(pl, lv) {
+  const p = W.makePlayer(0, 0, null, 5);
+  p.x = pl.x + (pl.w - p.w) / 2; p.y = pl.y - p.h - 2; p.vy = 0;
+  for (let i = 0; i < 20 && p.ride !== pl; i++) W.stepPlayer(p, idle, lv, DT, []);
+  assert.strictEqual(p.ride, pl, 'ผู้เล่นต้องลงมายืนบนแพลตฟอร์ม');
+  return p;
+}
+
+t('vplatform: ยืนนิ่งติดไปด้วยครบรอบขึ้น-ลง', function () {
+  const lv = vfixture(); const pl = lv.platforms[0]; const p = standOn(pl, lv);
+  let minY = Infinity, maxY = -Infinity;
+  for (let i = 0; i < 120 * 8; i++) {
+    W.stepPlatform(pl, DT); W.stepPlayer(p, idle, lv, DT, []);
+    assert.ok(Math.abs(p.y + p.h - pl.y) < 0.5, 'หลุดจากแพลตฟอร์มที่ step ' + i);
+    minY = Math.min(minY, pl.y); maxY = Math.max(maxY, pl.y);
+  }
+  assert.strictEqual(minY, pl.minY); assert.strictEqual(maxY, pl.maxY);
+});
+t('vplatform: กระโดดจากแพลตฟอร์มขาขึ้นได้สูงกว่ายืนเฉย', function () {
+  const lv = vfixture(); const pl = lv.platforms[0]; const p = standOn(pl, lv);
+  for (let i = 0; i < 90; i++) { W.stepPlatform(pl, DT); W.stepPlayer(p, idle, lv, DT, []); }
+  const y0 = p.y; let top = p.y;
+  for (let i = 0; i < 80; i++) { W.stepPlatform(pl, DT); W.stepPlayer(p, { left: false, right: false, jump: true, jumpPressed: i === 0 }, lv, DT, []); top = Math.min(top, p.y); }
+  assert.ok(y0 - top > 90);
+});
+t('vplatform: แพลตฟอร์มแนวนอนเดิมยังพาไปด้านข้าง', function () {
+  const lv = CQ.parseLevel([HFIXTURE]); const pl = lv.platforms[0]; const p = standOn(pl, lv); const x0 = p.x;
+  for (let i = 0; i < 120; i++) { W.stepPlatform(pl, DT); W.stepPlayer(p, idle, lv, DT, []); }
+  assert.ok(p.x - x0 > 50);
+});
+
 console.log('\nผ่านทั้งหมด ' + n + ' ข้อ');

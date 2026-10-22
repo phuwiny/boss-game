@@ -231,10 +231,15 @@
       p.guardCooldown = Math.max(0, p.guardCooldown - dt);
       if (p.guardCooldown === 0) p.guard = p.guardMax;
     }
-    p.prevBottom = p.y + p.h;
 
-    // ยืนบนแพลตฟอร์มเคลื่อนที่ → เคลื่อนตาม
+    // ยืนบนแพลตฟอร์มเคลื่อนที่ → เคลื่อนตาม (แนวนอนก่อน แล้วค่อยแนวตั้ง)
     if (p.ride && p.ride.dx) moveX(p, p.ride.dx, lv);
+    if (p.ride && p.ride.dy) {
+      const ride = p.ride;
+      // moveY ล้าง onGround/ride ทุกครั้ง จึงคืนค่าให้ถ้ายังไม่โดนเพดานหรือพื้นทึบ (ไม่งั้นโคโยตี้/กระโดดจะเพี้ยน)
+      if (!moveY(p, ride.dy, lv, null) && p.vy >= 0 && !p.onGround) { p.onGround = true; p.ride = ride; }
+    }
+    p.prevBottom = p.y + p.h; // คิดหลังขยับตามแพลตฟอร์ม ไม่งั้นเหยียบศัตรู/ลงแพลตฟอร์มคลาดเคลื่อน
 
     const pw = p.pw;
     const st = p.st || DEFAULT_STATS;
@@ -419,6 +424,20 @@
       pl.waitT -= dt;
       pl.dx = 0;
       pl.vx = 0;
+      pl.dy = 0;
+      pl.vy = 0;
+      return;
+    }
+    if (pl.axis === 'y') {
+      // รางแนวตั้ง: dir -1 = ขึ้น, 1 = ลง
+      let ny = pl.y + pl.dir * pl.speed * dt;
+      if (ny >= pl.maxY) { ny = pl.maxY; pl.dir = -1; pl.waitT = pl.wait; }
+      else if (ny <= pl.minY) { ny = pl.minY; pl.dir = 1; pl.waitT = pl.wait; }
+      pl.dx = 0;
+      pl.vx = 0;
+      pl.dy = ny - pl.y;
+      pl.vy = pl.dy / dt;
+      pl.y = ny;
       return;
     }
     let nx = pl.x + pl.dir * pl.speed * dt;
