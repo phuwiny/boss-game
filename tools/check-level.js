@@ -23,7 +23,7 @@ const ROOT = path.resolve(__dirname, '..');
 const sandbox = { console: console };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
-['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/characters.js', 'js/spawn.js'].forEach(function (f) {
+['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/switches.js', 'js/characters.js', 'js/spawn.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 });
 

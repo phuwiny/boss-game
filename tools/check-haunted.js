@@ -14,7 +14,7 @@ const sandbox = { console: console };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
 // เพิ่มไฟล์ที่ต้องใช้ในรายการนี้ (งานถัดไปจะต่อท้าย)
-['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js'].forEach(function (f) {
+['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/switches.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 });
 const CQ = sandbox.CQ;
@@ -102,6 +102,54 @@ t('parse staticPlatforms: รางแนวตั้งเป็นแผ่น
 });
 t('parse: สเตจเดิมไม่มี error และไม่มีไอเทมวางตายตัว', function () {
   CQ.STAGES.forEach(function (s) { const lv = CQ.parseLevel(s.sections); same(lv.errors, []); assert.strictEqual(lv.items.length, 0); });
+});
+
+// ── บล็อกสวิตช์ ───────────────────────────────────────────────────
+// ด่านจำลอง: พื้นแถว 14, บล็อกม่วงแถว 11 คอลัมน์ 3-5, บล็อกส้มแถว 11 คอลัมน์ 7-9, สวิตช์ที่ (2, 9)
+function fixture() {
+  const rows = [];
+  for (let y = 0; y < 18; y++) {
+    let r = '............';
+    if (y === 9) r = '..T.........';
+    else if (y === 11) r = '...MMM.OOO..';
+    else if (y === 13) r = 'P...........';
+    else if (y >= 14) r = '############';
+    rows.push(r);
+  }
+  return CQ.parseLevel([rows]);
+}
+const W = CQ.World, Switches = CQ.Switches, DT = CQ.PHYS.DT;
+const idle = { left: false, right: false, jump: false, jumpPressed: false };
+
+t('switch: ม่วงทึบตอนเริ่ม ส้มโปร่ง สลับแล้วกลับกัน', function () {
+  const lv = fixture();
+  assert.ok(W.isSolid(lv, 4, 11)); assert.ok(!W.isSolid(lv, 8, 11)); assert.ok(W.isSolid(lv, 2, 9));
+  assert.strictEqual(Switches.toggle(lv, []), 'orange');
+  assert.ok(!W.isSolid(lv, 4, 11)); assert.ok(W.isSolid(lv, 8, 11));
+});
+t('switch: pending until clear — บล็อกที่ทับตัวยังโปร่งจนออกพ้น', function () {
+  const lv = fixture(); const body = { x: 8 * 32 + 6, y: 11 * 32 - 4, w: 20, h: 28 };
+  Switches.toggle(lv, [body]);
+  assert.ok(!W.isSolid(lv, 8, 11)); assert.ok(W.isSolid(lv, 7, 11));
+  body.x = 2 * 32; Switches.settle(lv, [body]);
+  assert.ok(W.isSolid(lv, 8, 11));
+});
+t('switch: ยืนบนบล็อกม่วงแล้วสลับ = ตกลงมา', function () {
+  const lv = fixture(); const p = W.makePlayer(4, 10, null, 5);
+  for (let i = 0; i < 60; i++) W.stepPlayer(p, idle, lv, DT, []);
+  assert.ok(p.onGround);
+  Switches.toggle(lv, [p]);
+  for (let i = 0; i < 60; i++) { W.stepPlayer(p, idle, lv, DT, []); Switches.settle(lv, [p]); }
+  assert.ok(p.y + p.h > 13 * 32);
+});
+t('switch: โหม่งสวิตช์ได้ event bonk พร้อมพิกัด', function () {
+  const lv = fixture(); const p = W.makePlayer(2, 13, null, 5); const ev = [];
+  for (let i = 0; i < 60; i++) W.stepPlayer(p, { left: false, right: false, jump: true, jumpPressed: i === 2 }, lv, DT, ev);
+  assert.ok(ev.some(e => e.type === 'bonk' && e.tx === 2 && e.ty === 9));
+});
+t('switch: setState ล้าง pending แล้วคำนวณใหม่', function () {
+  const lv = fixture(); Switches.toggle(lv, [{ x: 8 * 32, y: 11 * 32, w: 20, h: 28 }]);
+  Switches.setState(lv, 'purple', []); assert.strictEqual(lv.swPending.size, 0); assert.ok(W.isSolid(lv, 4, 11));
 });
 
 console.log('\nผ่านทั้งหมด ' + n + ' ข้อ');

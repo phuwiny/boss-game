@@ -51,7 +51,13 @@
 
   function isSolid(lv, tx, ty) {
     const t = tileAt(lv, tx, ty);
-    return t === TILE.GROUND || t === TILE.BRICK;
+    if (t === TILE.GROUND || t === TILE.BRICK || t === TILE.SWITCH) return true;
+    // บล็อกม่วง/ส้ม: ทึบเฉพาะฝั่งที่ตรงกับสถานะ และต้องไม่อยู่ใน pending (ยังมีตัวทับอยู่)
+    if (t === TILE.PURPLE || t === TILE.ORANGE) {
+      if (lv.sw !== (t === TILE.PURPLE ? 'purple' : 'orange')) return false;
+      return !(lv.swPending && lv.swPending.has(ty * lv.w + tx));
+    }
+    return false;
   }
 
   function isOneWay(lv, tx, ty) {
@@ -122,12 +128,18 @@
       const ty = Math.floor(b.y / T);
       const tx0 = Math.floor(b.x / T);
       const tx1 = Math.floor((b.x + b.w - EPS) / T);
+      let hitTx = -1;
       for (let tx = tx0; tx <= tx1; tx++) {
         if (isSolid(lv, tx, ty)) {
-          b.y = (ty + 1) * T;
-          b.vy = 0;
-          return 'head';
+          if (hitTx < 0 || tileAt(lv, tx, ty) === TILE.SWITCH) hitTx = tx; // ถ้าชนหลายช่อง ให้สวิตช์มาก่อน
         }
+      }
+      if (hitTx >= 0) {
+        b.y = (ty + 1) * T;
+        b.vy = 0;
+        b.bonkTx = hitTx;
+        b.bonkTy = ty;
+        return 'head';
       }
     }
     return null;
@@ -285,7 +297,7 @@
     const hit = moveY(p, p.vy * dt, lv, lv.platforms);
     if (hit === 'head') {
       p.jumping = false;
-      if (ev) ev.push({ type: 'bonk' });
+      if (ev) ev.push({ type: 'bonk', tx: p.bonkTx, ty: p.bonkTy });
     }
     if (p.onGround && !wasGround && ev) ev.push({ type: 'land', speed: fallSpeed });
 
