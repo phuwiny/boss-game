@@ -12,6 +12,11 @@
  *   P  จุดเริ่มต้นผู้เล่น      C  จุดเช็กพอยต์              s  สไลม์ (ศัตรู)
  *   h  หมูป่า (ศัตรู เหยียบแล้วสลบ ไม่ตาย)
  *   R  จุดหินหล่นจากเพดาน (Boss Stage)   X  บอส (Boss Stage วางที่มุมซ้ายล่างของตัวบอส)
+ *   M  บล็อกม่วง   O  บล็อกส้ม   (ทึบสลับกันตามสวิตช์: ฝั่งที่ทึบอยู่จะเป็นบล็อก ฝั่งที่ไม่ทึบเป็นเงาจาง)
+ *   T  สวิตช์สลับบล็อกม่วง/ส้ม (ทึบ กระโดดชนจากด้านล่างหรือเหยียบเพื่อสลับ)
+ *   |  รางแพลตฟอร์มแนวตั้ง (ต่อ | ในคอลัมน์เดียวกัน แพลตฟอร์มกว้าง 3 ช่องคร่อมคอลัมน์นั้น วิ่งขึ้น-ลงตามราง)
+ *   k  ฟักทองกระโดด (ศัตรู phop)   j  ฟักทองพ่นไฟ (ศัตรู pfire)
+ *   H  ไอเทมหัวใจแบบวางตายตัว       m  ไอเทมเห็ดแบบวางตายตัว
  *
  * เหรียญและไอเทมส่วนใหญ่ถูกสุ่มวางทุกวันโดย js/spawn.js จากจุดที่ยืนยันแล้วว่าเก็บได้
  *
@@ -21,7 +26,7 @@
   'use strict';
   const CQ = root.CQ = root.CQ || {};
 
-  CQ.TILE = { EMPTY: 0, GROUND: 1, BRICK: 2, ONEWAY: 3, SPIKE: 4, SPRING: 5 };
+  CQ.TILE = { EMPTY: 0, GROUND: 1, BRICK: 2, ONEWAY: 3, SPIKE: 4, SPRING: 5, PURPLE: 6, ORANGE: 7, SWITCH: 8 };
   CQ.LEVEL_ROWS = 18;
 
   CQ.LEVEL_SECTIONS = [
@@ -246,11 +251,15 @@
     const h = CQ.LEVEL_ROWS;
     const errors = [];
     const rows = [];
+    const rooms = []; // ช่วงคอลัมน์ของแต่ละ section
+    let colX = 0;
     for (let r = 0; r < h; r++) rows.push('');
 
     sections.forEach(function (sec, si) {
       if (sec.length !== h) errors.push('ส่วนที่ ' + (si + 1) + ' มี ' + sec.length + ' แถว (ต้องมี ' + h + ')');
       const w = sec[0] ? sec[0].length : 0;
+      rooms.push({ tx0: colX, tx1: colX + w - 1 });
+      colX += w;
       for (let r = 0; r < h; r++) {
         const line = sec[r] || '';
         if (line.length !== w) errors.push('ส่วนที่ ' + (si + 1) + ' แถว ' + r + ' กว้าง ' + line.length + ' (ต้องกว้าง ' + w + ')');
@@ -263,6 +272,8 @@
     const lv = {
       w: w, h: h, tiles: tiles,
       coins: [], enemies: [], checkpoints: [], platforms: [], tracks: [], rocks: [],
+      items: [], vtracks: [], switches: [], rooms: rooms,
+      sw: 'purple', swPending: new Set(),
       start: null, boss: null, errors: errors
     };
 
@@ -283,10 +294,18 @@
           case '=': tiles[i] = TILE.ONEWAY; break;
           case '^': tiles[i] = TILE.SPIKE; break;
           case 'S': tiles[i] = TILE.SPRING; break;
+          case 'M': tiles[i] = TILE.PURPLE; break;
+          case 'O': tiles[i] = TILE.ORANGE; break;
+          case 'T': tiles[i] = TILE.SWITCH; lv.switches.push({ tx: tx, ty: ty }); break;
+          case '|': break; // รางแนวตั้ง: รวมเป็นช่วงด้านล่างหลังอ่านครบทุกแถว
           case '~': if (opts.staticPlatforms) tiles[i] = TILE.ONEWAY; break;
           case 'o': lv.coins.push({ tx: tx, ty: ty, x: tx * T + T / 2, y: ty * T + T / 2 }); break;
           case 's': lv.enemies.push({ tx: tx, ty: ty, kind: 'slime' }); break;
           case 'h': lv.enemies.push({ tx: tx, ty: ty, kind: 'boar' }); break;
+          case 'k': lv.enemies.push({ tx: tx, ty: ty, kind: 'phop' }); break;
+          case 'j': lv.enemies.push({ tx: tx, ty: ty, kind: 'pfire' }); break;
+          case 'H': lv.items.push({ tx: tx, ty: ty, type: 'heart' }); break;
+          case 'm': lv.items.push({ tx: tx, ty: ty, type: 'mush' }); break;
           case 'C': lv.checkpoints.push({ tx: tx, ty: ty }); break;
           case 'R': lv.rocks.push({ tx: tx, ty: ty }); break;
           case 'X':
@@ -300,6 +319,16 @@
           case '.': break;
           default: errors.push('ไม่รู้จักสัญลักษณ์ "' + ch + '" ที่ (' + tx + ', ' + ty + ')');
         }
+      }
+    }
+
+    // รางแนวตั้ง: ต่อ | ในคอลัมน์เดียวกันเป็นช่วง (สแกนทีละคอลัมน์จากบนลงล่าง)
+    for (let tx = 0; tx < w; tx++) {
+      let y0 = -1;
+      for (let ty = 0; ty <= h; ty++) {
+        const on = ty < h && rows[ty][tx] === '|';
+        if (on) { if (y0 < 0) y0 = ty; }
+        else if (y0 >= 0) { lv.vtracks.push({ tx: tx, ty0: y0, ty1: ty - 1 }); y0 = -1; }
       }
     }
 
@@ -320,7 +349,20 @@
       lv.tracks.forEach(function (tr) {
         const minX = tr.tx0 * T;
         const maxX = Math.max(minX, (tr.tx1 + 1) * T - PW);
-        lv.platforms.push({ x: minX, y: tr.ty * T, w: PW, h: 14, minX: minX, maxX: maxX, dir: 1, speed: 80, wait: 0.5, waitT: 0, dx: 0, vx: 0 });
+        lv.platforms.push({ axis: 'x', x: minX, y: tr.ty * T, w: PW, h: 14, minX: minX, maxX: maxX, dir: 1, speed: 80, wait: 0.5, waitT: 0, dx: 0, vx: 0, dy: 0, vy: 0 });
+      });
+      // แพลตฟอร์มแนวตั้งเริ่มที่ปลายล่างของราง แล้ววิ่งขึ้นก่อน
+      lv.vtracks.forEach(function (vt) {
+        lv.platforms.push({ axis: 'y', x: (vt.tx - 1) * T, y: vt.ty1 * T, w: PW, h: 14, minY: vt.ty0 * T, maxY: vt.ty1 * T, dir: -1, speed: 80, wait: 0.5, waitT: 0, dx: 0, vx: 0, dy: 0, vy: 0 });
+      });
+    } else {
+      // ตัวตรวจด่าน: รางแนวตั้งเป็นแผ่นไม้นิ่ง 3 ช่องทุกแถว (ไม่ทับช่องที่ไม่ว่าง)
+      lv.vtracks.forEach(function (vt) {
+        for (let ty = vt.ty0; ty <= vt.ty1; ty++) {
+          for (let tx = Math.max(0, vt.tx - 1); tx <= Math.min(w - 1, vt.tx + 1); tx++) {
+            if (tiles[ty * w + tx] === TILE.EMPTY) tiles[ty * w + tx] = TILE.ONEWAY;
+          }
+        }
       });
     }
 
