@@ -14,7 +14,7 @@ const sandbox = { console: console };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
 // เพิ่มไฟล์ที่ต้องใช้ในรายการนี้ (งานถัดไปจะต่อท้าย)
-['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/switches.js', 'js/boss.js', 'js/pumpkin.js'].forEach(function (f) {
+['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/switches.js', 'js/boss.js', 'js/pumpkin.js', 'js/characters.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 });
 const CQ = sandbox.CQ;
@@ -301,6 +301,134 @@ t('pumpkin: fireball stops at wall', function () {
   for (let i = 0; i < 120 * 2; i++) Pumpkin.stepPumpkin(e, lv, p, DT, fires, []);
   const f = fires[0]; let res = null; for (let i = 0; i < 600 && !res; i++) res = Boss.stepShot(f, lv, DT);
   assert.strictEqual(res, 'wall');
+});
+
+// ── ตัวตรวจด่านรู้จักสวิตช์ (tools/lib/reach.js) ─────────────────────
+const { reach } = require('./lib/reach.js');
+const bobo = CQ.CHARACTERS.find(c => c.id === 'bobo'), mew = CQ.CHARACTERS.find(c => c.id === 'mew');
+// สร้างด่าน 18 แถว กว้าง w พื้นแถว 14-17; marks = [[x, y, สัญลักษณ์ หรือข้อความหลายช่อง], ...]
+function grid(w, marks) {
+  const rows = [];
+  for (let y = 0; y < 18; y++) rows.push((y >= 14 ? '#' : '.').repeat(w));
+  marks.forEach(function (m) { put(rows, m[0], m[1], m[2]); });
+  return rows;
+}
+function put(rows, x, y, str) { for (let i = 0; i < str.length; i++) setCell(rows, x + i, y, str[i]); }
+// GATE: ขั้นบันไดสูงทีละ 2 ช่อง พื้น → ส้ม (5-7,12) → ชั้น L1 (9-11,10) เหรียญ A (10,9) → ม่วง (13-15,8) → ชั้น L2 (17-19,6) เหรียญ B (18,5)
+// สวิตช์ (2,9) โหม่งได้จากพื้น, สวิตช์ (10,5) โหม่งได้จาก L1; เริ่มม่วงห้ามสลับ = ขึ้นไม่ได้เลย
+const GATE = grid(20, [[0, 13, 'P'], [2, 9, 'T'], [5, 12, 'OOO'], [9, 10, '###'], [10, 9, 'o'], [10, 5, 'T'],
+  [13, 8, 'MMM'], [17, 6, '###'], [18, 5, 'o']]);
+// SHOOT_GATE: เริ่มบนชั้น (0-5,8) สวิตช์ลอย (14,7) เหนือพื้นสูง 6 ช่อง (โหม่งไม่ถึง) แต่ยิงถึง; ส้ม (6-8,6) → ชั้น (9-11,4) เหรียญ (10,3)
+const SHOOT_GATE = grid(20, [[0, 8, '######'], [1, 7, 'P'], [14, 7, 'T'], [6, 6, 'OOO'], [9, 4, '###'], [10, 3, 'o']]);
+// HIGH_LEDGE: ชั้น (7-9,9) สูง 5 ช่องจากพื้น เหรียญ (8,8) — กระโดดครั้งเดียวไม่ถึง กระโดดกลางอากาศถึง
+const HIGH_LEDGE = grid(11, [[1, 13, 'P'], [7, 9, '###'], [8, 8, 'o']]);
+
+t('reach: เหรียญหลังสวิตช์ เก็บได้เมื่อสลับได้ เก็บไม่ได้เมื่อห้ามสลับ', function () {
+  const lv = CQ.parseLevel([GATE]); const tg = lv.coins.map(c => ({ tx: c.tx, ty: c.ty }));
+  const r = reach(CQ, lv, bobo, tg, {});
+  assert.strictEqual(r.got.size, tg.length);
+  assert.ok(r.standing > 0);
+  assert.strictEqual(reach(CQ, lv, bobo, tg, { toggles: false }).got.size, 0);
+});
+t('reach: เริ่มสถานะส้มก็ต้องสลับกลับได้', function () {
+  const lv = CQ.parseLevel([GATE]); const tg = lv.coins.map(c => ({ tx: c.tx, ty: c.ty }));
+  assert.strictEqual(reach(CQ, lv, bobo, tg, { sw: 'orange' }).got.size, tg.length);
+  assert.strictEqual(reach(CQ, lv, bobo, tg, { sw: 'orange', toggles: false }).got.size, 1); // ได้แค่ A
+});
+t('reach: ยิงสวิตช์ที่โหม่งไม่ถึงนับเป็นการสลับ', function () {
+  const lv = CQ.parseLevel([SHOOT_GATE]); const tg = lv.coins.map(c => ({ tx: c.tx, ty: c.ty }));
+  assert.strictEqual(reach(CQ, lv, bobo, tg, {}).got.size, tg.length);
+  assert.strictEqual(reach(CQ, lv, bobo, tg, { toggles: false }).got.size, 0);
+});
+t('reach: airJumps ทำให้ Mew ข้ามช่องที่ Bobo ข้ามไม่ได้', function () {
+  const lv = CQ.parseLevel([HIGH_LEDGE]); const tg = lv.coins.map(c => ({ tx: c.tx, ty: c.ty }));
+  assert.strictEqual(reach(CQ, lv, bobo, tg, { toggles: false }).got.size, 0);
+  assert.strictEqual(reach(CQ, lv, mew, tg, { toggles: false, airJumps: true }).got.size, tg.length);
+});
+t('reach: start และ bounds', function () {
+  const lv = CQ.parseLevel([GATE]); const tg = lv.coins.map(c => ({ tx: c.tx, ty: c.ty }));
+  // ห้ามออกนอกคอลัมน์ 0-4 (+1) = ไปไม่ถึงบันไดส้ม
+  assert.strictEqual(reach(CQ, lv, bobo, tg, { bounds: { tx0: 0, tx1: 3 } }).got.size, 0);
+  // เริ่มบน L1 สถานะส้ม ห้ามสลับ = ได้ A แต่ไม่ได้ B
+  const r2 = reach(CQ, lv, bobo, tg, { start: { tx: 10, ty: 9 }, sw: 'orange', toggles: false });
+  assert.strictEqual(r2.got.size, 1);
+  assert.strictEqual(lv.sw, 'purple', 'reach ต้องคืนสถานะสวิตช์ของด่าน');
+});
+
+// ── กติกาสเตจ fixedCoins ใน check-level.js ─────────────────────────
+// แต่ละกฎแยกฟังก์ชัน จึงทดสอบด้วยด่านจำลองเล็ก ๆ ได้ (BFS ของด่านใหญ่ช้า)
+const CL = require('./check-level.js');
+function collector() {
+  const o = { fails: [], warns: [] };
+  o.fail = m => o.fails.push(m); o.warn = m => o.warns.push(m); o.log = function () {};
+  return o;
+}
+const parseFixed = sections => { const lv = CL.CQ.parseLevel(sections, { staticPlatforms: true }); same(lv.errors, []); return lv; };
+const clBobo = CL.CQ.CHARACTERS.find(c => c.id === 'bobo');
+// สอง section กว้าง 8: ห้อง 0 = P, หัวใจ, เหรียญ (5,13); ห้อง 1 = เช็กพอยต์ (8,13), เหรียญ (11,13)
+function rooms2(edit0, edit1) {
+  const r0 = grid(8, [[1, 13, 'PH'], [5, 13, 'o']]);
+  const r1 = grid(8, [[0, 13, 'C'], [3, 13, 'o']]);
+  if (edit0) edit0(r0);
+  if (edit1) edit1(r1);
+  return [r0, r1];
+}
+
+t('fixedCoins: ต้องมีเหรียญ 40 และไอเทม heart×3 + mush×1', function () {
+  // ห้อง 0: เหรียญแถว 10-11 อย่างละ 10, ห้อง 1 เหมือนกัน = 40
+  const ok = () => [grid(10, [[1, 13, 'PH'], [0, 10, 'o'.repeat(10)], [0, 11, 'o'.repeat(10)]]),
+    grid(10, [[0, 13, 'CHHm'], [0, 10, 'o'.repeat(10)], [0, 11, 'o'.repeat(10)]])];
+  let o = collector(); CL.fixedCounts(parseFixed(ok()), 'ทดสอบ', o); same(o.fails, []);
+  let secs = ok(); setCell(secs[0], 0, 10, '.');
+  o = collector(); CL.fixedCounts(parseFixed(secs), 'ทดสอบ', o);
+  assert.ok(o.fails.length === 1 && o.fails[0].indexOf('39') >= 0, o.fails.join('\n'));
+  secs = ok(); setCell(secs[0], 2, 13, 'm');
+  o = collector(); CL.fixedCounts(parseFixed(secs), 'ทดสอบ', o);
+  assert.ok(o.fails.length === 1 && o.fails[0].indexOf('ไอเทม') >= 0, o.fails.join('\n'));
+});
+t('fixedCoins กฎ 4: ใต้สวิตช์ หัวราง เช็กพอยต์/จุดเริ่มทับบล็อกสี', function () {
+  let o = collector(); CL.fixedLayout(parseFixed(rooms2(r => { setCell(r, 4, 9, 'T'); for (let y = 6; y <= 9; y++) setCell(r, 6, y, '|'); })), 'ทดสอบ', o);
+  same(o.fails, []);
+  o = collector(); CL.fixedLayout(parseFixed(rooms2(r => { setCell(r, 4, 9, 'T'); setCell(r, 4, 10, '#'); })), 'ทดสอบ', o);
+  assert.ok(o.fails.length === 1 && o.fails[0].indexOf('สวิตช์') >= 0 && o.fails[0].indexOf('(4, 9)') >= 0, o.fails.join('\n'));
+  ['#', 'M', 'O', 'T'].forEach(function (c) {
+    o = collector(); CL.fixedLayout(parseFixed(rooms2(r => { for (let y = 6; y <= 9; y++) setCell(r, 4, y, '|'); setCell(r, 5, 5, c); })), 'ทดสอบ', o);
+    assert.ok(o.fails.some(m => m.indexOf('ราง') >= 0 && m.indexOf('(5, 5)') >= 0), c + ': ' + o.fails.join('\n'));
+  });
+  o = collector(); CL.fixedLayout(parseFixed(rooms2(null, r => { setCell(r, 0, 13, '.'); setCell(r, 0, 12, 'C'); setCell(r, 0, 13, 'O'); })), 'ทดสอบ', o);
+  assert.ok(o.fails.length === 1 && o.fails[0].indexOf('เช็กพอยต์') >= 0 && o.fails[0].indexOf('(8, 12)') >= 0, o.fails.join('\n'));
+  o = collector(); CL.fixedLayout(parseFixed(rooms2(r => { setCell(r, 1, 13, '.'); setCell(r, 1, 12, 'P'); setCell(r, 1, 13, 'M'); })), 'ทดสอบ', o);
+  assert.ok(o.fails.length === 1 && o.fails[0].indexOf('จุดเริ่มต้น') >= 0, o.fails.join('\n'));
+});
+t('fixedCoins กฎ 1/3: ด่านถูกต้องผ่าน, ห้องที่ไม่มีเช็กพอยต์ = fail', function () {
+  let o = collector(); CL.fixedReach(parseFixed(rooms2()), 'ทดสอบ', [clBobo], o); same(o.fails, []);
+  o = collector(); CL.fixedReach(parseFixed(rooms2(null, r => setCell(r, 0, 13, '.'))), 'ทดสอบ', [clBobo], o);
+  assert.ok(o.fails.some(m => m.indexOf('ห้อง 1') >= 0 && m.indexOf('เช็กพอยต์') >= 0), o.fails.join('\n'));
+});
+t('fixedCoins กฎ 3: เหรียญที่ต้องใช้บล็อกม่วงในห้องที่ไม่มีสวิตช์ = เข้าไม่ถึงจากเช็กพอยต์สถานะส้ม', function () {
+  // ห้อง 1: บล็อกม่วง (13-15,12) เหรียญ (14,8) เหนือบล็อก — กระโดดจากพื้นไม่ถึง
+  const o = collector();
+  CL.fixedReach(parseFixed(rooms2(null, r => { put(r, 5, 12, 'MMM'); setCell(r, 6, 8, 'o'); })), 'ทดสอบ', [clBobo], o);
+  const bad = o.fails.filter(m => m.indexOf('(14, 8)') >= 0);
+  assert.ok(bad.length === 1 && bad[0].indexOf('ห้อง 1') >= 0 && bad[0].indexOf('ส้ม') >= 0, o.fails.join('\n'));
+});
+t('fixedCoins กฎ 1: เหรียญที่ไปไม่ถึงจากจุดเริ่ม = fail', function () {
+  const o = collector();
+  CL.fixedReach(parseFixed(rooms2(r => { put(r, 4, 9, '###'); setCell(r, 5, 8, 'o'); })), 'ทดสอบ', [clBobo], o);
+  assert.ok(o.fails.some(m => m.indexOf('จากจุดเริ่ม') >= 0 && m.indexOf('(5, 8)') >= 0), o.fails.join('\n'));
+});
+t('fixedCoins กฎ 5: เตือนทางลัด Mew (ไม่ fail)', function () {
+  const o = collector(); CL.mewShortcuts(parseFixed([HIGH_LEDGE]), o);
+  same(o.fails, []);
+  same(o.warns, ['  ⚠ ทางลัด Mew: เหรียญ (8, 8)']);
+  const o2 = collector(); CL.mewShortcuts(parseFixed(rooms2()), o2); same(o2.warns, []); // Bobo ก็เก็บได้ = ไม่เตือน
+});
+t('fixedCoins: checkFixed เรียกครบทุกกฎ', function () {
+  const o = collector(); CL.checkFixed(parseFixed([HIGH_LEDGE]), 'ทดสอบ', [clBobo], o);
+  assert.ok(o.fails.some(m => m.indexOf('มีเหรียญ 1 เหรียญ') >= 0), o.fails.join('\n'));
+  assert.ok(o.fails.some(m => m.indexOf('ไอเทม') >= 0 && m.indexOf('(8, 8)') < 0), o.fails.join('\n'));
+  assert.ok(o.fails.some(m => m.indexOf('(8, 8)') >= 0), o.fails.join('\n'));
+  same(o.warns, ['  ⚠ ทางลัด Mew: เหรียญ (8, 8)']);
 });
 
 console.log('\nผ่านทั้งหมด ' + n + ' ข้อ');

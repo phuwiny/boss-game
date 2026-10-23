@@ -11,6 +11,9 @@
  * 3) ลองสุ่มวางแบบรายวันล่วงหน้า 1 ปี ทั้งโหมดปกติและโหมดจับเวลา เพื่อยืนยันว่าทุกวันได้เหรียญและไอเทมครบ ไม่ซ้อนกัน
  *    หมายเหตุ: รางแพลตฟอร์มเคลื่อนที่ถูกจำลองเป็นแผ่นไม้นิ่งตลอดแนวราง และไม่คิดศัตรู บอส และหินหล่น
  *    Boss Stage ตรวจเพิ่มว่าจุดที่เหรียญจากบอสอาจตกลงมา (เขตที่บอสเดิน) เก็บได้ทุกจุด
+ *    BFS อยู่ใน tools/lib/reach.js (รู้จักบล็อกสวิตช์ม่วง/ส้ม: โหม่ง/ยิงสวิตช์ได้)
+ * 4) สเตจ fixedCoins (วางเหรียญ/ไอเทมตายตัว ไม่สุ่ม): ตรวจจำนวน, การเข้าถึงจากจุดเริ่มและจากเช็กพอยต์ของแต่ละห้อง
+ *    ทั้งสองสถานะสวิตช์, ตำแหน่งสวิตช์/รางแนวตั้ง/เช็กพอยต์ และเตือนเหรียญที่เป็นทางลัดของ Mew
  *
  * ตรวจเฉพาะบางสเตจ/ตัวละครได้ เช่น  node tools/check-level.js forest mew aclaire
  */
@@ -18,6 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { reach } = require('./lib/reach.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const sandbox = { console: console };
@@ -32,11 +36,11 @@ const W = CQ.World;
 const P = CQ.PHYS;
 const Spawn = CQ.Spawn;
 const T = P.T;
-const DT = P.DT;
 const ENEMY_NAME = { slime: 'สไลม์', boar: 'หมูป่า', phop: 'ฟักทองกระโดด', pfire: 'ฟักทองยิงไฟ' };
 
 let failed = false;
 function fail(msg) { failed = true; console.log('  ✗ ' + msg); }
+const OUT = { fail: fail, warn: function (msg) { console.log(msg); }, log: function (msg) { console.log(msg); } };
 
 const args = process.argv.slice(2);
 const isStage = function (a) { return CQ.STAGES.some(function (s) { return s.id === a; }); };
@@ -90,6 +94,14 @@ function checkStage(stage) {
     if (pits.length) fail(label + ' ต้องไม่มีเหว แต่แถวล่างสุดว่างที่คอลัมน์ ' + pits.slice(0, 10).join(', ') + (pits.length > 10 ? ' ...' : ''));
   }
 
+  if (stage.fixedCoins) {
+    // วางเหรียญ/ไอเทมตายตัวทั้งหมด ไม่มีการสุ่มรายวัน
+    console.log('เหรียญตายตัว ' + lv.coins.length + ' | ไอเทม ' + lv.items.map(function (it) { return it.type; }).join(', ') +
+      ' | สวิตช์ ' + lv.switches.length + ' | ห้อง ' + lv.rooms.length + ' | เป้าหมาย: เก็บครบทุกเหรียญ');
+    checkFixed(lv, label, chars, OUT);
+    return;
+  }
+
   const pool = Spawn.buildPool(lv);
   const items = Spawn.itemsFor(stage);
   const nNormal = Spawn.coinsFor(stage, 'normal'), nTimed = Spawn.coinsFor(stage, 'timed');
@@ -112,111 +124,128 @@ function checkStage(stage) {
   checkDaily(lv, pool, stage);
 }
 
-// ── BFS ──────────────────────────────────────────────────────────
-const R = P.COIN_R;
-const clone = function (p) { return Object.assign({}, p); };
-const key = function (p) {
-  return Math.round(p.x / 8) + ',' + Math.round(p.y) + ',' + (Math.abs(p.vx) > 150 ? Math.sign(p.vx) : 0);
-};
-const input = function (dir, jump, pressed) {
-  return { left: dir < 0, right: dir > 0, jump: jump, jumpPressed: pressed };
-};
-const HOLDS = [4, 14, 999];
-const SWITCHES = [20, 45];
-
-/** BFS ด้วยฟิสิกส์ของตัวละคร ch คืนจำนวนเป้าหมายที่เก็บไม่ได้ */
-function checkReach(lv, ch, targets, label) {
-  const targetIndex = new Map();
-  targets.forEach(function (t, i) {
-    const k = t.ty * lv.w + t.tx;
-    if (!targetIndex.has(k)) targetIndex.set(k, []);
-    targetIndex.get(k).push(i);
-  });
-  const got = new Set();
-  const seen = new Set();
-  const queue = [];
-
-  function collect(p) {
-    const tx0 = Math.floor((p.x - R) / T), tx1 = Math.floor((p.x + p.w + R) / T);
-    const ty0 = Math.floor((p.y - R) / T), ty1 = Math.floor((p.y + p.h + R) / T);
-    for (let ty = ty0; ty <= ty1; ty++) {
-      for (let tx = tx0; tx <= tx1; tx++) {
-        const list = targetIndex.get(ty * lv.w + tx);
-        if (!list || got.has(list[0])) continue;
-        const cx = tx * T + T / 2, cy = ty * T + T / 2;
-        if (W.overlap(p.x, p.y, p.w, p.h, cx - R, cy - R, R * 2, R * 2)) list.forEach(function (i) { got.add(i); });
-      }
-    }
-  }
-
-  function enqueue(p) {
-    const k = key(p);
-    if (seen.has(k)) return;
-    seen.add(k);
-    queue.push(clone(p));
-  }
-
-  function simAir(p, dir1, switchAt, dir2, hold, pressFirst) {
-    for (let i = 0; i < 1200; i++) {
-      const dir = i < switchAt ? dir1 : dir2;
-      W.stepPlayer(p, input(dir, i < hold, pressFirst && i === 0), lv, DT, null);
-      if (p.dead) return;
-      collect(p);
-      if (i > 1 && p.onGround) { enqueue(p); return; }
-    }
-  }
-
-  function simWalk(s, dir) {
-    const p = clone(s);
-    for (let i = 0; i < 480; i++) {
-      const beforeX = p.x;
-      W.stepPlayer(p, input(dir, false, false), lv, DT, null);
-      if (p.dead) return;
-      collect(p);
-      if (!p.onGround) {
-        [dir, 0, -dir].forEach(function (d2) { simAir(clone(p), dir, 0, d2, 0, false); });
-        return;
-      }
-      if (i % 4 === 3) enqueue(p);
-      if (i > 20 && p.x === beforeX) { enqueue(p); return; } // ชนกำแพง
-    }
-    enqueue(p);
-  }
-
-  const start = W.makePlayer(lv.start.tx, lv.start.ty, ch);
-  start.guard = 0; // ไม่นับการเดินผ่านหนามด้วยการกันตาย
-  for (let i = 0; i < 120 && !start.onGround; i++) W.stepPlayer(start, input(0, false, false), lv, DT, null);
-  enqueue(start);
-
+// ── BFS (tools/lib/reach.js) ─────────────────────────────────────
+/**
+ * BFS ด้วยฟิสิกส์ของตัวละคร ch คืนรายการเป้าหมายที่เก็บไม่ได้
+ * out = { fail, log } (ค่าเริ่ม: ตัวพิมพ์ของสคริปต์นี้), opts ส่งต่อให้ reach()
+ */
+function checkReach(lv, ch, targets, label, opts, out) {
+  out = out || OUT;
   const t0 = Date.now();
-  while (queue.length) {
-    const s = queue.shift();
-    collect(s);
-    simWalk(s, -1);
-    simWalk(s, 1);
-    for (const d1 of [-1, 0, 1]) {
-      for (const hold of HOLDS) {
-        simAir(clone(s), d1, 9999, d1, hold, true);
-        for (const sw of SWITCHES) {
-          for (const d2 of [-1, 0, 1]) {
-            if (d2 !== d1) simAir(clone(s), d1, sw, d2, hold, true);
-          }
-        }
+  const r = reach(CQ, lv, ch, targets, opts || {});
+  const tag = '[' + label + ' / ' + ch.name + '] ';
+  out.log(tag + 'จำลองการเล่น: ' + r.standing + ' ตำแหน่งยืน, ' + ((Date.now() - t0) / 1000).toFixed(1) + ' วินาที');
+  const missed = [];
+  targets.forEach(function (t, i) {
+    if (r.got.has(i)) return;
+    missed.push(t);
+    if (missed.length <= 30) out.fail(tag + t.what + ' ช่อง (' + t.tx + ', ' + t.ty + ') เก็บไม่ได้');
+  });
+  if (missed.length > 30) out.fail(tag + '...และอีก ' + (missed.length - 30) + ' จุด');
+  out.log(tag + 'เข้าถึงได้ ' + (targets.length - missed.length) + ' / ' + targets.length + ' จุด');
+  return missed;
+}
+
+// ── สเตจที่วางเหรียญ/ไอเทมตายตัว (stage.fixedCoins) ─────────────────
+const FIXED_COINS = 40;
+const FIXED_ITEMS = { heart: 3, mush: 1 };
+const SW_NAME = { purple: 'ม่วง', orange: 'ส้ม' };
+
+/**
+ * กติกาสเตจ fixedCoins (ใช้ทั้งตอนตรวจสเตจจริงและในเทสต์ tools/check-haunted.js)
+ *   จำนวนเหรียญ/ไอเทม, กฎ 1 (เข้าถึงจากจุดเริ่ม), กฎ 3 (แต่ละห้องเข้าถึงจากเช็กพอยต์ทั้งสองสถานะ),
+ *   กฎ 4 (ตำแหน่งสวิตช์/ราง/เช็กพอยต์), กฎ 5 (เตือนทางลัดของ Mew)
+ * out = { fail, warn, log }
+ */
+function checkFixed(lv, label, chars, out) {
+  out = out || OUT;
+  fixedCounts(lv, label, out);
+  fixedLayout(lv, label, out);
+  fixedReach(lv, label, chars, out);
+  mewShortcuts(lv, out);
+}
+
+const inRoom = function (room) { return function (t) { return t.tx >= room.tx0 && t.tx <= room.tx1; }; };
+
+/** จำนวนเหรียญ (40) และไอเทม (heart×3 + mush×1) */
+function fixedCounts(lv, label, out) {
+  if (lv.coins.length !== FIXED_COINS) out.fail(label + ': มีเหรียญ ' + lv.coins.length + ' เหรียญ (ต้องมี ' + FIXED_COINS + ')');
+  const count = {};
+  lv.items.forEach(function (it) { count[it.type] = (count[it.type] || 0) + 1; });
+  const okItems = Object.keys(count).concat(Object.keys(FIXED_ITEMS)).every(function (k) { return (count[k] || 0) === (FIXED_ITEMS[k] || 0); });
+  if (!okItems) {
+    out.fail(label + ': ไอเทมต้องเป็น heart×3 + mush×1 แต่มี ' +
+      Object.keys(count).map(function (k) { return k + '×' + count[k]; }).join(' + '));
+  }
+}
+
+/** กฎ 4: ใต้สวิตช์ต้องว่าง, เหนือหัวรางแนวตั้งต้องว่าง, เช็กพอยต์/จุดเริ่มไม่ทับ/ไม่ยืนบนบล็อกสี */
+function fixedLayout(lv, label, out) {
+  const TILE = CQ.TILE;
+  const isColor = function (t) { return t === TILE.PURPLE || t === TILE.ORANGE; };
+  lv.switches.forEach(function (s) {
+    if (W.tileAt(lv, s.tx, s.ty + 1) !== TILE.EMPTY) out.fail(label + ': ใต้สวิตช์ที่ (' + s.tx + ', ' + s.ty + ') ต้องเป็นช่องว่าง');
+  });
+  lv.vtracks.forEach(function (vt) {
+    for (let tx = vt.tx - 1; tx <= vt.tx + 1; tx++) {
+      const ty = vt.ty0 - 1, t = W.tileAt(lv, tx, ty);
+      if (W.isSolid(lv, tx, ty) || t === TILE.SPIKE || isColor(t)) {
+        out.fail(label + ': เหนือหัวรางแนวตั้ง ช่อง (' + tx + ', ' + ty + ') ต้องว่าง (แพลตฟอร์มขึ้นไปถึง)');
       }
     }
-  }
-
-  const tag = '[' + label + ' / ' + ch.name + '] ';
-  console.log(tag + 'จำลองการเล่น: ' + seen.size + ' ตำแหน่งยืน, ' + ((Date.now() - t0) / 1000).toFixed(1) + ' วินาที');
-  let missing = 0;
-  targets.forEach(function (t, i) {
-    if (got.has(i)) return;
-    missing++;
-    if (missing <= 30) fail(tag + t.what + ' ช่อง (' + t.tx + ', ' + t.ty + ') เก็บไม่ได้');
   });
-  if (missing > 30) fail(tag + '...และอีก ' + (missing - 30) + ' จุด');
-  console.log(tag + 'เข้าถึงได้ ' + (targets.length - missing) + ' / ' + targets.length + ' จุด');
-  return missing;
+  const notOnColor = function (c, what) {
+    if (isColor(W.tileAt(lv, c.tx, c.ty)) || isColor(W.tileAt(lv, c.tx, c.ty + 1))) {
+      out.fail(label + ': ' + what + 'ที่ (' + c.tx + ', ' + c.ty + ') ทับ/ยืนบนบล็อกม่วง/ส้ม');
+    }
+  };
+  lv.checkpoints.forEach(function (c) { notOnColor(c, 'เช็กพอยต์'); });
+  notOnColor(lv.start, 'จุดเริ่มต้น');
+}
+
+const fixedTargets = function (lv) {
+  return lv.coins.map(function (c) { return { tx: c.tx, ty: c.ty, what: 'เหรียญ' }; })
+    .concat(lv.items.map(function (it) { return { tx: it.tx, ty: it.ty, what: 'ไอเทม ' + it.type }; }));
+};
+
+/** กฎ 1 และกฎ 3 */
+function fixedReach(lv, label, chars, out) {
+  const targets = fixedTargets(lv);
+
+  // กฎ 1: ทุกเหรียญ/ไอเทมเข้าถึงได้จากจุดเริ่ม สถานะม่วง
+  chars.forEach(function (ch) {
+    checkReach(lv, ch, targets, label + ' จากจุดเริ่ม (' + SW_NAME.purple + ')', { sw: 'purple' }, out);
+  });
+
+  // กฎ 3: แต่ละห้องเข้าถึงได้จากเช็กพอยต์ของห้อง (ห้อง 0 = จุดเริ่ม สถานะม่วงเท่านั้น)
+  lv.rooms.forEach(function (room, k) {
+    const tg = targets.filter(inRoom(room));
+    if (k === 0) {
+      chars.forEach(function (ch) {
+        checkReach(lv, ch, tg, label + ' ห้อง 0 จากจุดเริ่ม (' + SW_NAME.purple + ')', { sw: 'purple', bounds: room }, out);
+      });
+      return;
+    }
+    const cp = lv.checkpoints.filter(inRoom(room))[0];
+    if (!cp) { out.fail(label + ': ห้อง ' + k + ' (คอลัมน์ ' + room.tx0 + '-' + room.tx1 + ') ไม่มีเช็กพอยต์ C'); return; }
+    ['purple', 'orange'].forEach(function (sw) {
+      chars.forEach(function (ch) {
+        checkReach(lv, ch, tg, label + ' ห้อง ' + k + ' จากเช็กพอยต์ (' + SW_NAME[sw] + ')', { start: cp, sw: sw, bounds: room }, out);
+      });
+    });
+  });
+}
+
+/** กฎ 5 (เตือน): เหรียญที่ Mew ใช้กระโดดกลางอากาศเก็บได้ แต่ Bobo เก็บไม่ได้ (ไม่สลับสวิตช์ทั้งคู่) */
+function mewShortcuts(lv, out) {
+  const bobo = CQ.CHARACTERS.find(function (c) { return c.id === 'bobo'; });
+  const mew = CQ.CHARACTERS.find(function (c) { return c.id === 'mew'; });
+  const coins = lv.coins.map(function (c) { return { tx: c.tx, ty: c.ty }; });
+  const gotMew = reach(CQ, lv, mew, coins, { toggles: false, airJumps: true }).got;
+  const gotBobo = reach(CQ, lv, bobo, coins, { toggles: false }).got;
+  coins.forEach(function (c, i) {
+    if (gotMew.has(i) && !gotBobo.has(i)) out.warn('  ⚠ ทางลัด Mew: เหรียญ (' + c.tx + ', ' + c.ty + ')');
+  });
 }
 
 // ── ทดลองสุ่มแบบรายวัน 1 ปี ───────────────────────────────────────
@@ -251,10 +280,15 @@ function checkDaily(lv, pool, stage) {
   });
 }
 
-stages.forEach(checkStage);
+function main() {
+  stages.forEach(checkStage);
 
-if (failed) {
-  console.log('ผลตรวจ: ไม่ผ่าน');
-  process.exit(1);
+  if (failed) {
+    console.log('ผลตรวจ: ไม่ผ่าน');
+    process.exit(1);
+  }
+  console.log('ผลตรวจ: ผ่าน ✓');
 }
-console.log('ผลตรวจ: ผ่าน ✓');
+
+if (require.main === module) main();
+module.exports = { CQ: CQ, checkReach: checkReach, checkFixed: checkFixed, fixedCounts: fixedCounts, fixedLayout: fixedLayout, fixedReach: fixedReach, mewShortcuts: mewShortcuts };
