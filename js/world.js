@@ -115,7 +115,8 @@
       if (platforms) {
         for (let i = 0; i < platforms.length; i++) {
           const pl = platforms[i];
-          if (b.x + b.w > pl.x && b.x < pl.x + pl.w && prevBottom <= pl.y + 0.01 && bottom >= pl.y) {
+          // เทียบกับผิวแพลตฟอร์มก่อนขยับในเฟรมนี้ (pl.dy ขาขึ้นเท่านั้น) ไม่งั้นแพลตฟอร์มขาขึ้นจะวิ่งหนีเท้าแล้วทะลุ
+          if (b.x + b.w > pl.x && b.x < pl.x + pl.w && prevBottom <= pl.y - Math.min(pl.dy || 0, 0) + 0.01 && bottom >= pl.y) {
             b.y = pl.y - b.h;
             b.vy = 0;
             b.onGround = true;

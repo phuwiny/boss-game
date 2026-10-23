@@ -206,5 +206,16 @@ t('vplatform: แพลตฟอร์มแนวนอนเดิมยัง
   for (let i = 0; i < 120; i++) { W.stepPlatform(pl, DT); W.stepPlayer(p, idle, lv, DT, []); }
   assert.ok(p.x - x0 > 50);
 });
+t('vplatform: ตกลงมาจากความสูงน้อยๆ ลงบนแพลตฟอร์มขาขึ้นต้องไม่ทะลุ', function () {
+  for (let h = 0; h <= 120; h += 2.5) {
+    const lv = vfixture(); const pl = lv.platforms[0];
+    while (pl.y > 300) W.stepPlatform(pl, DT); // เลื่อนมากลางราง ขาขึ้น
+    assert.strictEqual(pl.dir, -1);
+    const p = W.makePlayer(0, 0, null, 5);
+    p.x = pl.x + (pl.w - p.w) / 2; p.y = pl.y - p.h - h; p.vy = 0;
+    for (let i = 0; i < 120; i++) { W.stepPlatform(pl, DT); W.stepPlayer(p, idle, lv, DT, []); } // แพลตฟอร์มก่อนผู้เล่น เหมือน main.js
+    assert.strictEqual(p.ride, pl, 'ทะลุแพลตฟอร์มเมื่อตกจากสูง ' + h + ' px');
+  }
+});
 
 console.log('\nผ่านทั้งหมด ' + n + ' ข้อ');
