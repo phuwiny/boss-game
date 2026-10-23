@@ -23,7 +23,7 @@ const ROOT = path.resolve(__dirname, '..');
 const sandbox = { console: console };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
-['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/switches.js', 'js/characters.js', 'js/spawn.js'].forEach(function (f) {
+['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/switches.js', 'js/pumpkin.js', 'js/characters.js', 'js/spawn.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 });
 
@@ -33,7 +33,7 @@ const P = CQ.PHYS;
 const Spawn = CQ.Spawn;
 const T = P.T;
 const DT = P.DT;
-const ENEMY_NAME = { slime: 'สไลม์', boar: 'หมูป่า' };
+const ENEMY_NAME = { slime: 'สไลม์', boar: 'หมูป่า', phop: 'ฟักทองกระโดด', pfire: 'ฟักทองยิงไฟ' };
 
 let failed = false;
 function fail(msg) { failed = true; console.log('  ✗ ' + msg); }

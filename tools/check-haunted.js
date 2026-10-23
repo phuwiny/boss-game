@@ -14,7 +14,7 @@ const sandbox = { console: console };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
 // เพิ่มไฟล์ที่ต้องใช้ในรายการนี้ (งานถัดไปจะต่อท้าย)
-['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/switches.js'].forEach(function (f) {
+['js/level.js', 'js/stage-forest.js', 'js/stage-castle.js', 'js/world.js', 'js/switches.js', 'js/boss.js', 'js/pumpkin.js'].forEach(function (f) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 });
 const CQ = sandbox.CQ;
@@ -216,6 +216,91 @@ t('vplatform: ตกลงมาจากความสูงน้อยๆ �
     for (let i = 0; i < 120; i++) { W.stepPlatform(pl, DT); W.stepPlayer(p, idle, lv, DT, []); } // แพลตฟอร์มก่อนผู้เล่น เหมือน main.js
     assert.strictEqual(p.ride, pl, 'ทะลุแพลตฟอร์มเมื่อตกจากสูง ' + h + ' px');
   }
+});
+
+// ── ฟักทอง ────────────────────────────────────────────────────────
+const Pumpkin = CQ.Pumpkin, Boss = CQ.Boss;
+function pumpkinRows(floor, extra) { // floor: ข้อความแถวพื้น (แถว 14-17), extra: ฟังก์ชันแก้แถวอื่น
+  const rows = [];
+  for (let y = 0; y < 18; y++) rows.push(y >= 14 ? floor : '.'.repeat(floor.length));
+  if (extra) extra(rows);
+  return rows;
+}
+function setCell(rows, x, y, ch) { rows[y] = rows[y].slice(0, x) + ch + rows[y].slice(x + 1); }
+// ฟักทองยิงไฟที่ช่อง 3 ผู้เล่นที่ช่อง px (ค่าเริ่ม 8); wallBetween = กำแพงสูงที่ช่อง 5
+function fireFixture(o) {
+  o = o || {};
+  const rows = pumpkinRows('#'.repeat(30), function (r) {
+    setCell(r, 3, 13, 'j'); setCell(r, 0, 13, 'P');
+    if (o.wallBetween) for (let y = 9; y <= 13; y++) setCell(r, 5, y, '#');
+  });
+  const lv = CQ.parseLevel([rows]);
+  const e = Pumpkin.makePumpkin(lv.enemies.find(x => x.kind === 'pfire'));
+  const p = W.makePlayer(o.px === undefined ? 8 : o.px, 13, null, 5);
+  for (let i = 0; i < 30; i++) Pumpkin.stepPumpkin(e, lv, { x: 9999, y: 0, w: p.w, h: p.h }, DT, [], []); // ลงยืนพื้นก่อน
+  e.cd = 0; e.windT = 0;
+  return { lv, e, p };
+}
+
+t('pumpkin: ค่าคงที่และ isPumpkin', function () {
+  same(Pumpkin.PUMPKIN, { HOP: { W: 26, H: 24, SPEED: 60, JUMP_V: 430, PAUSE: 0.8 },
+    FIRE: { W: 28, H: 26, RANGE: 288, WINDUP: 0.6, COOLDOWN: 2.5, HP: 3, FIRE_SPEED: 200, FIRE_R: 8, FIRE_LIFE: 4 } });
+  assert.ok(Pumpkin.isPumpkin('phop') && Pumpkin.isPumpkin('pfire'));
+  assert.ok(!Pumpkin.isPumpkin('slime') && !Pumpkin.isPumpkin('boar'));
+  const a = Pumpkin.makePumpkin({ tx: 2, ty: 13, kind: 'phop' }), b = Pumpkin.makePumpkin({ tx: 2, ty: 13, kind: 'pfire' });
+  assert.strictEqual(a.hp, 1); assert.strictEqual(b.hp, 3);
+  ['kind', 'x', 'y', 'w', 'h', 'vx', 'vy', 'dir', 'onGround', 'ride', 'dead', 'deadT', 't', 'pause', 'windT', 'cd', 'flash', 'face']
+    .forEach(function (k) { assert.ok(k in a && k in b, 'ขาด field ' + k); });
+});
+t('pumpkin: phop กระโดดเป็นจังหวะและไม่ตกขอบ', function () {
+  const rows = pumpkinRows('....######....', function (r) { setCell(r, 6, 13, 'k'); setCell(r, 7, 13, 'P'); });
+  const lv = CQ.parseLevel([rows]);
+  const e = Pumpkin.makePumpkin(lv.enemies[0]);
+  const p = { x: 9999, y: 0, w: 20, h: 28 };
+  let hops = 0, prev = e.onGround, minX = Infinity, maxX = -Infinity;
+  for (let i = 0; i < 120 * 10; i++) {
+    Pumpkin.stepPumpkin(e, lv, p, DT, [], []);
+    if (prev && !e.onGround) hops++;
+    prev = e.onGround; minX = Math.min(minX, e.x); maxX = Math.max(maxX, e.x + e.w);
+    assert.ok(!e.dead, 'ตายที่ step ' + i);
+  }
+  assert.strictEqual(e.dead, false);
+  assert.ok(hops >= 3, 'กระโดด ' + hops + ' ครั้ง');
+  assert.ok(minX >= 4 * 32 - 1 && maxX <= 10 * 32 + 1, 'ออกนอกพื้น ' + minX + ',' + maxX);
+});
+t('pumpkin: phop กลับทิศเมื่อติดกำแพง', function () {
+  const rows = pumpkinRows('#'.repeat(10), function (r) { setCell(r, 6, 13, 'k'); setCell(r, 0, 13, 'P'); for (let y = 12; y <= 13; y++) setCell(r, 3, y, '#'); });
+  const lv = CQ.parseLevel([rows]);
+  const e = Pumpkin.makePumpkin(lv.enemies[0]);
+  const p = { x: 9999, y: 0, w: 20, h: 28 };
+  for (let i = 0; i < 120 * 10; i++) Pumpkin.stepPumpkin(e, lv, p, DT, [], []);
+  assert.ok(e.x >= 4 * 32 - 1, 'ทะลุกำแพง x=' + e.x);
+});
+t('pumpkin: pfire เตือนก่อนยิง 0.6 วิ แล้วยิง 1 ลูกต่อ cooldown', function () {
+  const { lv, e, p } = fireFixture(); const fires = [], ev = [];
+  let windAt = -1, fireAt = -1;
+  for (let i = 0; i < 120 * 6; i++) { ev.length = 0; Pumpkin.stepPumpkin(e, lv, p, DT, fires, ev);
+    if (ev.some(x => x.type === 'pwind') && windAt < 0) windAt = i;
+    if (ev.some(x => x.type === 'pfire') && fireAt < 0) fireAt = i; }
+  assert.ok(windAt >= 0 && fireAt >= 0);
+  assert.ok(Math.abs((fireAt - windAt) * DT - 0.6) < 0.02);
+  assert.ok(fires.length >= 2 && fires.length <= 3); assert.strictEqual(fires[0].kind, 'ghost');
+  assert.ok(Math.sign(fires[0].vx) === Math.sign(p.x - e.x));
+  const f = fires[0];
+  assert.strictEqual(f.r, 8); assert.strictEqual(f.life, 4); assert.strictEqual(f.t, 0);
+  assert.ok(Math.abs(Math.hypot(f.vx, f.vy) - 200) < 1e-6);
+  assert.ok(Math.abs(f.vy) <= 0.55 * 200 + 1e-6);
+});
+t('pumpkin: pfire ไม่ยิงเมื่อผู้เล่นอยู่นอกระยะ', function () {
+  const { lv, e, p } = fireFixture({ px: 3 + 12 }); const fires = [], ev = [];
+  for (let i = 0; i < 120 * 6; i++) Pumpkin.stepPumpkin(e, lv, p, DT, fires, ev);
+  assert.strictEqual(fires.length, 0); assert.strictEqual(ev.length, 0);
+});
+t('pumpkin: fireball stops at wall', function () {
+  const { lv, e, p } = fireFixture({ wallBetween: true }); const fires = [];
+  for (let i = 0; i < 120 * 2; i++) Pumpkin.stepPumpkin(e, lv, p, DT, fires, []);
+  const f = fires[0]; let res = null; for (let i = 0; i < 600 && !res; i++) res = Boss.stepShot(f, lv, DT);
+  assert.strictEqual(res, 'wall');
 });
 
 console.log('\nผ่านทั้งหมด ' + n + ' ข้อ');
