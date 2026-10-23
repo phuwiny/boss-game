@@ -345,6 +345,20 @@ t('reach: airJumps ทำให้ Mew ข้ามช่องที่ Bobo �
   assert.strictEqual(reach(CQ, lv, bobo, tg, { toggles: false }).got.size, 0);
   assert.strictEqual(reach(CQ, lv, mew, tg, { toggles: false, airJumps: true }).got.size, tg.length);
 });
+// SHOT_BLOCKED: ยืนบนชั้นแถว 8 (4-5 = '#', 6-9 = ม่วง) สวิตช์ S ฝังกำแพงซ้าย (0,7) มีบล็อกม่วง (2,7) บังแนวยิง
+// สวิตช์ B (9,4) โหม่งได้ตอนกระโดดขวา แต่สลับแล้วชั้นม่วงหายและตกหนามตาย; เหรียญ (3,2) ต้องใช้ขั้นส้ม (3-4,5)
+// ถ้าการยิงอ่านสถานะสวิตช์ที่ sim ก่อนหน้าทิ้งไว้ (ส้ม) จะยิงทะลุบล็อกม่วงไปโดน S = ผ่านผิด ๆ
+function shotBlocked(blocker) {
+  const rows = grid(14, [[4, 8, '##MMMM'], [4, 7, 'P'], [3, 5, 'OO'], [3, 2, 'o'], [9, 4, 'T'], [2, 7, blocker], [1, 13, '^'.repeat(13)]]);
+  for (let y = 0; y <= 13; y++) setCell(rows, 0, y, y === 7 ? 'T' : '#');
+  return CQ.parseLevel([rows], { staticPlatforms: true });
+}
+t('reach: ยิงสวิตช์ใช้สถานะของ node ไม่ใช่สถานะที่ sim ก่อนหน้าทิ้งไว้', function () {
+  let lv = shotBlocked('M'); const tg = lv.coins.map(c => ({ tx: c.tx, ty: c.ty }));
+  assert.strictEqual(reach(CQ, lv, bobo, tg, {}).got.size, 0, 'บล็อกม่วงบังแนวยิง ต้องเก็บไม่ได้');
+  lv = shotBlocked('.');
+  assert.strictEqual(reach(CQ, lv, bobo, tg, {}).got.size, 1, 'ไม่มีบล็อกบัง ยิงสวิตช์แล้วเก็บได้');
+});
 t('reach: start และ bounds', function () {
   const lv = CQ.parseLevel([GATE]); const tg = lv.coins.map(c => ({ tx: c.tx, ty: c.ty }));
   // ห้ามออกนอกคอลัมน์ 0-4 (+1) = ไปไม่ถึงบันไดส้ม
@@ -417,18 +431,14 @@ t('fixedCoins กฎ 1: เหรียญที่ไปไม่ถึงจ�
   CL.fixedReach(parseFixed(rooms2(r => { put(r, 4, 9, '###'); setCell(r, 5, 8, 'o'); })), 'ทดสอบ', [clBobo], o);
   assert.ok(o.fails.some(m => m.indexOf('จากจุดเริ่ม') >= 0 && m.indexOf('(5, 8)') >= 0), o.fails.join('\n'));
 });
-t('fixedCoins กฎ 5: เตือนทางลัด Mew (ไม่ fail)', function () {
-  const o = collector(); CL.mewShortcuts(parseFixed([HIGH_LEDGE]), o);
-  same(o.fails, []);
-  same(o.warns, ['  ⚠ ทางลัด Mew: เหรียญ (8, 8)']);
-  const o2 = collector(); CL.mewShortcuts(parseFixed(rooms2()), o2); same(o2.warns, []); // Bobo ก็เก็บได้ = ไม่เตือน
-});
-t('fixedCoins: checkFixed เรียกครบทุกกฎ', function () {
+t('fixedCoins กฎ 5 + checkFixed: เตือนทางลัด Mew (ไม่ fail) และเรียกครบทุกกฎ', function () {
   const o = collector(); CL.checkFixed(parseFixed([HIGH_LEDGE]), 'ทดสอบ', [clBobo], o);
   assert.ok(o.fails.some(m => m.indexOf('มีเหรียญ 1 เหรียญ') >= 0), o.fails.join('\n'));
   assert.ok(o.fails.some(m => m.indexOf('ไอเทม') >= 0 && m.indexOf('(8, 8)') < 0), o.fails.join('\n'));
-  assert.ok(o.fails.some(m => m.indexOf('(8, 8)') >= 0), o.fails.join('\n'));
+  assert.ok(o.fails.some(m => m.indexOf('(8, 8)') >= 0), o.fails.join('\n')); // กฎ 1: Bobo เก็บไม่ได้
   same(o.warns, ['  ⚠ ทางลัด Mew: เหรียญ (8, 8)']);
+  const o2 = collector(); CL.mewShortcuts(parseFixed([grid(6, [[1, 13, 'P'], [4, 13, 'o']])]), o2);
+  same(o2.fails, []); same(o2.warns, []); // Bobo ก็เก็บได้ = ไม่เตือน
 });
 
 console.log('\nผ่านทั้งหมด ' + n + ' ข้อ');

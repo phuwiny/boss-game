@@ -42,7 +42,7 @@ let failed = false;
 function fail(msg) { failed = true; console.log('  ✗ ' + msg); }
 const OUT = { fail: fail, warn: function (msg) { console.log(msg); }, log: function (msg) { console.log(msg); } };
 
-const args = process.argv.slice(2);
+const args = require.main === module ? process.argv.slice(2) : []; // ถูก require (เทสต์) = ไม่อ่าน argv
 const isStage = function (a) { return CQ.STAGES.some(function (s) { return s.id === a; }); };
 const isChar = function (a) { return CQ.CHARACTERS.some(function (c) { return c.id === a; }); };
 args.forEach(function (a) {

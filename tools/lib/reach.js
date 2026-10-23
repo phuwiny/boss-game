@@ -129,12 +129,14 @@ function reach(CQ, lv, ch, targets, opts) {
     enqueue(p);
   }
 
-  /** ยิงจากตำแหน่งยืนทั้งสองทิศ ถ้ากระสุนชนสวิตช์ก่อนชนของทึบอื่น = สลับได้จากตรงนี้ */
+  /** ยิงจากตำแหน่งยืนทั้งสองทิศ ถ้ากระสุนชนสวิตช์ก่อนชนของทึบอื่น = สลับได้จากตรงนี้
+   *  สแกนด้วยสถานะสวิตช์ของ node นี้เสมอ (sim ก่อนหน้าอาจโหม่งสวิตช์จนสถานะเปลี่ยน) */
   function shoot(s) {
     const ty = Math.floor((s.y + 13) / T);
     const cx = s.x + s.w / 2, ctx = Math.floor(cx / T);
     const range = ch && ch.shot ? ch.shot.range : 0;
     for (const d of [-1, 1]) {
+      restore(s.swNode); // ทิศก่อนหน้าอาจสลับไปแล้ว
       for (let tx = ctx; ; tx += d) {
         const dist = d > 0 ? tx * T - cx : cx - (tx + 1) * T;
         if (dist > range) break;
