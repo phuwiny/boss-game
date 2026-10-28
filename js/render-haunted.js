@@ -687,6 +687,9 @@
   // ทุกเฟรม: คัดลอกช่วงของแผนที่ที่อยู่ในจอ แล้วเจาะแสงที่ขยับได้ด้วย destination-out จากสไปรต์ gradient ที่แคชตามรัศมี
   const DARK_RGB = '20,8,36';
   const DARK_RES = 0.5; // พิกเซล offscreen ต่อ 1 หน่วยโลก
+  // ขอบเผื่อรอบแผนที่แสงคงที่: clampCam ให้กล้องขึ้นเหนือด่านได้ 3 ช่อง + จอสั่นได้ถึง ~10 หน่วย
+  // (ส่วนที่ยังเลยขอบเผื่อไปอีก drawDarkness เติมสีมืดให้เอง)
+  const DARK_PAD = 4 * T;
   const DARK_LIGHT = { fire: 2.5 * T, ball: 1.5 * T, sw: 1.5 * T, coin: 1.1 * T, decor: 2 * T };
   // บล็อกสวิตช์เจาะความมืดเป็นสี่เหลี่ยมพอดีช่อง ขอบ/เส้นประจึงยังคมแม้อยู่นอกวงแสง (บล็อกโปร่งจางกว่าจึงเจาะมากกว่า)
   const DARK_CUT_SOLID = 0.3, DARK_CUT_GHOST = 0.45;
@@ -722,8 +725,8 @@
     const m = this.darkMap;
     if (m && m.lv === lv && m.decor === this.decor && m.alpha === alpha) return m.cv;
     const cv = document.createElement('canvas');
-    cv.width = Math.ceil(lv.w * T * DARK_RES);
-    cv.height = Math.ceil(lv.h * T * DARK_RES);
+    cv.width = Math.ceil((lv.w * T + 2 * DARK_PAD) * DARK_RES);
+    cv.height = Math.ceil((lv.h * T + 2 * DARK_PAD) * DARK_RES);
     const c = cv.getContext('2d');
     c.fillStyle = 'rgba(' + DARK_RGB + ',' + alpha + ')';
     c.fillRect(0, 0, cv.width, cv.height);
@@ -732,7 +735,7 @@
     function light(wx, wy, r, a) {
       const rp = r * DARK_RES;
       c.globalAlpha = a;
-      c.drawImage(self.lightSprite(rp), wx * DARK_RES - rp, wy * DARK_RES - rp, rp * 2, rp * 2);
+      c.drawImage(self.lightSprite(rp), (wx + DARK_PAD) * DARK_RES - rp, (wy + DARK_PAD) * DARK_RES - rp, rp * 2, rp * 2);
     }
     for (let i = 0; i < this.decor.length; i++) {
       const d = this.decor[i];
@@ -764,9 +767,25 @@
     const k = DARK_RES, c = this.darkCtx, ox = Math.floor(this.cx * k) / k, oy = Math.floor(this.cy * k) / k;
     const self = this;
     // 1) ช่วงของแผนที่คงที่ที่อยู่ในจอ (copy = แทนที่ทั้ง canvas ไม่ต้อง clear)
+    //    ตัดกรอบต้นทางให้อยู่ในแผนที่ ส่วนที่เลยออกไป (copy ทิ้งไว้โปร่ง) เติมสีมืดเป็นแถบ ๆ
+    const sx = Math.round((ox + DARK_PAD) * k), sy = Math.round((oy + DARK_PAD) * k);
+    const x0 = Math.max(0, sx), y0 = Math.max(0, sy);
+    const x1 = Math.min(map.width, sx + bw), y1 = Math.min(map.height, sy + bh);
     c.globalAlpha = 1;
-    c.globalCompositeOperation = 'copy';
-    c.drawImage(map, ox * k, oy * k, bw, bh, 0, 0, bw, bh);
+    if (x1 > x0 && y1 > y0) {
+      c.globalCompositeOperation = 'copy';
+      c.drawImage(map, x0, y0, x1 - x0, y1 - y0, x0 - sx, y0 - sy, x1 - x0, y1 - y0);
+      c.globalCompositeOperation = 'source-over';
+    } else c.clearRect(0, 0, bw, bh);
+    if (x0 > sx || y0 > sy || x1 < sx + bw || y1 < sy + bh) {
+      const top = Math.max(0, Math.min(bh, y0 - sy)), bot = Math.max(top, Math.min(bh, y1 - sy));
+      const lft = Math.max(0, Math.min(bw, x0 - sx)), rgt = Math.max(lft, Math.min(bw, x1 - sx));
+      c.fillStyle = 'rgba(' + DARK_RGB + ',' + dk.alpha + ')';
+      if (top > 0) c.fillRect(0, 0, bw, top);
+      if (bot < bh) c.fillRect(0, bot, bw, bh - bot);
+      if (lft > 0) c.fillRect(0, top, lft, bot - top);
+      if (rgt < bw) c.fillRect(rgt, top, bw - rgt, bot - top);
+    }
     c.globalCompositeOperation = 'destination-out';
 
     // เจาะแสงหนึ่งดวงที่ (wx, wy) โลก รัศมี r ความแรง a (0..1) ข้ามดวงที่อยู่นอกจอ

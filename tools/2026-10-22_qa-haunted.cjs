@@ -2,7 +2,7 @@
  *   node tools/2026-10-22_qa-haunted.cjs [phase]      phase: logic (ค่าเริ่มต้น) | visual | dark | perf
  *   dark: วงแสง/หนาม/ขอบบล็อกสวิตช์/ฟักทองยิงไฟใต้ความมืด (QA_OUT เหมือน visual)
  *   perf: RAF p95 สเตจ 4 ≤ 1.2 × Castle ที่ 1366×768 และ 390×844 (CPU ช้า 4×) RAF ไม่ล็อก vsync
- *         QA_ROUNDS รอบ (ค่าเริ่มต้น 3) / QA_BUSY=<ms> ถ่วง render สเตจ 4 เพื่อตรวจว่า gate FAIL ได้จริง
+ *         QA_ROUNDS รอบ (ค่าเริ่มต้น 6) / QA_BUSY=<ms> ถ่วง render สเตจ 4 เพื่อตรวจว่า gate FAIL ได้จริง
  *   visual: QA_OUT=<โฟลเดอร์ screenshot> QA_BASE=<commit เทียบสเตจ 1–3, ค่าเริ่มต้น bceb32d>
  * เปิด static server ของตัวเองที่ 127.0.0.1:8001 ตรวจผ่าน CQ.debug.game + กดคีย์บอร์ด/คลิกจริง
  * มี assertion ไหน FAIL จะจบด้วย exit code 1
@@ -482,7 +482,7 @@ async function dark(browser) {
     const savedE = {};
     if (spec.player) { p.x = spec.player[0] - p.w / 2; p.y = spec.player[1] - p.h / 2; }
     Object.keys(spec.patch || {}).forEach(i => { const e = g.enemies[i]; savedE[i] = {}; Object.keys(spec.patch[i]).forEach(k => { savedE[i][k] = e[k]; e[k] = spec.patch[i][k]; }); });
-    const c = r.clampCam(spec.cam[0] - r.viewW / 2, spec.cam[1] - r.viewH / 2);
+    const c = spec.rawCam ? { x: spec.rawCam[0], y: spec.rawCam[1] } : r.clampCam(spec.cam[0] - r.viewW / 2, spec.cam[1] - r.viewH / 2);
     r.cam.x = c.x; r.cam.y = c.y;
     g.showMinimap = false;
     const ctx = document.getElementById('game').getContext('2d');
@@ -603,6 +603,25 @@ async function dark(browser) {
     await page.screenshot({ path: path.join(SHOTS, 'dark-pumpkin-windup.png') });
   }
 
+  // ── 4b) กล้องเลยขอบด่าน: clampCam ยอมให้ขึ้นเหนือด่านได้ 3 ช่อง และการสั่นจอดันกล้องเลยขอบซ้ายได้
+  //        แถบที่อยู่นอกด่านต้องมืดเหมือนส่วนอื่น (ไม่ใช่แถบสว่างโล่ง)
+  {
+    const edge = await page.evaluate(() => { const r = CQ.debug.renderer; return { minY: r.clampCam(0, -1e6).y, viewW: r.viewW, viewH: r.viewH }; });
+    // เหนือด่าน: กล้องสูงสุดที่ clampCam ยอม ผู้เล่นอยู่ล่างขวาไกลจากแถบที่วัด
+    const top = await probe({ player: [20 * T, 12 * T], rawCam: [4 * T, edge.minY], rects: [{ name: 'band', x: 4 * T + 8, y: edge.minY + 4, w: 6 * T, h: -edge.minY - 8 }] });
+    const rt = ratio(top.on.band.lum, top.off.band.lum);
+    check('dark: band above the level (camera at clampCam minY ' + edge.minY + ') is darkened (<= 0.8 × no-dark)', edge.minY < 0 && rt <= 0.8, { ratio: rt, on: top.on.band, off: top.off.band });
+    await page.screenshot({ path: path.join(SHOTS, 'dark-above-level.png') });
+    // เลยขอบซ้าย (เหมือนจอสั่น 12 หน่วยที่ขอบด่าน)
+    const left = await probe({ player: [20 * T, 10 * T], rawCam: [-12, 4 * T], rects: [{ name: 'strip', x: -12, y: 5 * T, w: 10, h: 4 * T }] });
+    const rl = ratio(left.on.strip.lum, left.off.strip.lum);
+    check('dark: strip left of the level (screen shake) is darkened (<= 0.8 × no-dark)', rl <= 0.8, { ratio: rl, on: left.on.strip, off: left.off.strip });
+    // เลยขอบเผื่อของแผนที่แสงไปไกล (กันพลาด): ต้องเติมสีมืดแทน ไม่ปล่อยโปร่ง
+    const far = await probe({ player: [20 * T, 10 * T], rawCam: [-10 * T, 4 * T], rects: [{ name: 'strip', x: -10 * T + 4, y: 5 * T, w: 3 * T, h: 4 * T }] });
+    const rf = ratio(far.on.strip.lum, far.off.strip.lum);
+    check('dark: area far beyond the light-map padding is still darkened (<= 0.8 × no-dark)', rf <= 0.8, { ratio: rf, on: far.on.strip, off: far.off.strip });
+  }
+
   // ── 5) แคช: offscreen canvas ใช้ซ้ำ ไม่สร้าง gradient ใหม่ทุกเฟรม ──
   const cache = await page.evaluate(() => {
     const r = CQ.debug.renderer, g = CQ.debug.game, P = CanvasRenderingContext2D.prototype;
@@ -629,7 +648,7 @@ async function dark(browser) {
 // วิธีเดียวกับ tools/2026-10-16_qa-resolution-performance.cjs: หยุดเกม แทน render ของ loop ด้วย noop
 // แล้วเรียก render เองทุก RAF (40 เฟรมอุ่นเครื่อง + 120 เฟรมวัด) สลับลำดับสเตจทุกรอบ เปิดหน้าใหม่ทุกครั้ง
 async function perf(browser) {
-  const ROUNDS = +(process.env.QA_ROUNDS || 3);
+  const ROUNDS = +(process.env.QA_ROUNDS || 6);
   const sizes = [
     ['1366x768', { viewport: { width: 1366, height: 768 } }],
     ['390x844', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }, 4]
