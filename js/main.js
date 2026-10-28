@@ -181,6 +181,9 @@
       shake: 0,
       flash: 0,
       landSquash: 0,
+      // motion v2 (เฉพาะ stage.motion === 'v2'): stretch = ยืดตอนกระโดด, lean = เอนตามความเร็ว (เรเดียน)
+      motion: { stretch: 0, lean: 0, jumpT: 0, skid: false, idleT: 0 },
+      hitStop: 0, // หยุดภาพชั่วครู่ตอนพลาด (วินาที) ระหว่างนี้ step ไม่จำลองแต่ยังวาด
       runPhase: 0,
       deathAnim: null,
       clearT: 0,
@@ -234,8 +237,51 @@
     }
   }
 
+  // ── motion v2 (สเตจที่ stage.motion === 'v2') ─────────────────────
+  const MOTION = {
+    STRETCH: 0.14,   // ยืดตัวตอนกระโดด
+    STRETCH_T: 0.18, // คืนเข้า 0 แบบ ease-out ภายในเวลานี้ (วินาที)
+    LEAN: 0.08,      // เอนสูงสุด (เรเดียน) ที่ |vx| = RUN × 1.5
+    LEAN_K: 10,      // ความไวของการเอน (ยิ่งมากยิ่งตามทัน)
+    SKID_V: 120,     // กลับตัวขณะวิ่งเร็วกว่านี้ = ฝุ่นเบรก
+    IDLE_T: 0.1,     // ยืนนิ่งนานเท่านี้แล้วออกตัว = ฝุ่นออกตัว
+    HIT_STOP: 0.12
+  };
+  const motionV2 = function () { return g.stage.motion === 'v2'; };
+
+  function resetMotion() {
+    const m = g.motion;
+    m.stretch = 0; m.lean = 0; m.jumpT = 0; m.skid = false; m.idleT = 0;
+    g.hitStop = 0;
+  }
+
+  /** อัปเดตยืด/เอน/ฝุ่นหลังฟิสิกส์ผู้เล่น 1 สเต็ป (prevVx = vx ก่อนสเต็ป) */
+  function stepMotion(p, prevVx, dt) {
+    const m = g.motion;
+    m.jumpT = Math.max(0, m.jumpT - dt);
+    const u = m.jumpT / MOTION.STRETCH_T;
+    m.stretch = MOTION.STRETCH * u * u; // ease-out: ลดเร็วตอนแรกแล้วค่อย ๆ เข้า 0
+    const want = Math.max(-1, Math.min(1, p.vx / (P.RUN * 1.5))) * MOTION.LEAN;
+    m.lean += (want - m.lean) * (1 - Math.exp(-dt * MOTION.LEAN_K));
+    if (Math.abs(m.lean) < 1e-4) m.lean = 0;
+    const fx = p.x + p.w / 2, fy = p.y + p.h;
+    if (!p.onGround) { m.skid = false; m.idleT = 0; return; }
+    // กลับตัวขณะวิ่ง: ฝุ่นเบรกครั้งเดียวตอนเริ่มไถล
+    const skid = Math.abs(p.vx) > MOTION.SKID_V && Math.sign(p.vx) !== p.face;
+    if (skid && !m.skid) dust(fx + Math.sign(p.vx) * 6, fy, 5);
+    m.skid = skid;
+    // ออกตัวจากยืนนิ่ง: ฝุ่นเล็ก ๆ หลังเท้า
+    if (Math.abs(p.vx) < 5) m.idleT += dt;
+    else {
+      if (m.idleT >= MOTION.IDLE_T && Math.abs(prevVx) < 5) dust(fx - Math.sign(p.vx) * 6, fy, 3);
+      m.idleT = 0;
+    }
+  }
+
   // ── การจำลองโลกเกม 1 สเต็ป ─────────────────────────────────────
   function step(dt, inp) {
+    // hit-stop (motion v2): หยุดการจำลองทั้งหมดชั่วครู่ ภาพยังวาดตามปกติ
+    if (g.hitStop > 0) { g.hitStop = Math.max(0, g.hitStop - dt); return; }
     const lv = g.lv;
     for (let i = 0; i < lv.platforms.length; i++) W.stepPlatform(lv.platforms[i], dt);
     const pumpkinEvents = [];
@@ -268,12 +314,14 @@
     events.length = 0;
     const jumpPressed = pendingJump;
     pendingJump = false;
+    const prevVx = p.vx;
     W.stepPlayer(p, { left: inp.left, right: inp.right, jump: inp.jump, jumpPressed: jumpPressed }, lv, dt, events);
     if (lv.swPending.size) Switches.settle(lv, switchBodies());
     if (p.invuln > 0) p.invuln -= dt;
     if (p.onGround && Math.abs(p.vx) > 25) g.runPhase += dt * Math.abs(p.vx) * 0.075;
 
     for (let i = 0; i < events.length; i++) handleEvent(events[i], p);
+    if (motionV2()) stepMotion(p, prevVx, dt);
     if (p.dead) { kill(); return; }
     updatePowers(p, dt);
 
@@ -333,8 +381,10 @@
       case 'jump':
         Sound.sfx.jump();
         dust(p.x + p.w / 2, p.y + p.h, 4);
+        if (motionV2()) g.motion.jumpT = MOTION.STRETCH_T;
         break;
       case 'land':
+        if (motionV2()) g.motion.jumpT = 0; // ลงพื้น: เลิกยืด ใช้ landSquash (หด) แทน
         if (ev.speed > 260) {
           g.landSquash = Math.min(0.22, ev.speed / 2600);
           dust(p.x + p.w / 2, p.y + p.h, ev.speed > 600 ? 8 : 4);
@@ -348,6 +398,7 @@
         break;
       case 'airjump':
         Sound.sfx.airjump();
+        if (motionV2()) g.motion.jumpT = MOTION.STRETCH_T;
         if (ev.wing) {
           for (let i = 0; i < 6; i++) {
             spawn({ kind: 'feather', x: p.x + p.w / 2 + (Math.random() - 0.5) * 20, y: p.y + p.h - 4, vx: (Math.random() - 0.5) * 70, vy: 20 + Math.random() * 40, g: 30, size: 5 + Math.random() * 3, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 6, color: '#ffffff', life: 0.7 + Math.random() * 0.3 });
@@ -559,6 +610,14 @@
     g.rocks.length = 0;
     Sound.sfx.die();
     burst(p.x + p.w / 2, p.y + p.h / 2, 10, ['#ff6a3d', '#ffd3ad', '#ffffff'], 160, 'circle');
+    if (motionV2()) {
+      resetMotion();
+      g.hitStop = MOTION.HIT_STOP;
+      // วิญญาณขาวอมเขียวลอยขึ้นจากตัว 1 วินาที
+      for (let i = 0; i < 7; i++) {
+        spawn({ kind: 'circle', x: p.x + p.w / 2 + (Math.random() - 0.5) * p.w, y: p.y + p.h * (0.25 + Math.random() * 0.55), vx: (Math.random() - 0.5) * 30, vy: -45 - Math.random() * 45, g: -12, size: 2.5 + Math.random() * 2.5, color: 'rgba(215,255,232,0.85)', life: 1 });
+      }
+    }
   }
 
   function respawn() {
@@ -566,6 +625,7 @@
     g.player = W.makePlayer(r.tx, r.ty, g.char, g.stage.hp);
     g.player.invuln = 1.5;
     g.deathAnim = null;
+    resetMotion();
     pendingJump = false;
     g.shots.length = 0;
     g.fires.length = 0;
@@ -598,6 +658,7 @@
       g.shots.length = 0;
       g.fires.length = 0;
       pendingJump = false;
+      resetMotion();
     }
     renderer.updateCamera(focusPoint(), g.player.face, 0, true);
     resumeGame();

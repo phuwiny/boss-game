@@ -910,6 +910,7 @@
         else if (r < 66) decor.push({ k: 'rock', x: x, y: y, back: true });
       }
     }
+    if (haunted) this.hauntedCeilingDecor(decor, lv); // ใยแมงมุมตามมุมเพดาน (render-haunted.js)
     if (lv.start) decor.push({ k: 'sign', x: (lv.start.tx + 3) * T + 16, y: (lv.start.ty + 1) * T, back: true });
     if (lv.boss) {
       // บัลลังก์ด้านหลังบอส
@@ -1825,8 +1826,14 @@
       ctx.fillStyle = 'hsla(' + ((hue + 60) % 360) + ',100%,70%,0.35)';
       ellipse(ctx, sx, sy - 17 * S, 19 * S, 21 * S); ctx.fill();
     }
+    // motion v2 (stage.motion === 'v2'): ยืด/หด + เอนตามความเร็ว ยึดที่เท้า (hitbox ไม่เปลี่ยน)
+    const mo = !dead && g.motion && g.stage && g.stage.motion === 'v2' ? g.motion : null;
     // ต่อจากนี้วาดในพิกัดที่หันขวาเสมอ แล้วกลับภาพตามทิศที่หัน
     ctx.translate(sx, 0);
+    if (mo) {
+      const lean = Math.round(mo.lean * 200) / 200; // ปัดทีละ 0.005 rad กันภาพสั่นตอนค่อย ๆ เปลี่ยน
+      if (lean) { ctx.translate(0, sy); ctx.rotate(lean); ctx.translate(0, -sy); }
+    }
     ctx.scale(f, 1);
     if (pw && shown(pw.mush) && Math.abs(p.vx) > 230) {
       // เห็ด: เส้นความเร็วแบบพิกเซลด้านหลังตัว
@@ -1845,7 +1852,12 @@
     const fr = heroFrame(p.ch || 'bobo', heroPose(p, g, time, dead), hue);
     ctx.imageSmoothingEnabled = fr.density > 1;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(fr.c, -fr.ax * k, sy - (fr.h - 1) * k, fr.w * k, fr.h * k);
+    if (mo) {
+      // scale(1 - s/2, 1 + s): ขนาดหลังยืด/หดปัดเป็นจำนวนเต็มพิกเซลจอ ขอบล่างภาพ (sy + k) คงที่
+      const s = mo.stretch - (g.landSquash || 0);
+      const sxk = 1 - s * 0.5, dw = Math.round(fr.w * k * sxk), dh = Math.round(fr.h * k * (1 + s));
+      ctx.drawImage(fr.c, Math.round(-fr.ax * k * sxk), sy + k - dh, dw, dh);
+    } else ctx.drawImage(fr.c, -fr.ax * k, sy - (fr.h - 1) * k, fr.w * k, fr.h * k);
     ctx.restore();
   };
 

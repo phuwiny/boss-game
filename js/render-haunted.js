@@ -383,16 +383,83 @@
     else if (r < 38) decor.push({ k: 'candle', x: x - 8 + (r % 16), y: y, s: 0.8 + (r % 3) * 0.15 });
   };
 
+  /** ใยแมงมุมตามมุมเพดานด้านใน (ช่องว่างที่มีเพดานทึบและผนังข้างใดข้างหนึ่ง) เรียกจาก setLevel */
+  Renderer.prototype.hauntedCeilingDecor = function (decor, lv) {
+    const W = CQ.World;
+    const wall = function (x, y) { const t = W.tileAt(lv, x, y); return t === TILE.GROUND || t === TILE.BRICK; };
+    for (let ty = 1; ty < lv.h - 1; ty++) {
+      for (let tx = 1; tx < lv.w - 1; tx++) {
+        if (W.tileAt(lv, tx, ty) !== TILE.EMPTY || !wall(tx, ty - 1)) continue;
+        const l = wall(tx - 1, ty), r = wall(tx + 1, ty);
+        if (l === r || hash(tx + 101, ty + 37) % 100 >= 60) continue;
+        decor.push({ k: 'cobweb', x: l ? tx * T : (tx + 1) * T, y: ty * T, dir: l ? 1 : -1, r: 18 + hash(tx, ty + 5) % 9, ph: hash(tx + 3, ty) % 628 / 100, back: true });
+      }
+    }
+  };
+
+  /** ใยแมงมุมไหวช้า ๆ: เส้นรัศมียึดมุม ปลายเส้นแกว่ง วงใยหย่อนตามลม + แมงมุมห้อยขึ้นลง */
+  function cobweb(ctx, d, time) {
+    const R = d.r, sw = Math.sin(time * 1.3 + d.ph) * 1.8 + Math.sin(time * 3.1 + d.ph * 2) * 0.6;
+    const sag = 0.82 + 0.06 * Math.sin(time * 1.7 + d.ph);
+    ctx.save();
+    ctx.translate(d.x, d.y);
+    ctx.scale(d.dir, 1);
+    ctx.strokeStyle = 'rgba(220,210,240,0.3)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    // จุดบนเส้นรัศมี i ที่ระยะ f (0..1) — ยิ่งไกลมุมและยิ่งต่ำยิ่งแกว่งมาก
+    const A0 = 0.08, DA = (Math.PI / 2 - 0.16) / 3;
+    for (let i = 0; i < 4; i++) {
+      const a = A0 + i * DA;
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * R + sw * Math.sin(a), Math.sin(a) * R);
+    }
+    for (let ring = 1; ring <= 3; ring++) {
+      const f = ring / 3.3;
+      for (let i = 0; i < 3; i++) {
+        const a = A0 + i * DA, b = a + DA, m = a + DA / 2;
+        const ax = Math.cos(a) * R * f + sw * f * Math.sin(a), ay = Math.sin(a) * R * f;
+        const bx = Math.cos(b) * R * f + sw * f * Math.sin(b), by = Math.sin(b) * R * f;
+        ctx.moveTo(ax, ay);
+        ctx.quadraticCurveTo(Math.cos(m) * R * f * sag + sw * f * Math.sin(m), Math.sin(m) * R * f * sag, bx, by);
+      }
+    }
+    // เส้นใยห้อยแมงมุม
+    const hx = R * 0.55, hy = R * 0.75 + Math.sin(time * 0.8 + d.ph) * 4;
+    ctx.moveTo(hx, 0);
+    ctx.lineTo(hx + sw * 0.8, hy);
+    ctx.stroke();
+    ctx.fillStyle = '#120b1a';
+    ellipse(ctx, hx + sw * 0.8, hy + 1.5, 1.8, 1.6); ctx.fill();
+    ctx.restore();
+  }
+
+  /** ฝุ่นละอองลอยในแสงเทียน (คำนวณจากเวลาล้วน ๆ ไม่มีสถานะ) */
+  function motes(ctx, x, y, time, seed) {
+    ctx.fillStyle = '#ffe6b4';
+    for (let i = 0; i < 3; i++) {
+      const ph = (time * 0.11 + i / 3 + seed * 0.0137) % 1;
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.55;
+      ctx.fillRect(x + Math.sin(time * 0.9 + i * 2.1 + seed) * 9 * (0.4 + ph), y - 4 - ph * 28, 1.2, 1.2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   function flame(ctx, x, y, s, time, seed) {
     const fl = Math.sin(time * 12 + seed) * 0.8 + Math.sin(time * 7.1 + seed * 0.3) * 0.5;
+    // เปลวกะพริบ: แสงรอบเปลวและความสูงเปลวแกว่งเล็กน้อย (แสงบนแผนที่ความมืดยังคงที่)
+    const fk = 0.5 + 0.5 * Math.sin(time * 17 + seed * 1.3) * Math.sin(time * 5.3 + seed);
+    const hs = s * (0.92 + 0.16 * fk);
+    ctx.globalAlpha = 0.6 + 0.6 * fk;
     ctx.fillStyle = 'rgba(255,190,110,0.18)';
     ellipse(ctx, x, y - 3 * s, 7 * s, 7 * s); ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.fillStyle = '#ff9a2a';
     ctx.beginPath();
-    ctx.moveTo(x - 2.2 * s, y); ctx.quadraticCurveTo(x - 2 * s + fl * 0.4, y - 4 * s, x + fl * 0.5, y - 7 * s - fl * 0.4);
-    ctx.quadraticCurveTo(x + 2.4 * s + fl * 0.3, y - 3.5 * s, x + 2.2 * s, y); ctx.closePath(); ctx.fill();
+    ctx.moveTo(x - 2.2 * s, y); ctx.quadraticCurveTo(x - 2 * s + fl * 0.4, y - 4 * hs, x + fl * 0.5, y - 7 * hs - fl * 0.4);
+    ctx.quadraticCurveTo(x + 2.4 * s + fl * 0.3, y - 3.5 * hs, x + 2.2 * s, y); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#ffe9a0';
-    ellipse(ctx, x + fl * 0.2, y - 2 * s, 1 * s, 1.8 * s); ctx.fill();
+    ellipse(ctx, x + fl * 0.2, y - 2 * hs, 1 * s, 1.8 * hs); ctx.fill();
   }
 
   Renderer.prototype.drawHauntedDecor = function (d, time) {
@@ -407,6 +474,7 @@
         ctx.fillStyle = '#e8e0cf';
         ellipse(ctx, d.x - 1.5 * s, d.y - 6 * s, 0.9 * s, 1.6 * s); ctx.fill(); // หยดเทียน
         flame(ctx, d.x, d.y - 9 * s, s, time, d.x);
+        motes(ctx, d.x, d.y - 12 * s, time, d.x);
         break;
       }
       case 'candelabra': {
@@ -423,6 +491,7 @@
         flame(ctx, d.x - 12.5, d.y - 60, 1, time, d.x);
         flame(ctx, d.x + 12.5, d.y - 60, 1, time, d.x + 3);
         flame(ctx, d.x, d.y - 56, 1.1, time, d.x + 7);
+        motes(ctx, d.x, d.y - 62, time, d.x);
         break;
       }
       case 'portrait': {
@@ -459,8 +528,12 @@
         ctx.fillRect(d.x - 2.5, d.y - 3, 5, 1);
         ctx.fillStyle = '#3f5a2a';
         ctx.fillRect(d.x - 0.7, d.y - 10.5, 1.4, 2.5);
+        motes(ctx, d.x, d.y - 8, time, d.x);
         break;
       }
+      case 'cobweb':
+        cobweb(ctx, d, time);
+        break;
       case 'bat': {
         // ค้างคาวบินวนช้า ๆ ไกล ๆ (ฉากหลัง)
         const t = time * 0.7 + d.ph;
@@ -560,6 +633,11 @@
       if (!e.onGround) { const k = Math.min(0.12, Math.abs(e.vy) / 4000); sx = 1 - k; sy = 1 + k; }
       else if (e.pause < 0.2) { sx = 1.1; sy = 0.88; }
     } else if (wind) { sx = 1.04; sy = 0.97; }
+    // ฟักทองนิ่ง ๆ "หายใจ": พองยุบช้า ๆ (ไม่ทับจังหวะเตือน/ย่อตัวก่อนกระโดด)
+    if (!e.dead && !wind && sx === 1 && sy === 1) {
+      const b = Math.sin(time * 2.4 + e.x * 0.07) * 0.035;
+      sx = 1 + b; sy = 1 + b * 0.6;
+    }
     ctx.save();
     if (e.dead && e.knock) {
       const t = e.deadT;

@@ -1,9 +1,10 @@
 /* QA ของสเตจ 4 Haunted House ในเบราว์เซอร์จริง (Playwright Chromium)
- *   node tools/2026-10-22_qa-haunted.cjs [phase]      phase: logic (ค่าเริ่มต้น) | visual | dark | perf
+ *   node tools/2026-10-22_qa-haunted.cjs [phase]      phase: logic (ค่าเริ่มต้น) | visual | dark | perf | motion
  *   dark: วงแสง/หนาม/ขอบบล็อกสวิตช์/ฟักทองยิงไฟใต้ความมืด (QA_OUT เหมือน visual)
  *   perf: RAF p95 สเตจ 4 ≤ 1.2 × Castle ที่ 1366×768 และ 390×844 (CPU ช้า 4×) RAF ไม่ล็อก vsync
  *         QA_ROUNDS รอบ (ค่าเริ่มต้น 6) / QA_BUSY=<ms> ถ่วง render สเตจ 4 เพื่อตรวจว่า gate FAIL ได้จริง
  *   visual: QA_OUT=<โฟลเดอร์ screenshot> QA_BASE=<commit เทียบสเตจ 1–3, ค่าเริ่มต้น bceb32d>
+ *   motion: motion v2 สเตจ 4 (ยืด/หด เอน ฝุ่น hit-stop วิญญาณ ฉากไหว) + สเตจ 1 ต้องตรงกับ QA_BASE ทุกพิกเซล (QA_OUT เหมือน visual)
  * เปิด static server ของตัวเองที่ 127.0.0.1:8001 ตรวจผ่าน CQ.debug.game + กดคีย์บอร์ด/คลิกจริง
  * มี assertion ไหน FAIL จะจบด้วย exit code 1
  * Tooling only: no runtime dependency for the game.
@@ -19,7 +20,7 @@ catch (e) {
 const { chromium } = playwright;
 const root = path.resolve(__dirname, '..');
 const phase = process.argv[2] || 'logic';
-const PHASES = ['logic', 'visual', 'dark', 'perf'];
+const PHASES = ['logic', 'visual', 'dark', 'perf', 'motion'];
 const URL_BASE = 'http://127.0.0.1:8001/?seed=qa-haunted';
 // visual: สเตจ 1–3 ต้องตรงกับ commit ก่อนเพิ่มภาพสเตจ 4 ทุกพิกเซล (เสิร์ฟต้นไม้เก่าที่ /__baseline__/ ด้วย git show)
 const BASE = process.env.QA_BASE || 'bceb32d';
@@ -643,6 +644,219 @@ async function dark(browser) {
   await context.close();
 }
 
+// ── motion ──────────────────────────────────────────────────────
+// motion v2 (เฉพาะ stage.motion === 'v2'): เล่นลำดับเดียวกันด้วยคีย์บอร์ดจริงบนนาฬิกาเสมือน
+// ยืน → กระโดด → ลงพื้น → ออกตัววิ่งขวา → กลับตัวซ้าย → ศัตรูชน (พลาด)
+// วัดกรอบภาพตัวละครจากความต่างของ render() ที่วาด/ไม่วาด hero (พิกเซลจอ canvas)
+function installHeroBox() {
+  window.__heroBox = function () {
+    const r = CQ.debug.renderer, g = CQ.debug.game, c = document.getElementById('game'), ctx = c.getContext('2d');
+    const p = g.deathAnim || g.player;
+    const save = { inv: g.player.invuln, mm: g.showMinimap, shake: g.shake };
+    g.player.invuln = 0; g.showMinimap = false; g.shake = 0;
+    let a, b, x0, y0, w, h;
+    const orig = r.drawHero;
+    try {
+      r.render(g, 5);
+      x0 = Math.max(0, Math.floor((p.x - 40 - r.cx) * r.S)); y0 = Math.max(0, Math.floor((p.y - 50 - r.cy) * r.S));
+      w = Math.max(1, Math.min(c.width - x0, Math.ceil((p.w + 80) * r.S))); h = Math.max(1, Math.min(c.height - y0, Math.ceil((p.h + 90) * r.S)));
+      a = ctx.getImageData(x0, y0, w, h).data;
+      r.drawHero = function () {};
+      r.render(g, 5);
+      b = ctx.getImageData(x0, y0, w, h).data;
+    } finally {
+      r.drawHero = orig;
+      g.player.invuln = save.inv; g.showMinimap = save.mm; g.shake = save.shake;
+    }
+    r.render(g, 5); // คืนภาพที่มีตัวละครไว้ให้ screenshot
+    let top = 1e9, bottom = -1, left = 1e9, right = -1;
+    for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
+      const i = (yy * w + xx) * 4;
+      if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) {
+        if (yy < top) top = yy; if (yy > bottom) bottom = yy; if (xx < left) left = xx; if (xx > right) right = xx;
+      }
+    }
+    if (bottom < 0) return null;
+    return { top: y0 + top, bottom: y0 + bottom, left: x0 + left, right: x0 + right, h: bottom - top + 1, w: right - left + 1 };
+  };
+  // นับอนุภาคที่เพิ่งเกิด (ฝุ่น = สีครีมของ dust(), วิญญาณ = วงกลมขาวอมเขียว)
+  window.__parts = function () {
+    const g = CQ.debug.game, rgb = s => (/^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(s || '') || []).slice(1).map(Number);
+    let dust = 0, wisp = 0, wispUp = 0, wispLife = 0;
+    g.particles.forEach(q => {
+      if (q.kind !== 'circle') return;
+      if (q.color === 'rgba(245,236,215,0.9)' && q.t <= 1 / 60 + 1e-6) dust++;
+      const c = rgb(q.color);
+      if (c.length === 3 && c[1] > c[0] && c[1] > c[2] && c[0] > 150) { wisp++; if (q.vy < 0) wispUp++; wispLife = Math.max(wispLife, q.life); }
+    });
+    return { dust, wisp, wispUp, wispLife };
+  };
+}
+
+/** เล่นลำดับ motion บนหน้าที่เริ่มสเตจแล้ว คืนพิกเซลแต่ละจังหวะ + กรอบตัวละคร + ค่าที่วัด */
+async function motionRun(page, tagShots) {
+  await page.evaluate(installHeroBox);
+  const px = {}, box = {}, info = {};
+  const step = n => page.evaluate(n => window.__step(n), n);
+  const snap = async tag => {
+    px[tag] = await canvasPixels(page);
+    box[tag] = await page.evaluate(() => window.__heroBox());
+    if (tagShots) await page.screenshot({ path: path.join(SHOTS, tagShots + '-' + tag + '.png') });
+  };
+  // ภาพตัวละครเมื่อปิด motion ชั่วคราว (ท่าเดียวกัน) — ใช้เป็นตัวเทียบ
+  const control = () => page.evaluate(() => {
+    const g = CQ.debug.game, m = g.motion, ls = g.landSquash;
+    if (!m) return null;
+    const sv = { stretch: m.stretch, lean: m.lean };
+    m.stretch = 0; m.lean = 0; g.landSquash = 0;
+    try { return window.__heroBox(); } finally { m.stretch = sv.stretch; m.lean = sv.lean; g.landSquash = ls; }
+  });
+  const hitbox = () => page.evaluate(() => { const p = CQ.debug.game.player; return [p.w, p.h]; });
+
+  info.hitbox0 = await hitbox();
+  await snap('stand');
+  // กระโดด: กดค้าง 1 เฟรม (2 สเต็ปฟิสิกส์)
+  await page.keyboard.down('KeyZ');
+  await step(1);
+  info.jump = await page.evaluate(() => { const g = CQ.debug.game, p = g.player; return { vy: p.vy, onGround: p.onGround, motion: g.motion ? Object.assign({}, g.motion) : null }; });
+  await snap('jump');
+  info.jumpCtl = await control();
+  info.hitboxJump = await hitbox();
+  // รอจนลงพื้น (landSquash > 0)
+  let landed = false;
+  for (let i = 0; i < 150 && !landed; i++) {
+    await step(1);
+    landed = await page.evaluate(() => CQ.debug.game.player.onGround && CQ.debug.game.landSquash > 0);
+  }
+  info.landed = landed;
+  info.landSquash = await page.evaluate(() => CQ.debug.game.landSquash);
+  await snap('land');
+  info.landCtl = await control();
+  await page.keyboard.up('KeyZ');
+  await step(30);
+  // ออกตัวจากหยุดนิ่ง
+  await page.keyboard.down('ArrowRight');
+  await step(1);
+  info.start = await page.evaluate(() => window.__parts());
+  await snap('start');
+  await step(30);
+  info.run = await page.evaluate(() => { const g = CQ.debug.game, p = g.player; return { vx: p.vx, lean: g.motion ? g.motion.lean : null }; });
+  await snap('run');
+  // กลับตัวขณะวิ่ง
+  await page.keyboard.up('ArrowRight');
+  await page.keyboard.down('ArrowLeft');
+  await step(1);
+  info.turn = Object.assign(await page.evaluate(() => window.__parts()), await page.evaluate(() => { const p = CQ.debug.game.player; return { vx: p.vx, face: p.face }; }));
+  await snap('turn');
+  await page.keyboard.up('ArrowLeft');
+  await step(20);
+  // ศัตรูชนตอนพลังชีวิตเหลือ 1 → พลาด
+  info.enemy = await page.evaluate(() => {
+    const g = CQ.debug.game, p = g.player;
+    const e = g.enemies.filter(en => !en.dead).sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+    if (!e) return null;
+    p.hp = 1; p.invuln = 0; p.guard = 0; p.pw.star = 0; p.vx = 0;
+    e.x = p.x + (p.w - e.w) / 2; e.y = p.y + p.h - e.h; e.vx = 0;
+    return e.kind;
+  });
+  await step(1);
+  info.die0 = await page.evaluate(() => { const d = CQ.debug.game.deathAnim; return d && { y: d.y, startY: d.startY, hitStop: CQ.debug.game.hitStop }; });
+  await step(4);
+  info.die1 = await page.evaluate(() => { const d = CQ.debug.game.deathAnim; return d && { y: d.y, startY: d.startY }; });
+  info.wisps1 = await page.evaluate(() => window.__parts());
+  await snap('die1');
+  await step(12);
+  info.die2 = await page.evaluate(() => { const d = CQ.debug.game.deathAnim; return d && { y: d.y, startY: d.startY }; });
+  info.wisps2 = await page.evaluate(() => window.__parts());
+  await snap('die2');
+  return { px, box, info };
+}
+
+const pxDiff = (a, b) => {
+  if (!a || !b || a.length !== b.length) return -1;
+  let n = 0;
+  for (let i = 0; i < a.length; i += 4) if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2] || a[i + 3] !== b[i + 3]) n++;
+  return n;
+};
+
+async function motion(browser) {
+  fs.mkdirSync(SHOTS, { recursive: true });
+
+  // ── สเตจ 1: ลำดับเดียวกันต้องได้ภาพตรงกับ BASE ทุกพิกเซลทุกจังหวะ (ไม่มี motion v2) ──
+  const runs = {};
+  for (const [tag, base] of [['base', '/__baseline__/'], ['now', '/']]) {
+    const { context, page, errors } = await frozenPage(browser, base);
+    await startFrozen(page, 'grassland');
+    runs[tag] = await motionRun(page, tag === 'now' ? 'motion-grassland' : null);
+    check('grassland (' + tag + '): no console/page errors', errors.length === 0, errors);
+    await context.close();
+  }
+  for (const tag of Object.keys(runs.now.px)) {
+    const d = pxDiff(runs.base.px[tag], runs.now.px[tag]);
+    check('grassland ' + tag + ': canvas identical to ' + BASE + ' (0 px differ)', d === 0, d);
+  }
+  const gi = runs.now.info, bi = runs.base.info;
+  check('grassland fixture: jumped, landed, ran, turned, died', gi.jump.vy < 0 && gi.landed && gi.run.vx > 120 && gi.turn.face === -1 && !!gi.die1, gi);
+  check('grassland: hero box during jump same as baseline', JSON.stringify(runs.base.box.jump) === JSON.stringify(runs.now.box.jump), [runs.base.box.jump, runs.now.box.jump]);
+  check('grassland: no hit-stop (deathAnim moved like baseline after 4 frames)', !!gi.die1 && gi.die1.y !== gi.die1.startY && JSON.stringify(gi.die1) === JSON.stringify(bi.die1), [bi.die1, gi.die1]);
+  check('grassland: same particles as baseline (no extra dust / wisps)', JSON.stringify([gi.start, gi.turn.dust, gi.wisps1]) === JSON.stringify([bi.start, bi.turn.dust, bi.wisps1]), { base: [bi.start, bi.turn, bi.wisps1], now: [gi.start, gi.turn, gi.wisps1] });
+
+  // ── สเตจ 4: motion v2 ──
+  const { context, page, errors } = await frozenPage(browser, '/');
+  await startFrozen(page, 'haunted');
+  const st = await page.evaluate(() => CQ.debug.game.stage.motion);
+  check('haunted: stage.motion === v2', st === 'v2', st);
+  const h = await motionRun(page, 'motion-haunted');
+  const hi = h.info, hb = h.box;
+  check('haunted fixture: jumped, landed, ran right, turned left, enemy available', hi.jump.vy < 0 && hi.landed && hi.run.vx > 120 && hi.turn.face === -1 && hi.turn.vx > 120 && !!hi.enemy, hi);
+  check('haunted: g.motion { stretch, lean } exists, stretch > 0 right after jump', !!hi.jump.motion && hi.jump.motion.stretch > 0 && hi.jump.motion.stretch <= 0.14 && typeof hi.jump.motion.lean === 'number', hi.jump.motion);
+  check('haunted: hero >= 2 screen px taller rising than standing', !!hb.jump && !!hb.stand && hb.jump.h >= hb.stand.h + 2, { stand: hb.stand, jump: hb.jump });
+  check('haunted: stretch (not the pose) makes it taller (>= +2 px vs same pose without motion)', !!hb.jump && !!hi.jumpCtl && hb.jump.h >= hi.jumpCtl.h + 2, { jump: hb.jump, ctl: hi.jumpCtl });
+  check('haunted: stretch anchored at the feet (bottom row unchanged ±1)', !!hb.jump && !!hi.jumpCtl && Math.abs(hb.jump.bottom - hi.jumpCtl.bottom) <= 1, { jump: hb.jump, ctl: hi.jumpCtl });
+  check('haunted: landing squash shorter (>= 2 px) and not narrower than same pose without motion', !!hb.land && !!hi.landCtl && hb.land.h <= hi.landCtl.h - 2 && hb.land.w >= hi.landCtl.w, { land: hb.land, ctl: hi.landCtl, landSquash: hi.landSquash });
+  check('haunted: hitbox unchanged (p.w, p.h)', JSON.stringify(hi.hitbox0) === JSON.stringify(hi.hitboxJump), [hi.hitbox0, hi.hitboxJump]);
+  check('haunted: start-from-standstill dust (>= 2 new dust particles)', hi.start.dust >= 2, hi.start);
+  check('haunted: lean ≈ vx/(RUN·1.5)·0.08 while running right (0.03..0.08)', hi.run.lean > 0.03 && hi.run.lean <= 0.08, hi.run);
+  check('haunted: turn-while-running dust (>= 2 new dust particles)', hi.turn.dust >= 2, hi.turn);
+  check('haunted: kill() sets hit-stop 0.12', !!hi.die0 && Math.abs((hi.die0.hitStop || 0) - 0.12) < 0.02, hi.die0);
+  check('haunted: deathAnim.y frozen ~0.06 s after kill (hit-stop)', !!hi.die1 && hi.die1.y === hi.die1.startY, hi.die1);
+  check('haunted: deathAnim moves again after hit-stop', !!hi.die2 && hi.die2.y < hi.die2.startY, hi.die2);
+  check('haunted: ghost wisps (white-green circles) rise for ~1 s', hi.wisps1.wisp >= 4 && hi.wisps1.wispUp === hi.wisps1.wisp && hi.wisps1.wispLife >= 0.9 && hi.wisps2.wisp >= 4, { die1: hi.wisps1, die2: hi.wisps2 });
+
+  // ── ฉากไหว: ใยแมงมุม / ฟักทองหายใจ / เปลวเทียน (ปิดความมืดตอนวัด เทียบเวลา 5.0 กับ 5.6) ──
+  const scene = await page.evaluate(() => {
+    const r = CQ.debug.renderer, g = CQ.debug.game, ctx = document.getElementById('game').getContext('2d');
+    const dk = g.stage.dark, mm = g.showMinimap;
+    const region = (wx, wy, ww, wh, t) => {
+      const want = r.clampCam(wx + ww / 2 - r.viewW / 2, wy + wh / 2 - r.viewH / 2);
+      r.cam.x = want.x; r.cam.y = want.y;
+      r.render(g, t);
+      const d = ctx.getImageData(Math.round((wx - r.cx) * r.S), Math.round((wy - r.cy) * r.S), Math.round(ww * r.S), Math.round(wh * r.S)).data;
+      let s = 0; for (let i = 0; i < d.length; i++) s = (s * 31 + d[i]) >>> 0;
+      return s;
+    };
+    const out = {};
+    g.stage.dark = null; g.showMinimap = false;
+    const cam = { x: r.cam.x, y: r.cam.y };
+    try {
+      const webs = r.decor.filter(d => d.k === 'cobweb');
+      out.webs = webs.length;
+      if (webs[0]) { const w = webs[0]; out.web = region(w.x - 34, w.y, 68, 40, 5) !== region(w.x - 34, w.y, 68, 40, 5.6); }
+      const e = g.enemies.find(en => en.kind === 'pfire' && !en.dead);
+      if (e) { const wt = e.windT; e.windT = 0; out.pumpkin = region(e.x - 6, e.y - 10, e.w + 12, e.h + 12, 5) !== region(e.x - 6, e.y - 10, e.w + 12, e.h + 12, 5.6); e.windT = wt; }
+      const c = r.decor.find(d => d.k === 'candle');
+      if (c) out.candle = region(c.x - 10, c.y - 30, 20, 22, 5) !== region(c.x - 10, c.y - 30, 20, 22, 5.6);
+    } finally { g.stage.dark = dk; g.showMinimap = mm; r.cam.x = cam.x; r.cam.y = cam.y; }
+    return out;
+  });
+  check('haunted: cobweb decor exists in the level', scene.webs > 0, scene);
+  check('haunted: cobweb sways over time', scene.web === true, scene);
+  check('haunted: idle fire pumpkin "breathes" (body changes over time)', scene.pumpkin === true, scene);
+  check('haunted: candle flame flickers', scene.candle === true, scene);
+  check('haunted motion: no console/page errors', errors.length === 0, errors);
+  await context.close();
+}
+
 // ── perf ────────────────────────────────────────────────────────
 // RAF p95 สเตจ 4 (มีความมืด) เทียบ Castle ใน browser เดียวกัน ที่ 1366×768 และ 390×844 (มือถือ)
 // วิธีเดียวกับ tools/2026-10-16_qa-resolution-performance.cjs: หยุดเกม แทน render ของ loop ด้วย noop
@@ -723,6 +937,7 @@ function p95(a) {
     else if (phase === 'visual') await visual(browser);
     else if (phase === 'dark') await dark(browser);
     else if (phase === 'perf') await perf(browser);
+    else if (phase === 'motion') await motion(browser);
   } catch (e) {
     failed++;
     console.log('FAIL  exception — ' + (e && e.stack || e));
