@@ -682,114 +682,150 @@
   }
 
   // ── ความมืดสลัว (ข้อกำหนด §6.5) ───────────────────────────────
-  // offscreen canvas ขนาด view (หน่วยโลก 1:1 แสงนุ่มอยู่แล้วจึงไม่ต้องละเอียดเท่าจอ) สร้างใหม่เฉพาะตอนขนาดเปลี่ยน
-  // ทุกเฟรม: เติมสีม่วงเข้มโปร่ง แล้วเจาะแสงด้วย destination-out จากสไปรต์ gradient ที่แคชตามรัศมี
+  // offscreen canvas ขนาด view ที่ความละเอียดครึ่งหน่วยโลก (แสงนุ่มอยู่แล้ว) สร้างใหม่เฉพาะตอนขนาดเปลี่ยน
+  // แสงที่อยู่กับที่ (เทียน/โคม/สวิตช์) อบไว้ใน "แผนที่แสงคงที่" ทั้งด่านครั้งเดียวต่อด่าน
+  // ทุกเฟรม: คัดลอกช่วงของแผนที่ที่อยู่ในจอ แล้วเจาะแสงที่ขยับได้ด้วย destination-out จากสไปรต์ gradient ที่แคชตามรัศมี
   const DARK_RGB = '20,8,36';
-  const DARK_LIGHT = { fire: 2.5 * T, ball: 1.5 * T, sw: 1.5 * T, coin: 0.8 * T, decor: 2 * T };
-  // บล็อกสวิตช์ (ทึบ + โปร่ง) เจาะความมืดเป็นสี่เหลี่ยมพอดีช่อง ขอบ/เส้นประจึงยังคมแม้อยู่นอกวงแสง
-  const DARK_BLOCK_CUT = 0.45;
+  const DARK_RES = 0.5; // พิกเซล offscreen ต่อ 1 หน่วยโลก
+  const DARK_LIGHT = { fire: 2.5 * T, ball: 1.5 * T, sw: 1.5 * T, coin: 1.1 * T, decor: 2 * T };
+  // บล็อกสวิตช์เจาะความมืดเป็นสี่เหลี่ยมพอดีช่อง ขอบ/เส้นประจึงยังคมแม้อยู่นอกวงแสง (บล็อกโปร่งจางกว่าจึงเจาะมากกว่า)
+  const DARK_CUT_SOLID = 0.3, DARK_CUT_GHOST = 0.45;
+  // รูปแบบความจางของแสง: soft = ค่อย ๆ จาง / pool = วงแสงผู้เล่น สว่างเต็มถึง ~0.55 ของรัศมีแล้วจางเร็ว
+  const LIGHT_STOPS = {
+    soft: [[0, 1], [0.45, 0.85], [0.75, 0.4], [1, 0]],
+    pool: [[0, 1], [0.55, 1], [0.8, 0.35], [1, 0]]
+  };
 
-  /** สไปรต์แสงวงกลมรัศมี r (หน่วยโลก): กลางทึบ ค่อย ๆ จางถึงขอบ — สร้างครั้งเดียวต่อรัศมี */
-  Renderer.prototype.lightSprite = function (r) {
+  /** สไปรต์แสงวงกลมรัศมี r พิกเซล offscreen: สร้างครั้งเดียวต่อ (รูปแบบ, รัศมี) */
+  Renderer.prototype.lightSprite = function (r, kind) {
     const cache = this.lightCache || (this.lightCache = {});
-    const key = Math.round(r);
+    kind = kind || 'soft';
+    const px = Math.max(2, Math.round(r));
+    const key = kind + px;
     let s = cache[key];
     if (!s) {
       s = document.createElement('canvas');
-      s.width = s.height = key * 2;
+      s.width = s.height = px * 2;
       const c = s.getContext('2d');
-      const gr = c.createRadialGradient(key, key, 0, key, key, key);
-      gr.addColorStop(0, 'rgba(0,0,0,1)');
-      gr.addColorStop(0.45, 'rgba(0,0,0,0.85)');
-      gr.addColorStop(0.75, 'rgba(0,0,0,0.4)');
-      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      const gr = c.createRadialGradient(px, px, 0, px, px, px);
+      LIGHT_STOPS[kind].forEach(function (st) { gr.addColorStop(st[0], 'rgba(0,0,0,' + st[1] + ')'); });
       c.fillStyle = gr;
-      c.fillRect(0, 0, key * 2, key * 2);
+      c.fillRect(0, 0, px * 2, px * 2);
       cache[key] = s;
     }
     return s;
   };
 
-  /** วาดความมืดทับฉาก เรียกจาก render() หลังอนุภาค ก่อน flash/minimap/HUD เมื่อ g.stage.dark */
-  Renderer.prototype.drawDarkness = function (g, time) {
-    const dk = g.stage.dark;
-    const vw = Math.ceil(this.viewW), vh = Math.ceil(this.viewH);
-    let cv = this.darkCv;
-    if (!cv || cv.width !== vw || cv.height !== vh) {
-      cv = this.darkCv = document.createElement('canvas');
-      cv.width = vw; cv.height = vh;
-      this.darkCtx = cv.getContext('2d');
-    }
-    const c = this.darkCtx, ox = this.cx, oy = this.cy;
-    const self = this;
-    c.globalCompositeOperation = 'source-over';
-    c.globalAlpha = 1;
-    c.clearRect(0, 0, vw, vh);
-    c.fillStyle = 'rgba(' + DARK_RGB + ',' + dk.alpha + ')';
-    c.fillRect(0, 0, vw, vh);
+  /** แผนที่แสงคงที่ทั้งด่าน: เติมสีมืด + เจาะแสงเทียน/เชิงเทียน/โคมฟักทอง/สวิตช์ (สร้างใหม่เมื่อเปลี่ยนด่านหรือ alpha) */
+  Renderer.prototype.darkStaticMap = function (g) {
+    const lv = g.lv, alpha = g.stage.dark.alpha;
+    const m = this.darkMap;
+    if (m && m.lv === lv && m.decor === this.decor && m.alpha === alpha) return m.cv;
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(lv.w * T * DARK_RES);
+    cv.height = Math.ceil(lv.h * T * DARK_RES);
+    const c = cv.getContext('2d');
+    c.fillStyle = 'rgba(' + DARK_RGB + ',' + alpha + ')';
+    c.fillRect(0, 0, cv.width, cv.height);
     c.globalCompositeOperation = 'destination-out';
-
-    // เจาะแสงหนึ่งดวงที่ (wx, wy) โลก รัศมี r ความแรง a (0..1) ข้ามดวงที่อยู่นอกจอ
+    const self = this;
     function light(wx, wy, r, a) {
-      const x = wx - ox, y = wy - oy;
-      if (x + r < 0 || y + r < 0 || x - r > vw || y - r > vh) return;
+      const rp = r * DARK_RES;
       c.globalAlpha = a;
-      c.drawImage(self.lightSprite(r), x - r, y - r, r * 2, r * 2);
+      c.drawImage(self.lightSprite(rp), wx * DARK_RES - rp, wy * DARK_RES - rp, rp * 2, rp * 2);
     }
-
-    // บล็อกสวิตช์ในจอ: สี่เหลี่ยมพอดีช่อง (path เดียว fill ครั้งเดียว)
-    const lv = g.lv;
-    const tx0 = Math.max(0, Math.floor(ox / T)), tx1 = Math.min(lv.w - 1, Math.floor((ox + vw) / T));
-    const ty0 = Math.max(0, Math.floor(oy / T)), ty1 = Math.min(lv.h - 1, Math.floor((oy + vh) / T));
-    c.globalAlpha = 1;
-    c.fillStyle = 'rgba(0,0,0,' + DARK_BLOCK_CUT + ')';
-    c.beginPath();
-    let any = false;
-    for (let ty = ty0; ty <= ty1; ty++) {
-      for (let tx = tx0; tx <= tx1; tx++) {
-        const t = lv.tiles[ty * lv.w + tx];
-        if (t === TILE.PURPLE || t === TILE.ORANGE) { c.rect(tx * T - ox, ty * T - oy, T, T); any = true; }
-      }
-    }
-    if (any) c.fill();
-
-    // ของตกแต่งที่มีเปลวไฟ (เทียน เชิงเทียน โคมฟักทอง)
     for (let i = 0; i < this.decor.length; i++) {
       const d = this.decor[i];
       if (d.k === 'candle') light(d.x, d.y - 9 * d.s, DARK_LIGHT.decor, 0.75);
       else if (d.k === 'candelabra') light(d.x, d.y - 56, DARK_LIGHT.decor, 0.85);
       else if (d.k === 'jacklamp') light(d.x, d.y - 5, DARK_LIGHT.decor, 0.7);
     }
-    // สวิตช์
     for (let i = 0; i < lv.switches.length; i++) {
       const s = lv.switches[i];
       light((s.tx + 0.5) * T, (s.ty + 0.5) * T, DARK_LIGHT.sw, 0.8);
     }
-    // เหรียญที่ยังไม่เก็บ (เรืองจาง ๆ)
+    this.darkMap = { lv: lv, decor: this.decor, alpha: alpha, cv: cv };
+    return cv;
+  };
+
+  /** วาดความมืดทับฉาก เรียกจาก render() หลังอนุภาค ก่อน flash/minimap/HUD เมื่อ g.stage.dark */
+  Renderer.prototype.drawDarkness = function (g, time) {
+    const dk = g.stage.dark;
+    const vw = Math.ceil(this.viewW), vh = Math.ceil(this.viewH);
+    // +1 พิกเซล: ต้นทาง offscreen ปัดลงให้ตรงกริดพิกเซล offscreen (ขอบช่องตรงพิกเซลพอดี ไม่สั่นตามกล้อง)
+    const bw = Math.ceil(vw * DARK_RES) + 1, bh = Math.ceil(vh * DARK_RES) + 1;
+    let cv = this.darkCv;
+    if (!cv || cv.width !== bw || cv.height !== bh) {
+      cv = this.darkCv = document.createElement('canvas');
+      cv.width = bw; cv.height = bh;
+      this.darkCtx = cv.getContext('2d');
+    }
+    const map = this.darkStaticMap(g);
+    const k = DARK_RES, c = this.darkCtx, ox = Math.floor(this.cx * k) / k, oy = Math.floor(this.cy * k) / k;
+    const self = this;
+    // 1) ช่วงของแผนที่คงที่ที่อยู่ในจอ (copy = แทนที่ทั้ง canvas ไม่ต้อง clear)
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = 'copy';
+    c.drawImage(map, ox * k, oy * k, bw, bh, 0, 0, bw, bh);
+    c.globalCompositeOperation = 'destination-out';
+
+    // เจาะแสงหนึ่งดวงที่ (wx, wy) โลก รัศมี r ความแรง a (0..1) ข้ามดวงที่อยู่นอกจอ
+    function light(wx, wy, r, a, kind) {
+      const x = (wx - ox) * k, y = (wy - oy) * k, rp = r * k;
+      if (x + rp < 0 || y + rp < 0 || x - rp > bw || y - rp > bh) return;
+      c.globalAlpha = a;
+      c.drawImage(self.lightSprite(rp, kind), x - rp, y - rp, rp * 2, rp * 2);
+    }
+
+    // 2) บล็อกสวิตช์ในจอ: สี่เหลี่ยมพอดีช่อง แยกทึบ/โปร่ง (path ละชุด fill ละครั้ง)
+    const lv = g.lv;
+    const tx0 = Math.max(0, Math.floor(ox / T)), tx1 = Math.min(lv.w - 1, Math.floor((ox + vw) / T));
+    const ty0 = Math.max(0, Math.floor(oy / T)), ty1 = Math.min(lv.h - 1, Math.floor((oy + vh) / T));
+    const isGhost = CQ.Switches.isGhost;
+    for (let pass = 0; pass < 2; pass++) {
+      const ghostPass = pass === 1;
+      let any = false;
+      c.beginPath();
+      for (let ty = ty0; ty <= ty1; ty++) {
+        for (let tx = tx0; tx <= tx1; tx++) {
+          const t = lv.tiles[ty * lv.w + tx];
+          if ((t === TILE.PURPLE || t === TILE.ORANGE) && isGhost(lv, tx, ty) === ghostPass) {
+            c.rect((tx * T - ox) * k, (ty * T - oy) * k, T * k, T * k);
+            any = true;
+          }
+        }
+      }
+      if (any) {
+        c.globalAlpha = ghostPass ? DARK_CUT_GHOST : DARK_CUT_SOLID;
+        c.fill();
+      }
+    }
+
+    // 3) แสงที่เปลี่ยนได้: เหรียญที่ยังไม่เก็บ (เรืองจาง ๆ) ฟักทองยิงไฟ (สว่างขึ้นตอน windT) ลูกไฟ ผู้เล่น
     for (let i = 0; i < g.coins.length; i++) {
       const co = g.coins[i];
-      if (!co.taken && !co.hidden) light(co.x, co.y, DARK_LIGHT.coin, 0.5);
+      if (!co.taken && !co.hidden) light(co.x, co.y, DARK_LIGHT.coin, 0.35);
     }
-    // ฟักทองยิงไฟ: สว่างขึ้นตอนเตือนก่อนยิง (windT > 0)
     for (let i = 0; i < g.enemies.length; i++) {
       const e = g.enemies[i];
       if (e.kind !== 'pfire' || (e.dead && e.deadT > 0.6)) continue;
       const wind = e.windT > 0 && !e.dead;
       light(e.x + e.w / 2, e.y + e.h / 2, DARK_LIGHT.fire * (wind ? 1.2 : 1), wind ? 1 : 0.85);
     }
-    // ลูกไฟ
     if (g.fires) {
       for (let i = 0; i < g.fires.length; i++) light(g.fires[i].x, g.fires[i].y, DARK_LIGHT.ball, 0.9);
     }
-    // ผู้เล่น (หรือร่างตอนตาย)
     const p = g.deathAnim || g.player;
-    light(p.x + p.w / 2, p.y + p.h / 2, dk.radius, 1);
+    light(p.x + p.w / 2, p.y + p.h / 2, dk.radius, 1, 'pool');
 
     c.globalCompositeOperation = 'source-over';
     c.globalAlpha = 1;
+    // ขยายขึ้นจอแบบ nearest: ไล่สีของแสงต่างกันน้อยมากต่อพิกเซลจึงไม่เห็นเป็นขั้น แต่ถูกกว่า bilinear เต็มจอมาก (มือถือ DPR 3)
     const ctx = this.ctx;
     ctx.setTransform(this.S, 0, 0, this.S, 0, 0);
-    ctx.drawImage(cv, 0, 0, vw, vh);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(cv, ox - this.cx, oy - this.cy, bw / k, bh / k);
+    ctx.imageSmoothingEnabled = true;
   };
 
   // ── ลูกไฟผี (เขียวผี ต่างจากลูกไฟบอส) — ctx ถูก translate ไปที่ลูกไฟแล้ว ──

@@ -1,7 +1,8 @@
 /* QA ของสเตจ 4 Haunted House ในเบราว์เซอร์จริง (Playwright Chromium)
  *   node tools/2026-10-22_qa-haunted.cjs [phase]      phase: logic (ค่าเริ่มต้น) | visual | dark | perf
  *   dark: วงแสง/หนาม/ขอบบล็อกสวิตช์/ฟักทองยิงไฟใต้ความมืด (QA_OUT เหมือน visual)
- *   perf: RAF p95 สเตจ 4 ≤ 1.2 × Castle ที่ 1366×768 และ 390×844 (QA_ROUNDS รอบ ค่าเริ่มต้น 3)
+ *   perf: RAF p95 สเตจ 4 ≤ 1.2 × Castle ที่ 1366×768 และ 390×844 (CPU ช้า 4×) RAF ไม่ล็อก vsync
+ *         QA_ROUNDS รอบ (ค่าเริ่มต้น 3) / QA_BUSY=<ms> ถ่วง render สเตจ 4 เพื่อตรวจว่า gate FAIL ได้จริง
  *   visual: QA_OUT=<โฟลเดอร์ screenshot> QA_BASE=<commit เทียบสเตจ 1–3, ค่าเริ่มต้น bceb32d>
  * เปิด static server ของตัวเองที่ 127.0.0.1:8001 ตรวจผ่าน CQ.debug.game + กดคีย์บอร์ด/คลิกจริง
  * มี assertion ไหน FAIL จะจบด้วย exit code 1
@@ -631,13 +632,17 @@ async function perf(browser) {
   const ROUNDS = +(process.env.QA_ROUNDS || 3);
   const sizes = [
     ['1366x768', { viewport: { width: 1366, height: 768 } }],
-    ['390x844', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }]
+    ['390x844', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }, 4]
   ];
+  // QA_BUSY=<ms>: ทดสอบความไวของ gate — ถ่วง render ของสเตจ 4 ด้วย busy-wait (ต้อง FAIL)
+  const BUSY = +(process.env.QA_BUSY || 0);
   const errors = [];
-  for (const [label, opts] of sizes) {
+  for (const [label, opts, cpu] of sizes) {
     const context = await browser.newContext(opts);
     const page = await context.newPage();
     page.on('pageerror', e => errors.push(label + ' pageerror: ' + e.message));
+    // มือถือ: จำลอง CPU ช้าลง 4 เท่า (CDP) ค้างอยู่ตลอดการนำทางของ page นี้
+    if (cpu) await (await context.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: cpu });
     const pool = { haunted: { frame: [], sub: [] }, castle: { frame: [], sub: [] } };
     const roundsP95 = [];
     for (let round = 0; round < ROUNDS; round++) {
@@ -646,9 +651,13 @@ async function perf(browser) {
         await openStage(page, st);
         await page.evaluate(() => { CQ.debug.game && document.getElementById('btn-pause') && document.getElementById('btn-pause').click(); });
         await page.waitForFunction(() => CQ.debug.state === 'paused', null, { timeout: 2000 }).catch(() => {});
-        const m = await page.evaluate(async () => {
-          const g = CQ.debug.game, r = CQ.debug.renderer, render = r.render;
+        const m = await page.evaluate(async busy => {
+          const g = CQ.debug.game, r = CQ.debug.renderer, render0 = r.render;
+          const render = busy && g.stage.dark ? function () { const t = performance.now() + busy; while (performance.now() < t); return render0.apply(this, arguments); } : render0;
           r.render = () => {};
+          // ซ่อนหน้าหยุดเกม (backdrop-filter blur ทับ canvas แพงกว่างานวาดหลายเท่า กลบความต่างระหว่างสเตจ)
+          const pauseScreen = document.getElementById('screen-pause');
+          pauseScreen.hidden = true;
           const intervals = [], sub = [];
           let prev;
           try {
@@ -661,9 +670,9 @@ async function perf(browser) {
               render.call(r, g, i / 60);
               if (i >= 40) sub.push(performance.now() - t);
             }
-          } finally { r.render = render; }
+          } finally { r.render = render0; pauseScreen.hidden = false; }
           return { intervals, sub, dark: !!g.stage.dark, state: CQ.debug.state };
-        });
+        }, BUSY);
         pool[st].frame.push(...m.intervals); pool[st].sub.push(...m.sub);
         row[st] = { p95: p95(m.intervals), sub95: p95(m.sub), dark: m.dark, state: m.state };
       }
@@ -688,7 +697,8 @@ function p95(a) {
 (async () => {
   if (!PHASES.includes(phase)) { console.error('unknown phase: ' + phase + ' (use ' + PHASES.join('|') + ')'); process.exit(2); }
   const server = await startServer();
-  const browser = await chromium.launch();
+  // perf: ปลด vsync/จำกัดเฟรม ให้ RAF วัดงานจริง (ไม่ถูกปัดเป็น 16.7/33.4 ms)
+  const browser = await chromium.launch(phase === 'perf' ? { args: ['--disable-gpu-vsync', '--disable-frame-rate-limit'] } : {});
   try {
     if (phase === 'logic') await logic(browser);
     else if (phase === 'visual') await visual(browser);
