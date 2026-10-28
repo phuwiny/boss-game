@@ -111,11 +111,13 @@ async function logic(browser) {
   const re = await page.evaluate(([tx, ty]) => {
     const g = CQ.debug.game, p = g.player, T = CQ.PHYS.T;
     p.x = tx * T + (T - p.w) / 2; p.y = (ty + 1) * T + 2; p.vy = -400; p.onGround = false;
+    p.bonkTx = -1; p.bonkTy = -1; // ต้องถูกตั้งใหม่จากการโหม่งครั้งที่ 2 จริง
     return g.swCD;
   }, [sw0.tx, sw0.ty]);
   await page.waitForTimeout(90);
-  const afterRe = await page.evaluate(() => CQ.debug.game.lv.sw);
-  check('re-bonk within 0.3 s does not toggle back', re > 0 && afterRe === 'orange', { swCD: re, sw: afterRe });
+  const afterRe = await page.evaluate(() => { const p = CQ.debug.game.player; return { sw: CQ.debug.game.lv.sw, bonkTx: p.bonkTx, bonkTy: p.bonkTy }; });
+  check('second bonk really hit the switch (head hit)', afterRe.bonkTx === sw0.tx && afterRe.bonkTy === sw0.ty, afterRe);
+  check('re-bonk within 0.3 s does not toggle back', re > 0 && afterRe.sw === 'orange', { swCD: re, after: afterRe });
 
   // ── สวิตช์โดนกระสุนผู้เล่น ──
   await page.waitForTimeout(350);
@@ -128,17 +130,41 @@ async function logic(browser) {
   const shotFlipped = await page.waitForFunction(() => CQ.debug.game.lv.sw === 'purple' && CQ.debug.game.shots.length === 0, null, { timeout: 1000 }).then(() => true, () => false);
   check('player shot hitting a switch toggles it', shotFlip === 'orange' && shotFlipped);
 
-  // ── ฟักทองยิงไฟ hp 3: โดนกระสุนแล้วไม่ตาย ──
-  const pf = await page.evaluate(() => {
-    const g = CQ.debug.game;
-    const e = g.enemies.find(en => en.kind === 'pfire' && !en.dead);
-    if (!e) return null;
-    g.shots.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: 1, vy: 0, r: 5, kind: 'light', dmg: 1, t: 0, life: 2 });
-    return g.enemies.indexOf(e);
+  // ── ฟักทองยิงไฟ hp 3: ยิงโดน 3 ครั้งจึงแตก ──
+  const pfShot = async () => {
+    await page.evaluate(() => {
+      const g = CQ.debug.game, e = g.enemies.find(en => en.qa === 'shotA');
+      if (e && !e.dead) g.shots.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: 1, vy: 0, r: 5, kind: 'light', dmg: 1, t: 0, life: 2 });
+    });
+    await page.waitForTimeout(100);
+    return page.evaluate(() => { const e = CQ.debug.game.enemies.find(en => en.qa === 'shotA'); return e ? { hp: e.hp, dead: e.dead } : { gone: true }; });
+  };
+  const tagged = await page.evaluate(() => {
+    const g = CQ.debug.game, fires = g.enemies.filter(en => en.kind === 'pfire' && !en.dead), hop = g.enemies.find(en => en.kind === 'phop' && !en.dead);
+    if (fires.length < 2 || !hop) return false;
+    fires[0].qa = 'shotA'; fires[1].qa = 'stompF'; hop.qa = 'stompH';
+    return true;
   });
-  await page.waitForTimeout(80);
-  const pfAfter = await page.evaluate(i => { const e = CQ.debug.game.enemies[i]; return e && { hp: e.hp, dead: e.dead, flash: e.flash }; }, pf);
-  check('pfire hit by a shot: hp 3 → 2, not dead', pfAfter && pfAfter.hp === 2 && !pfAfter.dead, pfAfter);
+  check('fixture: 2 pfire + 1 phop available', tagged);
+  const h1 = await pfShot(), h2 = await pfShot(), h3 = await pfShot();
+  check('pfire hit by a shot: hp 3 → 2, not dead', h1.hp === 2 && !h1.dead, h1);
+  check('pfire 2nd shot: hp 1, not dead', h2.hp === 1 && !h2.dead, h2);
+  check('pfire 3rd shot breaks it', !!(h3.dead || h3.gone), h3);
+
+  // ── เหยียบหัวฟักทองแตกในครั้งเดียว (ทั้ง 2 แบบ) ──
+  const stomp = async tag => {
+    await page.evaluate(tag => {
+      const g = CQ.debug.game, p = g.player, e = g.enemies.find(en => en.qa === tag);
+      p.x = e.x + (e.w - p.w) / 2; p.y = e.y + 6 - p.h; p.vx = 0; p.vy = 150; p.onGround = false; p.ride = null; p.invuln = 0;
+    }, tag);
+    await page.waitForTimeout(100);
+    return page.evaluate(tag => { const g = CQ.debug.game, e = g.enemies.find(en => en.qa === tag); return { dead: !e || e.dead, hp: e && e.hp, playerHp: g.player.hp, deathAnim: !!g.deathAnim }; }, tag);
+  };
+  const sh = await stomp('stompH');
+  check('stomping a phop kills it', sh.dead && !sh.deathAnim, sh);
+  const sf = await stomp('stompF');
+  check('stomping a pfire (hp 3) kills it in one stomp', sf.dead && sf.hp === 3 && !sf.deathAnim, sf);
+  await page.evaluate(() => { const p = CQ.debug.game.player; p.hp = 5; });
 
   // ── Review Focus 4: กลับเช็กพอยต์ (ยังไม่แตะเช็กพอยต์ = จุดเริ่ม) ──
   await page.evaluate(() => { const g = CQ.debug.game; CQ.Switches.setState(g.lv, 'orange', [g.player]); g.player.hp = 3; });
@@ -153,7 +179,7 @@ async function logic(browser) {
   check('return: switches reset to purple', post.sw === 'purple', post.sw);
   check('return: deaths unchanged', post.deaths === pre.deaths, [pre.deaths, post.deaths]);
   check('return: hp kept (3)', post.hp === pre.hp, [pre.hp, post.hp]);
-  check('return: game resumed with invuln', post.state === 'playing' && post.invuln > 0, post);
+  check('return: game resumed with invuln ≈ 1.5 s', post.state === 'playing' && post.invuln > 1.3 && post.invuln <= 1.5, post);
 
   // ── เช็กพอยต์ห้อง 2 จำสถานะสวิตช์ ──
   const cp = await page.evaluate(() => CQ.debug.game.checkpoints.slice().sort((a, b) => a.tx - b.tx)[0]);
@@ -200,6 +226,12 @@ async function logic(browser) {
     check('stage ' + st + ': #btn-checkpoint hidden', hidden);
     await page.locator('#btn-resume').click();
     await page.waitForTimeout(250);
+    if (st === 'castle') {
+      await page.keyboard.down('KeyX');
+      const fired = await page.waitForFunction(() => CQ.debug.game.shots.length > 0, null, { timeout: 1000 }).then(() => true, () => false);
+      await page.keyboard.up('KeyX');
+      check('stage castle: KeyX still fires a shot (regression)', fired);
+    }
   }
   check('no console/page errors', errors.length === 0, errors);
   await context.close();

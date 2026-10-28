@@ -239,9 +239,12 @@
     const lv = g.lv;
     for (let i = 0; i < lv.platforms.length; i++) W.stepPlatform(lv.platforms[i], dt);
     const pumpkinEvents = [];
+    // ระหว่างกำลังพลาด: ฟักทองยังขยับได้ แต่ทิ้งลูกไฟ/เสียงที่เกิดขึ้น (ไม่มีลูกไฟค้างหรือเสียงลอย ๆ)
+    const pumpkinFires = g.deathAnim ? [] : g.fires;
+    const pumpkinEv = g.deathAnim ? [] : pumpkinEvents;
     for (let i = g.enemies.length - 1; i >= 0; i--) {
       const e = g.enemies[i];
-      if (Pumpkin.isPumpkin(e.kind)) Pumpkin.stepPumpkin(e, lv, g.player, dt, g.deathAnim ? [] : g.fires, pumpkinEvents);
+      if (Pumpkin.isPumpkin(e.kind)) Pumpkin.stepPumpkin(e, lv, g.player, dt, pumpkinFires, pumpkinEv);
       else W.stepEnemy(e, lv, dt);
       if (e.dead && e.deadT > 0.7) g.enemies.splice(i, 1);
     }
@@ -454,14 +457,13 @@
     W.refillAirJumps(p);
     g.shake = Math.max(g.shake, 3);
     if (e.kind === 'boar') { stunBoar(e, p, false); return; }
-    if (e.hp > 1) { hitTough(e); return; } // ฟักทองยิงไฟ: ต้องเหยียบ/ยิงหลายครั้ง
     e.dead = true;
     e.deadT = 0;
     Sound.sfx.stomp();
     burst(e.x + e.w / 2, e.y + e.h / 2, 8, ['#58d26d', '#a8f0b4'], 140, 'circle');
   }
 
-  /** ศัตรูที่มีพลังชีวิตหลายขีด (ฟักทองยิงไฟ) โดนตีแต่ยังไม่ตาย */
+  /** ศัตรูที่มีพลังชีวิตหลายขีด (ฟักทองยิงไฟ) โดนกระสุนแต่ยังไม่ตาย (เหยียบหัวแตกทันที) */
   function hitTough(e) {
     e.hp--;
     e.flash = 0.12;
