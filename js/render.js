@@ -78,6 +78,11 @@
       sky: ['#171526', '#262039', '#382b40'],
       plank: { edge: '#3b2616', mid: '#6a4529', light: '#86603c', grain: 'rgba(30,16,6,0.45)', knot: '#2e1c0e', leg: '#55565e' },
       tuft: '#5a5268'
+    },
+    // สเตจ 4: ช่อง ฉากหลัง ของตกแต่ง วาดใน js/render-haunted.js (hauntedTileSprite ฯลฯ)
+    haunted: {
+      id: 'haunted',
+      sky: ['#0e0a1f', '#1d1536', '#2e1f45']
     }
   };
 
@@ -442,6 +447,7 @@
   Renderer.prototype.tileSprite = function (lv, tx, ty, t) {
     const W = CQ.World;
     const th = this.theme;
+    if (th.id === 'haunted') return this.hauntedTileSprite(lv, tx, ty, t);
     if (th.id === 'castle' && (t === TILE.GROUND || t === TILE.BRICK)) {
       if (t === TILE.BRICK) {
         const top = !W.isSolid(lv, tx, ty - 1) && ty > 0;
@@ -504,7 +510,9 @@
       c.closePath();
       c.fill();
     };
-    if (this.theme.id === 'castle') {
+    if (this.theme.id === 'haunted') {
+      this.layers = this.buildHauntedLayers(mk);
+    } else if (this.theme.id === 'castle') {
       // ปราสาท: ผนังไกลมีหน้าต่างโค้งรับแสงจันทร์ + แนวเสาหินและธงใกล้ ๆ
       this.layers = {
         far: mk(1024, 320, function (c, w, h) {
@@ -765,6 +773,7 @@
     ctx.fillRect(0, 0, vw, vh);
     if (this.theme.id === 'forest') { this.drawForestSky(time); return; }
     if (this.theme.id === 'castle') { this.drawCastleSky(time); return; }
+    if (this.theme.id === 'haunted') { this.drawHauntedSky(time); return; }
 
     const sx = vw * 0.8 - this.cx * 0.01, sy = 64 - (this.cy - this.camMaxY()) * 0.05;
     ctx.fillStyle = 'rgba(255,245,190,0.35)';
@@ -860,6 +869,7 @@
     }
     const forest = th.id === 'forest';
     const castle = th.id === 'castle';
+    const haunted = th.id === 'haunted';
     const W = CQ.World;
     const empty = function (x, y) { return W.tileAt(lv, x, y) === TILE.EMPTY; };
     const ground = function (x, y) { return W.tileAt(lv, x, y) === TILE.GROUND; };
@@ -874,6 +884,7 @@
         const flat = ground(tx - 1, ty) && ground(tx + 1, ty) && empty(tx - 1, ty - 1) && empty(tx + 1, ty - 1);
         let room = 0;
         while (room < 4 && empty(tx, ty - 1 - room)) room++;
+        if (haunted) { this.hauntedDecorAt(decor, x, y, r, flat, room, busy.has(tx)); continue; }
         if (castle) {
           // ปราสาท: คบเพลิงบนผนัง ธง กระดูก เศษหิน
           if (r < 10 && flat && room >= 4 && !busy.has(tx)) decor.push({ k: 'torch', x: x, y: y, back: true });
@@ -923,6 +934,9 @@
         else if (t === TILE.ONEWAY) c.fillStyle = 'rgba(255,255,255,0.4)';
         else if (t === TILE.SPIKE) c.fillStyle = '#ff7070';
         else if (t === TILE.SPRING) c.fillStyle = '#ffb347';
+        else if (t === TILE.PURPLE) c.fillStyle = 'rgba(190,140,255,0.55)';
+        else if (t === TILE.ORANGE) c.fillStyle = 'rgba(255,170,80,0.55)';
+        else if (t === TILE.SWITCH) c.fillStyle = '#ffffff';
         else continue;
         c.fillRect(tx, ty, 1, 1);
       }
@@ -1113,6 +1127,8 @@
           ctx.moveTo(d.x + 3, d.y); ctx.lineTo(d.x + 5, d.y - 6);
           ctx.stroke();
           break;
+        default:
+          this.drawHauntedDecor(d, time); // ของตกแต่งสเตจ 4 (render-haunted.js)
       }
     }
   };
@@ -1255,6 +1271,7 @@
     const ctx = this.ctx;
     for (let i = 0; i < g.lv.platforms.length; i++) {
       const pl = g.lv.platforms[i];
+      if (pl.axis === 'y') { this.drawVTrack(pl); continue; }
       const y = pl.y + 7;
       const xa = pl.minX + 10, xb = pl.maxX + pl.w - 10;
       ctx.strokeStyle = 'rgba(70,50,30,0.35)';
@@ -1271,6 +1288,7 @@
   Renderer.prototype.drawPlatform = function (pl) {
     const ctx = this.ctx;
     if (pl.x + pl.w < this.cx || pl.x > this.cx + this.viewW) return;
+    if (this.theme.id === 'haunted') { this.drawHauntedPlatform(pl); return; }
     ctx.fillStyle = '#7a4c25';
     rr(ctx, pl.x, pl.y, pl.w, pl.h, 5); ctx.fill();
     ctx.fillStyle = '#c88a4e';
@@ -1417,7 +1435,7 @@
     ctx.restore();
   };
 
-  /** กระสุน: light (Bobo), wind (Mew), fire (Aclaire), boss (ลูกไฟของบอส) */
+  /** กระสุน: light (Bobo), wind (Mew), fire (Aclaire), boss (ลูกไฟของบอส), ghost (ลูกไฟผีของฟักทอง) */
   Renderer.prototype.drawShot = function (s, time) {
     const ctx = this.ctx;
     if (s.x + 30 < this.cx || s.x - 30 > this.cx + this.viewW) return;
@@ -1444,6 +1462,8 @@
       ctx.beginPath(); ctx.arc(-r * 1.6, 0, r * 0.9, -1.1, 1.1); ctx.stroke();
       ctx.strokeStyle = 'rgba(125,255,154,0.6)'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(-r * 4, -r * 0.5); ctx.lineTo(-r * 1.5, -r * 0.5); ctx.moveTo(-r * 4.5, r * 0.5); ctx.lineTo(-r * 2, r * 0.5); ctx.stroke();
+    } else if (s.kind === 'ghost') {
+      this.drawGhostFire(s, time); // ลูกไฟผีของฟักทอง (render-haunted.js)
     } else {
       // ลูกไฟ (Aclaire สีส้มทอง / บอสสีแดงเข้ม ใหญ่กว่า)
       const boss = s.kind === 'boss';
@@ -1594,6 +1614,7 @@
 
   Renderer.prototype.drawEnemy = function (e, time) {
     if (e.kind === 'boar') this.drawBoar(e, time);
+    else if (e.kind === 'phop' || e.kind === 'pfire') this.drawPumpkin(e, time);
     else this.drawSlime(e);
   };
 
@@ -2001,5 +2022,7 @@
     ctx.restore();
   };
 
+  // ฟังก์ชันช่วยวาดที่ไฟล์ render-*.js ใช้ร่วม
+  Renderer.util = { makeCanvas: makeCanvas, hash: hash, rng: rng, rr: rr, ellipse: ellipse, clamp: clamp };
   CQ.Renderer = Renderer;
 })(window);

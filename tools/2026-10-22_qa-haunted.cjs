@@ -1,5 +1,6 @@
 /* QA ของสเตจ 4 Haunted House ในเบราว์เซอร์จริง (Playwright Chromium)
- *   node tools/2026-10-22_qa-haunted.cjs [phase]      phase: logic (ค่าเริ่มต้น)
+ *   node tools/2026-10-22_qa-haunted.cjs [phase]      phase: logic (ค่าเริ่มต้น) | visual
+ *   visual: QA_OUT=<โฟลเดอร์ screenshot> QA_BASE=<commit เทียบสเตจ 1–3, ค่าเริ่มต้น bceb32d>
  * เปิด static server ของตัวเองที่ 127.0.0.1:8001 ตรวจผ่าน CQ.debug.game + กดคีย์บอร์ด/คลิกจริง
  * มี assertion ไหน FAIL จะจบด้วย exit code 1
  * Tooling only: no runtime dependency for the game.
@@ -15,8 +16,11 @@ catch (e) {
 const { chromium } = playwright;
 const root = path.resolve(__dirname, '..');
 const phase = process.argv[2] || 'logic';
-const PHASES = ['logic'];
+const PHASES = ['logic', 'visual'];
 const URL_BASE = 'http://127.0.0.1:8001/?seed=qa-haunted';
+// visual: สเตจ 1–3 ต้องตรงกับ commit ก่อนเพิ่มภาพสเตจ 4 ทุกพิกเซล (เสิร์ฟต้นไม้เก่าที่ /__baseline__/ ด้วย git show)
+const BASE = process.env.QA_BASE || 'bceb32d';
+const SHOTS = process.env.QA_OUT || path.join(require('node:os').tmpdir(), 'cq-haunted-visual');
 
 let failed = 0;
 function check(name, ok, detail) {
@@ -27,9 +31,18 @@ function check(name, ok, detail) {
 function startServer() {
   const server = require('node:http').createServer((req, res) => {
     const pathname = decodeURIComponent(new URL(req.url, 'http://127.0.0.1').pathname);
+    const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml' };
+    if (pathname.startsWith('/__baseline__/')) {
+      const rel = pathname.slice('/__baseline__/'.length) || 'index.html';
+      if (!/^[\w./-]+$/.test(rel) || rel.includes('..')) { res.writeHead(403).end(); return; }
+      const out = require('node:child_process').spawnSync('git', ['show', BASE + ':' + rel], { cwd: root, maxBuffer: 64 << 20 });
+      if (out.status !== 0) { res.writeHead(404).end(); return; }
+      res.setHeader('Content-Type', types[path.extname(rel)] || 'application/octet-stream');
+      res.end(out.stdout);
+      return;
+    }
     const file = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
     if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
-    const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml' };
     fs.readFile(file, (err, data) => {
       if (err) { res.writeHead(404).end(); return; }
       res.setHeader('Content-Type', types[path.extname(file)] || 'application/octet-stream');
@@ -237,12 +250,222 @@ async function logic(browser) {
   await context.close();
 }
 
+// ── visual ──────────────────────────────────────────────────────
+// นาฬิกาเสมือน: requestAnimationFrame/performance.now/Math.random อยู่ในมือสคริปต์ทั้งหมด
+// เกมเดินเฉพาะตอนเรียก window.__step(n) (1 เฟรม = 1/60 วินาที) ภาพจึงซ้ำได้ทุกพิกเซล
+function freezeClock() {
+  let now = 1000, q = [];
+  Object.defineProperty(performance, 'now', { value: () => now, configurable: true });
+  window.requestAnimationFrame = cb => { q.push(cb); return q.length; };
+  window.cancelAnimationFrame = () => {};
+  window.__step = n => {
+    for (let i = 0; i < n; i++) { now += 1000 / 60; const cbs = q; q = []; cbs.forEach(cb => cb(now)); }
+  };
+  let s = 0x2545f491;
+  Math.random = () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+}
+
+async function frozenPage(browser, base) {
+  const context = await browser.newContext({ viewport: { width: 844, height: 390 } });
+  await context.addInitScript(freezeClock);
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  await page.goto('http://127.0.0.1:8001' + base + '?seed=qa-haunted', { waitUntil: 'networkidle' });
+  await page.evaluate(() => document.fonts.ready);
+  return { context, page, errors };
+}
+
+async function startFrozen(page, stage) {
+  await page.locator('.stage-' + stage).click();
+  await page.evaluate(() => window.__step(2));
+  await page.locator('#btn-normal').click();
+  await page.waitForFunction(() => CQ.debug.state === 'playing');
+  await page.evaluate(() => window.__step(2));
+  // Grassland โหลดภาพ concept ตอนวาดเฟรมแรก รอให้โหลดเสร็จก่อนเดินต่อ
+  await page.waitForFunction(() => { const im = CQ.debug.renderer.grasslandConcept; return !im || im.complete; });
+  await page.evaluate(() => window.__step(90));
+}
+
+/** พิกเซลทั้ง canvas เกม (Buffer RGBA) */
+async function canvasPixels(page) {
+  const b64 = await page.evaluate(() => {
+    const c = document.getElementById('game'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let s = '';
+    for (let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
+    return btoa(s);
+  });
+  return Buffer.from(b64, 'base64');
+}
+
+async function visual(browser) {
+  fs.mkdirSync(SHOTS, { recursive: true });
+
+  // ── สเตจ 1–3: ภาพต้องตรงกับ BASE ทุกพิกเซล ──
+  for (const st of ['grassland', 'forest', 'castle']) {
+    const shots = {};
+    for (const [tag, base] of [['base', '/__baseline__/'], ['now', '/']]) {
+      const { context, page, errors } = await frozenPage(browser, base);
+      await startFrozen(page, st);
+      shots[tag] = await canvasPixels(page);
+      await page.screenshot({ path: path.join(SHOTS, st + '-' + tag + '.png') });
+      check(st + ' (' + tag + '): no console/page errors', errors.length === 0, errors);
+      await context.close();
+    }
+    let diff = 0;
+    const a = shots.base, b = shots.now;
+    if (a.length !== b.length) diff = -1;
+    else for (let i = 0; i < a.length; i += 4) if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2] || a[i + 3] !== b[i + 3]) diff++;
+    check(st + ': 844×390 canvas identical to ' + BASE + ' (0 px differ)', diff === 0, diff);
+  }
+
+  // ── สเตจ 4 ──
+  const { context, page, errors } = await frozenPage(browser, '/');
+  await startFrozen(page, 'haunted');
+  await page.screenshot({ path: path.join(SHOTS, 'haunted-start.png') });
+
+  const theme = await page.evaluate(() => {
+    const r = CQ.debug.renderer, g = CQ.debug.game, T = CQ.PHYS.T;
+    // ช่องว่างกลางห้อง 1 (5,8) อยู่ในจอเสมอ: ต้องเป็นฉากบ้านผีสิงโทนมืด ไม่ใช่ท้องฟ้า Grassland
+    const c = document.getElementById('game').getContext('2d');
+    const d = c.getImageData(Math.round((5.5 * T - r.cx) * r.S), Math.round((8.5 * T - r.cy) * r.S), 1, 1).data;
+    return { id: r.theme && r.theme.id, rgb: [d[0], d[1], d[2]], lum: 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2], empty: g.lv.tiles[8 * g.lv.w + 5] === 0 };
+  });
+  check('haunted: renderer theme is haunted', theme.id === 'haunted', theme);
+  check('haunted: room background is dark night/purple (lum < 90, b >= g)', theme.empty && theme.lum < 90 && theme.rgb[2] >= theme.rgb[1], theme);
+
+  // อ่านสไปรต์บล็อกจาก tileSprite โดยตรง (alpha ของบล็อกเอง ไม่ปนพื้นหลัง)
+  const blocks = () => page.evaluate(() => {
+    const r = CQ.debug.renderer, lv = CQ.debug.game.lv, TILE = CQ.TILE;
+    const find = t => { for (let i = 0; i < lv.tiles.length; i++) if (lv.tiles[i] === t) return { tx: i % lv.w, ty: Math.floor(i / lv.w) }; return null; };
+    const stat = t => {
+      const p = find(t), spr = p && r.tileSprite(lv, p.tx, p.ty, t);
+      if (!spr || !spr.getContext) return null;
+      const d = spr.getContext('2d').getImageData(0, 0, spr.width, spr.height).data;
+      let sa = 0, ma = 0;
+      const lum = [];
+      for (let i = 0; i < d.length; i += 4) {
+        sa += d[i + 3]; ma = Math.max(ma, d[i + 3]);
+        lum.push((0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) * d[i + 3] / 255);
+      }
+      return { avgA: sa / (d.length / 4) / 255, maxA: ma / 255, ghost: CQ.Switches.isGhost(lv, p.tx, p.ty), lum: lum, w: spr.width };
+    };
+    const swp = find(TILE.SWITCH), sws = swp && r.tileSprite(lv, swp.tx, swp.ty, TILE.SWITCH);
+    let swSig = null;
+    if (sws && sws.getContext) {
+      const d = sws.getContext('2d').getImageData(0, 0, sws.width, sws.height).data;
+      swSig = 0; for (let i = 0; i < d.length; i++) swSig = (swSig * 31 + d[i]) >>> 0;
+    }
+    return { sw: lv.sw, P: stat(TILE.PURPLE), O: stat(TILE.ORANGE), swSig: swSig };
+  });
+  // ลายในภาพ grayscale: ลบค่าเฉลี่ยออกก่อน (ไม่นับความสว่างรวม) แล้ววัดความต่างเฉลี่ยต่อพิกเซล
+  const patternDiff = (a, b) => {
+    if (!a || !b || a.length !== b.length) return 0;
+    const ma = a.reduce((s, v) => s + v, 0) / a.length, mb = b.reduce((s, v) => s + v, 0) / b.length;
+    let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs((a[i] - ma) - (b[i] - mb));
+    return s / a.length;
+  };
+  const s1 = await blocks();
+  const brief = s => s && { avgA: +s.avgA.toFixed(3), maxA: +s.maxA.toFixed(3), ghost: s.ghost };
+  check('purple state: purple block sprite exists and is solid', !!s1.P && !s1.P.ghost && s1.P.avgA > 0.9, brief(s1.P));
+  check('purple state: orange ghost sprite exists, max alpha <= 0.35', !!s1.O && s1.O.ghost && s1.O.maxA <= 0.351 && s1.O.avgA > 0, brief(s1.O));
+  check('purple state: avg alpha purple (solid) > orange (ghost)', !!s1.P && !!s1.O && s1.P.avgA > s1.O.avgA, [brief(s1.P), brief(s1.O)]);
+
+  await page.evaluate(() => { const g = CQ.debug.game; CQ.Switches.setState(g.lv, 'orange', []); window.__step(2); });
+  await page.screenshot({ path: path.join(SHOTS, 'haunted-toggled.png') });
+  const s2 = await blocks();
+  check('orange state: avg alpha orange (solid) > purple (ghost)', !!s2.P && !!s2.O && s2.O.avgA > s2.P.avgA && !s2.O.ghost && s2.P.ghost, [brief(s2.P), brief(s2.O)]);
+  check('orange state: purple ghost max alpha <= 0.35', !!s2.P && s2.P.maxA <= 0.351, brief(s2.P));
+  const pd = patternDiff(s1.P && s1.P.lum, s2.O && s2.O.lum);
+  check('grayscale: solid purple vs solid orange patterns differ (mean |Δ| > 6)', pd > 6, +pd.toFixed(2));
+  check('switch sprite differs between purple and orange state', s1.swSig !== null && s2.swSig !== null && s1.swSig !== s2.swSig, [s1.swSig, s2.swSig]);
+  await page.evaluate(() => { const g = CQ.debug.game; CQ.Switches.setState(g.lv, 'purple', []); window.__step(1); });
+
+  // ── ฟักทอง: วาดเองด้วย render() ที่เวลาคงที่ แล้วอ่านพิกเซลในกรอบตัว ──
+  const pumpkinView = (kind, patch) => page.evaluate(([kind, patch]) => {
+    const r = CQ.debug.renderer, g = CQ.debug.game;
+    const e = g.enemies.find(en => en.kind === kind && !en.dead);
+    if (!e) return null;
+    const saved = { windT: e.windT, flash: e.flash };
+    Object.assign(e, patch);
+    const want = r.clampCam(e.x - r.viewW / 2, e.y - r.viewH / 2);
+    r.cam.x = want.x; r.cam.y = want.y;
+    let slime = 0;
+    const orig = r.drawSlime;
+    r.drawSlime = function () { slime++; return orig.apply(this, arguments); };
+    r.render(g, 5);
+    r.drawSlime = orig;
+    Object.assign(e, saved);
+    const c = document.getElementById('game').getContext('2d');
+    const x0 = Math.round((e.x - r.cx) * r.S), y0 = Math.round((e.y - r.cy) * r.S);
+    const w = Math.round(e.w * r.S), h = Math.round(e.h * r.S);
+    const d = c.getImageData(x0, y0, w, h).data;
+    let orange = 0, white = 0, glow = 0, sig = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const R = d[i], G = d[i + 1], B = d[i + 2];
+      if (R > 170 && R > G + 40 && B < 120) orange++;
+      if (R > 235 && G > 235 && B > 235) white++;
+      if (G > 180 && G > R + 40 && G > B) glow++;
+      sig = (sig * 31 + R + G * 7 + B * 13) >>> 0;
+    }
+    const n = d.length / 4;
+    return { orange: orange / n, white: white / n, glow: glow / n, sig: sig, slime: slime };
+  }, [kind, patch]);
+  for (const kind of ['phop', 'pfire']) {
+    const base = await pumpkinView(kind, { windT: 0, flash: 0 });
+    check(kind + ': drawn as an orange pumpkin (not the slime fallback)', !!base && base.slime === 0 && base.orange > 0.2, base);
+    if (kind === 'pfire') {
+      await page.screenshot({ path: path.join(SHOTS, 'haunted-pumpkin.png') });
+      const wind = await pumpkinView(kind, { windT: 0.3, flash: 0 });
+      check('pfire windT > 0: glowing eyes (green glow pixels appear)', !!wind && wind.glow > base.glow && wind.sig !== base.sig, { base, wind });
+      await page.screenshot({ path: path.join(SHOTS, 'haunted-pumpkin-windup.png') });
+    }
+    const flash = await pumpkinView(kind, { windT: 0, flash: 0.1 });
+    check(kind + ' flash > 0: blinks white', !!flash && flash.white > base.white + 0.15, { base, flash });
+  }
+
+  // ── ลูกไฟผี: เขียว ไม่ใช่ส้มแบบลูกไฟ Aclaire/บอส ──
+  const ghost = await page.evaluate(() => {
+    const r = CQ.debug.renderer, g = CQ.debug.game;
+    const wx = r.cam.x + r.viewW / 2, wy = r.cam.y + r.viewH / 2;
+    g.fires.push({ x: wx, y: wy, vx: -200, vy: 0, r: 8, kind: 'ghost', t: 0, life: 4 });
+    r.render(g, 5);
+    g.fires.pop();
+    const d = document.getElementById('game').getContext('2d').getImageData(Math.round((wx - r.cx) * r.S) - 2, Math.round((wy - r.cy) * r.S) - 2, 5, 5).data;
+    let R = 0, G = 0, B = 0; for (let i = 0; i < d.length; i += 4) { R += d[i]; G += d[i + 1]; B += d[i + 2]; }
+    return [R / 25, G / 25, B / 25].map(Math.round);
+  });
+  check('ghost fireball core is ghost green (g > r, g > b)', ghost[1] > ghost[0] + 20 && ghost[1] > ghost[2], ghost);
+
+  // ── รางแนวตั้ง ──
+  const vt = await page.evaluate(() => {
+    const r = CQ.debug.renderer, g = CQ.debug.game;
+    const pl = g.lv.platforms.find(p => p.axis === 'y');
+    if (!pl || typeof r.drawVTrack !== 'function') return { pl: !!pl, fn: typeof r.drawVTrack };
+    const want = r.clampCam(pl.x - r.viewW / 2, pl.minY - 40);
+    r.cam.x = want.x; r.cam.y = want.y;
+    let calls = 0;
+    const orig = r.drawVTrack;
+    r.drawVTrack = function () { calls++; return orig.apply(this, arguments); };
+    r.render(g, 5);
+    r.drawVTrack = orig;
+    return { pl: true, fn: 'function', calls: calls };
+  });
+  check('vertical platform track drawn via drawVTrack', vt.fn === 'function' && vt.calls > 0, vt);
+  await page.screenshot({ path: path.join(SHOTS, 'haunted-vtrack.png') });
+
+  check('haunted visual: no console/page errors', errors.length === 0, errors);
+  await context.close();
+}
+
 (async () => {
   if (!PHASES.includes(phase)) { console.error('unknown phase: ' + phase + ' (use ' + PHASES.join('|') + ')'); process.exit(2); }
   const server = await startServer();
   const browser = await chromium.launch();
   try {
     if (phase === 'logic') await logic(browser);
+    else if (phase === 'visual') await visual(browser);
   } catch (e) {
     failed++;
     console.log('FAIL  exception — ' + (e && e.stack || e));
