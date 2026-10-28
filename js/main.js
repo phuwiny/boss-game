@@ -627,9 +627,9 @@
     g.deathAnim = null;
     resetMotion();
     pendingJump = false;
-    g.shots.length = 0;
-    g.fires.length = 0;
-    Switches.setState(g.lv, r.sw || 'purple', [g.player]);
+    // กระสุน/ลูกไฟถูกล้างแล้วใน kill() และระหว่างกำลังพลาดไม่มีอะไรเพิ่มเข้ามา (ลูกไฟฟักทองถูกทิ้ง บอสไม่ขยับ)
+    // บล็อกที่จะทึบแต่ทับผู้เล่น/ศัตรูอยู่ ค้างโปร่งไว้ก่อน (ใช้ชุดตัวเดียวกับตอนสลับสวิตช์)
+    Switches.setState(g.lv, r.sw || 'purple', switchBodies());
     // Boss Stage: บอสที่ยังไม่แพ้กลับมาพลังเต็มที่เดิม (แพ้แล้วไม่กลับมาอีก)
     if (g.boss && !g.bossDefeated) g.boss = Boss.makeBoss(g.lv);
   }
@@ -654,7 +654,7 @@
       p.ride = null;
       p.invuln = P.HURT_INVULN;
       g.player = p;
-      Switches.setState(g.lv, r.sw || 'purple', [p]);
+      Switches.setState(g.lv, r.sw || 'purple', switchBodies());
       g.shots.length = 0;
       g.fires.length = 0;
       pendingJump = false;

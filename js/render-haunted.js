@@ -673,8 +673,8 @@
     face(ctx, e, P, w, h, fire, wind, e.flash > 0);
     ctx.restore();
     if (wind) {
-      // ประกายไฟผีรอบตัวตอนเตือน
-      const k = 1 - e.windT / 0.6;
+      // ประกายไฟผีรอบตัวตอนเตือน (k: 0 → 1 ตลอดช่วงเตือน WINDUP ของ js/pumpkin.js)
+      const k = 1 - e.windT / CQ.Pumpkin.PUMPKIN.FIRE.WINDUP;
       ctx.fillStyle = 'rgba(125,255,176,' + (0.15 + 0.25 * k).toFixed(3) + ')';
       ellipse(ctx, cx + (e.face || 1) * w * 0.45, by - h * 0.45, 4 + k * 4, 4 + k * 4); ctx.fill();
     }

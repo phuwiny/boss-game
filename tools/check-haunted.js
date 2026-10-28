@@ -409,6 +409,22 @@ t('fixedCoins กฎ 4: ใต้สวิตช์ หัวราง เช็
     o = collector(); CL.fixedLayout(parseFixed(rooms2(r => { for (let y = 6; y <= 9; y++) setCell(r, 4, y, '|'); setCell(r, 5, 5, c); })), 'ทดสอบ', o);
     assert.ok(o.fails.some(m => m.indexOf('ราง') >= 0 && m.indexOf('(5, 5)') >= 0), c + ': ' + o.fails.join('\n'));
   });
+  // แนวราง 3 ช่องทุกแถว (ไม่ใช่แค่เหนือหัวราง) รวมแถวล่างสุด: ห้ามมีของทึบ บล็อกสี หรือหนาม
+  // (หนามต้องวางบนพื้นทึบ จึงเติม # ใต้หนามที่แถว 10 ซึ่งอยู่นอกแนวราง)
+  [['#', 3, 7], ['M', 5, 8], ['O', 4, 6], ['^', 3, 9], ['^', 5, 9]].forEach(function (c) {
+    o = collector(); CL.fixedLayout(parseFixed(rooms2(r => {
+      for (let y = 6; y <= 9; y++) setCell(r, 4, y, '|');
+      setCell(r, c[1], c[2], c[0]); if (c[0] === '^') setCell(r, c[1], c[2] + 1, '#');
+    })), 'ทดสอบ', o);
+    const at = '(' + c[1] + ', ' + c[2] + ')';
+    assert.ok(o.fails.length === 1 && o.fails[0].indexOf('ราง') >= 0 && o.fails[0].indexOf(at) >= 0, c.join() + ': ' + o.fails.join('\n'));
+  });
+  // ใต้แถวล่างสุดของราง (พื้นที่แพลตฟอร์มลงไปจอด) ไม่ใช่แนวราง = ไม่ fail
+  o = collector(); CL.fixedLayout(parseFixed(rooms2(r => { for (let y = 6; y <= 9; y++) setCell(r, 4, y, '|'); put(r, 3, 10, '###'); })), 'ทดสอบ', o);
+  same(o.fails, []);
+  // สวิตช์ที่ใต้ว่างผ่าน แม้โหม่งไม่ถึง (ยิงได้) — ข้อความบอกว่า "โหม่งหรือยิง"
+  o = collector(); CL.fixedLayout(parseFixed(rooms2(r => { setCell(r, 4, 9, 'T'); setCell(r, 4, 10, '#'); })), 'ทดสอบ', o);
+  assert.ok(o.fails[0].indexOf('โหม่งหรือยิง') >= 0, o.fails.join('\n'));
   o = collector(); CL.fixedLayout(parseFixed(rooms2(null, r => { setCell(r, 0, 13, '.'); setCell(r, 0, 12, 'C'); setCell(r, 0, 13, 'O'); })), 'ทดสอบ', o);
   assert.ok(o.fails.length === 1 && o.fails[0].indexOf('เช็กพอยต์') >= 0 && o.fails[0].indexOf('(8, 12)') >= 0, o.fails.join('\n'));
   o = collector(); CL.fixedLayout(parseFixed(rooms2(r => { setCell(r, 1, 13, '.'); setCell(r, 1, 12, 'P'); setCell(r, 1, 13, 'M'); })), 'ทดสอบ', o);
@@ -436,9 +452,39 @@ t('fixedCoins กฎ 5 + checkFixed: เตือนทางลัด Mew (ไ�
   assert.ok(o.fails.some(m => m.indexOf('มีเหรียญ 1 เหรียญ') >= 0), o.fails.join('\n'));
   assert.ok(o.fails.some(m => m.indexOf('ไอเทม') >= 0 && m.indexOf('(8, 8)') < 0), o.fails.join('\n'));
   assert.ok(o.fails.some(m => m.indexOf('(8, 8)') >= 0), o.fails.join('\n')); // กฎ 1: Bobo เก็บไม่ได้
-  same(o.warns, ['  ⚠ ทางลัด Mew: เหรียญ (8, 8)']);
+  same(o.warns, ['  ⚠ ทางลัด Mew: เหรียญ (8, 8) ห้อง 0 (ม่วง, ส้ม)']);
   const o2 = collector(); CL.mewShortcuts(parseFixed([grid(6, [[1, 13, 'P'], [4, 13, 'o']])]), o2);
   same(o2.fails, []); same(o2.warns, []); // Bobo ก็เก็บได้ = ไม่เตือน
+});
+// LEDGE_FLOAT: ห้อง 0 (กว้าง 3) มีแค่จุดเริ่มและกำแพงขวา (คอลัมน์ 2) ไม่มีเหรียญ
+// ห้อง 1 (เริ่มคอลัมน์ 3): เช็กพอยต์บนหิ้ง (3-4, แถว 9-13); คอลัมน์ 5 โล่งถึงฟ้า แล้วคอลัมน์ 6-11 มีเพดานทึบแถว 0-7
+// เหลืออุโมงค์สูง 1 ช่องที่แถว 8 พอดีระดับหิ้ง; พื้นใต้ช่องว่างเป็นหนามทั้งแถว; เหรียญ (13, 8) อยู่ปลายอุโมงค์
+// กระโดดทุกแบบจะลอยสูงกว่าอุโมงค์แล้วชนผนังเพดาน (หรือปล่อยปุ่มแล้วตกหนาม) — Mew ต้อง "เดินตกขอบพร้อมกดกระโดดค้าง"
+// ลอยตรงเข้าอุโมงค์; Bobo เดินตกขอบ = ตกหนาม; BFS เดิมไม่เคยลองท่านี้ จึงไม่เห็นทางลัด (และเดิมตรวจจากจุดเริ่มเท่านั้น)
+// block = บล็อกที่วางขวางอุโมงค์ที่ (8, 8) ของห้อง 1 (= คอลัมน์ 11) เช่น 'M' = ปิดเฉพาะสถานะม่วง
+function ledgeFloat(block) {
+  const r0 = grid(3, [[1, 13, 'P']]);
+  for (let y = 0; y <= 13; y++) setCell(r0, 2, y, '#');
+  const r1 = grid(12, [[0, 8, 'C'], [2, 13, '^'.repeat(10)], [10, 8, 'o']]);
+  for (let y = 9; y <= 13; y++) put(r1, 0, y, '##');
+  for (let y = 0; y <= 7; y++) put(r1, 3, y, '######');
+  if (block) setCell(r1, 8, 8, block);
+  return parseFixed([r0, r1]);
+}
+t('fixedCoins กฎ 5: ตรวจทีละห้องจากเช็กพอยต์ ทั้งสองสี และลองเดินตกขอบพร้อมลอย', function () {
+  const lv = ledgeFloat(); const tg = [{ tx: 13, ty: 8 }];
+  const cp = { tx: 3, ty: 8 }, room = lv.rooms[1];
+  // ท่าเดิม (กระโดด/กระโดดกลางอากาศ) ไปไม่ถึง ต้องใช้ท่าเดินตกขอบพร้อมลอย
+  assert.strictEqual(reach(CQ, lv, mew, tg, { start: cp, toggles: false, airJumps: true, bounds: room }).got.size, 0);
+  assert.strictEqual(reach(CQ, lv, mew, tg, { start: cp, toggles: false, airJumps: true, ledgeFloat: true, bounds: room }).got.size, 1);
+  assert.strictEqual(reach(CQ, lv, bobo, tg, { start: cp, toggles: false, ledgeFloat: true, bounds: room }).got.size, 0);
+  const o = collector(); CL.mewShortcuts(lv, o);
+  same(o.fails, []);
+  same(o.warns, ['  ⚠ ทางลัด Mew: เหรียญ (13, 8) ห้อง 1 (ม่วง, ส้ม)']);
+  // บล็อกม่วงขวางอุโมงค์: สถานะม่วงลอยผ่านไม่ได้ สถานะส้มบล็อกโปร่ง = เตือนเฉพาะสีส้ม (ต้องตรวจทั้งสองสีจริง)
+  const o2 = collector(); CL.mewShortcuts(ledgeFloat('M'), o2);
+  same(o2.fails, []);
+  same(o2.warns, ['  ⚠ ทางลัด Mew: เหรียญ (13, 8) ห้อง 1 (ส้ม)']);
 });
 
 console.log('\nผ่านทั้งหมด ' + n + ' ข้อ');

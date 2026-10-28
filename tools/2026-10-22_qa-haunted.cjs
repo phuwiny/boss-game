@@ -3,7 +3,7 @@
  *   dark: วงแสง/หนาม/ขอบบล็อกสวิตช์/ฟักทองยิงไฟใต้ความมืด (QA_OUT เหมือน visual)
  *   perf: RAF p95 สเตจ 4 ≤ 1.2 × Castle ที่ 1366×768 และ 390×844 (CPU ช้า 4×) RAF ไม่ล็อก vsync
  *         QA_ROUNDS รอบ (ค่าเริ่มต้น 6) / QA_BUSY=<ms> ถ่วง render สเตจ 4 เพื่อตรวจว่า gate FAIL ได้จริง
- *   visual: QA_OUT=<โฟลเดอร์ screenshot> QA_BASE=<commit เทียบสเตจ 1–3, ค่าเริ่มต้น bceb32d>
+ *   visual: QA_OUT=<โฟลเดอร์ screenshot> QA_BASE=<commit เทียบสเตจ 1–3, ค่าเริ่มต้น 3a7c233 = commit ก่อนเริ่มงานสเตจ 4 ทั้ง branch>
  *   motion: motion v2 สเตจ 4 (ยืด/หด เอน ฝุ่น hit-stop วิญญาณ ฉากไหว) + สเตจ 1 ต้องตรงกับ QA_BASE ทุกพิกเซล (QA_OUT เหมือน visual)
  * เปิด static server ของตัวเองที่ 127.0.0.1:8001 ตรวจผ่าน CQ.debug.game + กดคีย์บอร์ด/คลิกจริง
  * มี assertion ไหน FAIL จะจบด้วย exit code 1
@@ -22,8 +22,10 @@ const root = path.resolve(__dirname, '..');
 const phase = process.argv[2] || 'logic';
 const PHASES = ['logic', 'visual', 'dark', 'perf', 'motion'];
 const URL_BASE = 'http://127.0.0.1:8001/?seed=qa-haunted';
-// visual: สเตจ 1–3 ต้องตรงกับ commit ก่อนเพิ่มภาพสเตจ 4 ทุกพิกเซล (เสิร์ฟต้นไม้เก่าที่ /__baseline__/ ด้วย git show)
-const BASE = process.env.QA_BASE || 'bceb32d';
+// visual/motion: สเตจ 1–3 ต้องตรงกับ commit ก่อนเริ่มงานสเตจ 4 ทุกพิกเซล (เสิร์ฟต้นไม้เก่าที่ /__baseline__/ ด้วย git show)
+// 3a7c233 = แผนงานสเตจ 4 (ก่อนแก้ main.js/world.js/render.js ใด ๆ ของ branch) — อย่าใช้ commit กลาง branch
+// เพราะจะซ่อนการเปลี่ยนแปลงของงานช่วงต้น (T1–T7) ที่อาจกระทบภาพสเตจ 1–3
+const BASE = process.env.QA_BASE || '3a7c233';
 const SHOTS = process.env.QA_OUT || path.join(require('node:os').tmpdir(), 'cq-haunted-visual');
 
 let failed = 0;
@@ -209,13 +211,26 @@ async function logic(browser) {
   const now = await page.evaluate(() => CQ.debug.game.lv.sw);
   // ── Review Focus 5: ลูกไฟค้างจอแล้วกลับเช็กพอยต์ ──
   await page.evaluate(() => { const g = CQ.debug.game; g.fires.push({ x: g.player.x + 300, y: g.player.y - 40, vx: 0, vy: 0, r: 8, kind: 'ghost', t: 0, life: 30 }); });
+  // จดชุดตัวที่ส่งให้ Switches.setState (กลับเช็กพอยต์/เกิดใหม่ต้องใช้ผู้เล่น + ศัตรูที่ยังไม่ตาย เหมือนตอนสลับสวิตช์)
+  await page.evaluate(() => {
+    const S = CQ.Switches;
+    if (!S.__qaOrig) S.__qaOrig = S.setState;
+    S.setState = function (lv, sw, bodies) {
+      const g = CQ.debug.game;
+      window.__qaSetState = { n: bodies ? bodies.length : 0, live: 1 + g.enemies.filter(e => !e.dead).length, hasPlayer: !!bodies && bodies.indexOf(g.player) >= 0 };
+      return S.__qaOrig.apply(this, arguments);
+    };
+  });
   const r2 = await pauseAndReturn(page);
+  const bodiesReturn = await page.evaluate(() => window.__qaSetState);
   const post2 = await page.evaluate(() => {
     const g = CQ.debug.game, p = g.player, T = CQ.PHYS.T, r = g.respawn;
     return { sw: g.lv.sw, fires: g.fires.length, shots: g.shots.length, atCp: Math.abs(p.x - (r.tx * T + (T - p.w) / 2)) < 0.01 };
   });
   check('return to room-2 checkpoint restores orange (was purple)', now === 'purple' && post2.sw === 'orange' && post2.atCp, { now, post2 });
   check('Focus 5: fires cleared on checkpoint return', r2.before.fires > 0 && post2.fires === 0, { before: r2.before, after: post2.fires });
+  check('return: Switches.setState gets player + live enemies', !!bodiesReturn && bodiesReturn.hasPlayer && bodiesReturn.live > 1 && bodiesReturn.n === bodiesReturn.live, bodiesReturn);
+  await page.evaluate(() => { window.__qaSetState = null; });
 
   // ── ตายเพราะฟักทอง → เกิดใหม่ hp เต็ม + สวิตช์ตามเช็กพอยต์ ──
   const death = await page.evaluate(() => {
@@ -232,6 +247,8 @@ async function logic(browser) {
   const back = died && await page.waitForFunction(() => !CQ.debug.game.deathAnim, null, { timeout: 3000 }).then(() => true, () => false);
   const post3 = await page.evaluate(() => { const g = CQ.debug.game; return { hp: g.player.hp, sw: g.lv.sw, deaths: g.deaths, fires: g.fires.length }; });
   check('respawn: hp 5 and switch state from checkpoint (orange)', !!back && post3.hp === 5 && post3.sw === 'orange', post3);
+  const bodiesRespawn = await page.evaluate(() => { const r = window.__qaSetState; CQ.Switches.setState = CQ.Switches.__qaOrig; return r; });
+  check('respawn: Switches.setState gets player + live enemies', !!bodiesRespawn && bodiesRespawn.hasPlayer && bodiesRespawn.live > 1 && bodiesRespawn.n === bodiesRespawn.live, bodiesRespawn);
   check('respawn: deaths +1', death && post3.deaths === death.deaths + 1, post3);
 
   // ── สเตจ 1–3: ไม่มีปุ่มกลับเช็กพอยต์ ──

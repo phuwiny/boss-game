@@ -179,18 +179,27 @@ function fixedCounts(lv, label, out) {
   }
 }
 
-/** กฎ 4: ใต้สวิตช์ต้องว่าง, เหนือหัวรางแนวตั้งต้องว่าง, เช็กพอยต์/จุดเริ่มไม่ทับ/ไม่ยืนบนบล็อกสี */
+/** กฎ 4: ใต้สวิตช์ต้องว่าง, แนวรางแนวตั้งต้องว่าง, เช็กพอยต์/จุดเริ่มไม่ทับ/ไม่ยืนบนบล็อกสี */
 function fixedLayout(lv, label, out) {
   const TILE = CQ.TILE;
   const isColor = function (t) { return t === TILE.PURPLE || t === TILE.ORANGE; };
+  // สวิตช์ "โหม่งหรือยิงได้": ตรวจแค่ว่าใต้สวิตช์เป็นช่องว่าง (ไม่บังคับว่าต้องโหม่งถึง —
+  // สวิตช์บางตัว เช่น ห้อง 4 ตั้งใจให้ยิงอย่างเดียว; การเข้าถึงจริงตรวจด้วย BFS ในกฎ 1/3)
   lv.switches.forEach(function (s) {
-    if (W.tileAt(lv, s.tx, s.ty + 1) !== TILE.EMPTY) out.fail(label + ': ใต้สวิตช์ที่ (' + s.tx + ', ' + s.ty + ') ต้องเป็นช่องว่าง');
+    if (W.tileAt(lv, s.tx, s.ty + 1) !== TILE.EMPTY) {
+      out.fail(label + ': ใต้สวิตช์ที่ (' + s.tx + ', ' + s.ty + ') ต้องเป็นช่องว่าง (สวิตช์ต้องโหม่งหรือยิงได้)');
+    }
   });
+  // รางแนวตั้ง (spec 6.3): แพลตฟอร์มกว้าง 3 ช่องวิ่งตั้งแต่แถวบนสุดถึงแถวล่างสุดของราง
+  // ทุกแถวตลอดแนว (คอลัมน์ tx-1..tx+1, แถว ty0-1 ถึง ty1) ห้ามมีของทึบ บล็อกม่วง/ส้ม หรือหนาม
+  // แถว ty0-1 = ช่องที่ผู้เล่นยืนอยู่ตอนแพลตฟอร์มขึ้นถึงปลายบน — กันหนาม/เพดานบีบผู้เล่น
   lv.vtracks.forEach(function (vt) {
-    for (let tx = vt.tx - 1; tx <= vt.tx + 1; tx++) {
-      const ty = vt.ty0 - 1, t = W.tileAt(lv, tx, ty);
-      if (W.isSolid(lv, tx, ty) || t === TILE.SPIKE || isColor(t)) {
-        out.fail(label + ': เหนือหัวรางแนวตั้ง ช่อง (' + tx + ', ' + ty + ') ต้องว่าง (แพลตฟอร์มขึ้นไปถึง)');
+    for (let ty = vt.ty0 - 1; ty <= vt.ty1; ty++) {
+      for (let tx = vt.tx - 1; tx <= vt.tx + 1; tx++) {
+        const t = W.tileAt(lv, tx, ty);
+        if (W.isSolid(lv, tx, ty) || t === TILE.SPIKE || isColor(t)) {
+          out.fail(label + ': แนวรางแนวตั้ง (' + vt.tx + ', ' + vt.ty0 + '-' + vt.ty1 + ') ช่อง (' + tx + ', ' + ty + ') ต้องว่าง (แพลตฟอร์มวิ่งผ่าน/ผู้เล่นยืนบนแพลตฟอร์ม)');
+        }
       }
     }
   });
@@ -236,15 +245,36 @@ function fixedReach(lv, label, chars, out) {
   });
 }
 
-/** กฎ 5 (เตือน): เหรียญที่ Mew ใช้กระโดดกลางอากาศเก็บได้ แต่ Bobo เก็บไม่ได้ (ไม่สลับสวิตช์ทั้งคู่) */
+/**
+ * กฎ 5 (เตือน ไม่ fail): เหรียญที่ Mew เก็บได้โดยไม่สลับสวิตช์ แต่ Bobo (ไม่สลับเหมือนกัน) เก็บไม่ได้
+ *   ตรวจทีละห้อง เริ่มจากเช็กพอยต์ของห้อง (ห้อง 0 = จุดเริ่ม) ทั้งสถานะม่วงและส้ม ไม่ออกนอกห้อง
+ *   Mew ลองกระโดดกลางอากาศ และเดินตกขอบพร้อมกดกระโดดค้าง (ลอย) เพิ่มจากท่าปกติ
+ *   ห้องที่ไม่มีเช็กพอยต์ข้ามไป (กฎ 3 fail ให้แล้ว); เหรียญเดียวกันเตือนครั้งเดียวพร้อมบอกสถานะที่เจอ
+ */
 function mewShortcuts(lv, out) {
   const bobo = CQ.CHARACTERS.find(function (c) { return c.id === 'bobo'; });
   const mew = CQ.CHARACTERS.find(function (c) { return c.id === 'mew'; });
-  const coins = lv.coins.map(function (c) { return { tx: c.tx, ty: c.ty }; });
-  const gotMew = reach(CQ, lv, mew, coins, { toggles: false, airJumps: true }).got;
-  const gotBobo = reach(CQ, lv, bobo, coins, { toggles: false }).got;
-  coins.forEach(function (c, i) {
-    if (gotMew.has(i) && !gotBobo.has(i)) out.warn('  ⚠ ทางลัด Mew: เหรียญ (' + c.tx + ', ' + c.ty + ')');
+  // ด่านที่ไม่มีบล็อกสี/สวิตช์เลย สถานะม่วงกับส้มให้ผลเหมือนกัน จำลองครั้งเดียวแล้วนับเป็นทั้งสองสี (เทสต์เร็วขึ้น)
+  const colorless = !lv.switches.length && !lv.tiles.some(function (t) { return t === CQ.TILE.PURPLE || t === CQ.TILE.ORANGE; });
+  const SW_STATES = colorless ? ['purple'] : ['purple', 'orange'];
+  lv.rooms.forEach(function (room, k) {
+    const from = k === 0 ? lv.start : lv.checkpoints.filter(inRoom(room))[0];
+    if (!from) return;
+    const coins = lv.coins.filter(inRoom(room)).map(function (c) { return { tx: c.tx, ty: c.ty }; });
+    if (!coins.length) return;
+    const states = coins.map(function () { return []; });
+    SW_STATES.forEach(function (sw) {
+      const base = { start: from, sw: sw, toggles: false, bounds: room };
+      const gotMew = reach(CQ, lv, mew, coins, Object.assign({ airJumps: true, ledgeFloat: true }, base)).got;
+      if (!gotMew.size) return; // Mew ไม่ได้เหรียญไหนเลย = ไม่มีทางลัด ไม่ต้องจำลอง Bobo
+      const gotBobo = reach(CQ, lv, bobo, coins, base).got;
+      coins.forEach(function (c, i) {
+        if (gotMew.has(i) && !gotBobo.has(i)) states[i].push.apply(states[i], colorless ? [SW_NAME.purple, SW_NAME.orange] : [SW_NAME[sw]]);
+      });
+    });
+    coins.forEach(function (c, i) {
+      if (states[i].length) out.warn('  ⚠ ทางลัด Mew: เหรียญ (' + c.tx + ', ' + c.ty + ') ห้อง ' + k + ' (' + states[i].join(', ') + ')');
+    });
   });
 }
 

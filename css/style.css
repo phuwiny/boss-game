@@ -1451,7 +1451,11 @@ body.touch .icon-btn { --p: 3px; min-width: 44px; min-height: 44px; }
 .title-art[data-stage="castle"] { background: radial-gradient(ellipse at 60% 25%, #d06a46, transparent 45%), linear-gradient(145deg, #40344e, #181528 70%); }
 .title-art[data-stage="haunted"] { background: radial-gradient(circle at 70% 22%, #ffeec2 0 6%, rgba(255,238,194,0.25) 7%, transparent 16%), radial-gradient(ellipse at 30% 80%, rgba(240,138,36,0.55), transparent 40%), linear-gradient(150deg, #3a2550, #120d24 70%); }
 #screen-title .stage-castle::before { background-image: url('../assets/2026-10-14_castle-menu.webp'); }
-#screen-title .stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* 4 สเตจ: แถวเดียว 4 คอลัมน์เมื่อมีที่ (จอกว้าง/มือถือแนวนอน) และ 2×2 บนจอแคบ (มือถือแนวตั้ง, 640×360) */
+#screen-title .stages { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 700px) {
+  #screen-title .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 #screen-title .stage-name { overflow-wrap: anywhere; }
 @media (max-width: 480px) {
   body.boss-stage .pad-right { flex-direction: column; align-items: flex-end; }

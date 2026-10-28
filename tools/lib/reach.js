@@ -7,6 +7,8 @@
  * opts.sw       'purple' | 'orange' สถานะบล็อกสวิตช์ตอนเริ่ม (ค่าเริ่ม 'purple')
  * opts.toggles  สลับสวิตช์ได้ (โหม่ง/ยิง) (ค่าเริ่ม true)
  * opts.airJumps ลองกดกระโดดกลางอากาศด้วย (ค่าเริ่ม false — ใช้ตรวจทางลัดของ Mew เท่านั้น)
+ * opts.ledgeFloat ลองเดินตกขอบพร้อมกดกระโดดค้าง (ลอยตัวทันทีที่ระดับขอบ) และกดกระโดดกลางอากาศหลังตกขอบ
+ *                (ค่าเริ่ม false — ใช้ตรวจทางลัดของ Mew เท่านั้น ไม่ใช้กับกฎ 1/3 จึงไม่ทำให้การตรวจหลักช้าลง)
  * opts.bounds   {tx0, tx1} ไม่ไปยืนนอกช่วงคอลัมน์นี้ (±1 ช่อง) หรือ null
  *
  * node ใน BFS = ตำแหน่งยืน + สถานะสวิตช์ (sw) + บล็อกที่ค้าง pending
@@ -120,6 +122,17 @@ function reach(CQ, lv, ch, targets, opts) {
         [dir, 0, -dir].forEach(function (d2) {
           if (st) restore(st);
           simAir(clone(p), dir, 0, d2, 0, false, -1);
+          if (opts.ledgeFloat) {
+            // ตกขอบโดยกดกระโดดค้าง (ไม่ได้กดใหม่ จึงไม่กระโดดจากพื้น) = ลอยตัวที่ระดับขอบทันที
+            if (st) restore(st);
+            simAir(clone(p), dir, 0, d2, 999, false, -1);
+            if (opts.airJumps) {
+              for (const at of AIR_AT) { // ตกขอบแล้วกดกระโดดกลางอากาศ (ค้างไว้ต่อ = ลอยต่อหลังจุดสูงสุด)
+                if (st) restore(st);
+                simAir(clone(p), dir, 0, d2, 999, false, at);
+              }
+            }
+          }
         });
         return;
       }
