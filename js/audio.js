@@ -178,6 +178,20 @@
       [0, 0.18, 0.36, 0.6].forEach(function (d) { tone(90, 0.4, { type: 'sawtooth', vol: 0.12, slide: 40, delay: d }); });
       noise(0.5, 0.3, 800);
     },
+    // ── สเตจ 4 Haunted House ──
+    // สลับบล็อกม่วง/ส้ม: เสียงกลไก "แกร๊ก" + โน้ตขึ้น
+    switchFlip: function () {
+      noise(0.05, 0.16, 3200);
+      tone(392, 0.09, { type: 'square', vol: 0.08 });
+      tone(784, 0.14, { type: 'triangle', vol: 0.2, delay: 0.06 });
+    },
+    // ฟักทองยิงไฟอ้าปากเตือน
+    pumpkinWind: function () { tone(220, 0.45, { type: 'triangle', vol: 0.1, slide: 440 }); },
+    // ฟักทองพ่นลูกไฟผี
+    pumpkinFire: function () {
+      noise(0.2, 0.14, 1600);
+      tone(330, 0.25, { type: 'sine', vol: 0.12, slide: 140 });
+    },
     timeup: function () {
       [784, 659, 523].forEach(function (f, i) { tone(f, 0.16, { type: 'triangle', vol: 0.28, delay: i * 0.13 }); });
       tone(392, 0.6, { vol: 0.12, delay: 0.39 });
