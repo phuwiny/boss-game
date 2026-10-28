@@ -681,6 +681,117 @@
     }
   }
 
+  // ── ความมืดสลัว (ข้อกำหนด §6.5) ───────────────────────────────
+  // offscreen canvas ขนาด view (หน่วยโลก 1:1 แสงนุ่มอยู่แล้วจึงไม่ต้องละเอียดเท่าจอ) สร้างใหม่เฉพาะตอนขนาดเปลี่ยน
+  // ทุกเฟรม: เติมสีม่วงเข้มโปร่ง แล้วเจาะแสงด้วย destination-out จากสไปรต์ gradient ที่แคชตามรัศมี
+  const DARK_RGB = '20,8,36';
+  const DARK_LIGHT = { fire: 2.5 * T, ball: 1.5 * T, sw: 1.5 * T, coin: 0.8 * T, decor: 2 * T };
+  // บล็อกสวิตช์ (ทึบ + โปร่ง) เจาะความมืดเป็นสี่เหลี่ยมพอดีช่อง ขอบ/เส้นประจึงยังคมแม้อยู่นอกวงแสง
+  const DARK_BLOCK_CUT = 0.45;
+
+  /** สไปรต์แสงวงกลมรัศมี r (หน่วยโลก): กลางทึบ ค่อย ๆ จางถึงขอบ — สร้างครั้งเดียวต่อรัศมี */
+  Renderer.prototype.lightSprite = function (r) {
+    const cache = this.lightCache || (this.lightCache = {});
+    const key = Math.round(r);
+    let s = cache[key];
+    if (!s) {
+      s = document.createElement('canvas');
+      s.width = s.height = key * 2;
+      const c = s.getContext('2d');
+      const gr = c.createRadialGradient(key, key, 0, key, key, key);
+      gr.addColorStop(0, 'rgba(0,0,0,1)');
+      gr.addColorStop(0.45, 'rgba(0,0,0,0.85)');
+      gr.addColorStop(0.75, 'rgba(0,0,0,0.4)');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = gr;
+      c.fillRect(0, 0, key * 2, key * 2);
+      cache[key] = s;
+    }
+    return s;
+  };
+
+  /** วาดความมืดทับฉาก เรียกจาก render() หลังอนุภาค ก่อน flash/minimap/HUD เมื่อ g.stage.dark */
+  Renderer.prototype.drawDarkness = function (g, time) {
+    const dk = g.stage.dark;
+    const vw = Math.ceil(this.viewW), vh = Math.ceil(this.viewH);
+    let cv = this.darkCv;
+    if (!cv || cv.width !== vw || cv.height !== vh) {
+      cv = this.darkCv = document.createElement('canvas');
+      cv.width = vw; cv.height = vh;
+      this.darkCtx = cv.getContext('2d');
+    }
+    const c = this.darkCtx, ox = this.cx, oy = this.cy;
+    const self = this;
+    c.globalCompositeOperation = 'source-over';
+    c.globalAlpha = 1;
+    c.clearRect(0, 0, vw, vh);
+    c.fillStyle = 'rgba(' + DARK_RGB + ',' + dk.alpha + ')';
+    c.fillRect(0, 0, vw, vh);
+    c.globalCompositeOperation = 'destination-out';
+
+    // เจาะแสงหนึ่งดวงที่ (wx, wy) โลก รัศมี r ความแรง a (0..1) ข้ามดวงที่อยู่นอกจอ
+    function light(wx, wy, r, a) {
+      const x = wx - ox, y = wy - oy;
+      if (x + r < 0 || y + r < 0 || x - r > vw || y - r > vh) return;
+      c.globalAlpha = a;
+      c.drawImage(self.lightSprite(r), x - r, y - r, r * 2, r * 2);
+    }
+
+    // บล็อกสวิตช์ในจอ: สี่เหลี่ยมพอดีช่อง (path เดียว fill ครั้งเดียว)
+    const lv = g.lv;
+    const tx0 = Math.max(0, Math.floor(ox / T)), tx1 = Math.min(lv.w - 1, Math.floor((ox + vw) / T));
+    const ty0 = Math.max(0, Math.floor(oy / T)), ty1 = Math.min(lv.h - 1, Math.floor((oy + vh) / T));
+    c.globalAlpha = 1;
+    c.fillStyle = 'rgba(0,0,0,' + DARK_BLOCK_CUT + ')';
+    c.beginPath();
+    let any = false;
+    for (let ty = ty0; ty <= ty1; ty++) {
+      for (let tx = tx0; tx <= tx1; tx++) {
+        const t = lv.tiles[ty * lv.w + tx];
+        if (t === TILE.PURPLE || t === TILE.ORANGE) { c.rect(tx * T - ox, ty * T - oy, T, T); any = true; }
+      }
+    }
+    if (any) c.fill();
+
+    // ของตกแต่งที่มีเปลวไฟ (เทียน เชิงเทียน โคมฟักทอง)
+    for (let i = 0; i < this.decor.length; i++) {
+      const d = this.decor[i];
+      if (d.k === 'candle') light(d.x, d.y - 9 * d.s, DARK_LIGHT.decor, 0.75);
+      else if (d.k === 'candelabra') light(d.x, d.y - 56, DARK_LIGHT.decor, 0.85);
+      else if (d.k === 'jacklamp') light(d.x, d.y - 5, DARK_LIGHT.decor, 0.7);
+    }
+    // สวิตช์
+    for (let i = 0; i < lv.switches.length; i++) {
+      const s = lv.switches[i];
+      light((s.tx + 0.5) * T, (s.ty + 0.5) * T, DARK_LIGHT.sw, 0.8);
+    }
+    // เหรียญที่ยังไม่เก็บ (เรืองจาง ๆ)
+    for (let i = 0; i < g.coins.length; i++) {
+      const co = g.coins[i];
+      if (!co.taken && !co.hidden) light(co.x, co.y, DARK_LIGHT.coin, 0.5);
+    }
+    // ฟักทองยิงไฟ: สว่างขึ้นตอนเตือนก่อนยิง (windT > 0)
+    for (let i = 0; i < g.enemies.length; i++) {
+      const e = g.enemies[i];
+      if (e.kind !== 'pfire' || (e.dead && e.deadT > 0.6)) continue;
+      const wind = e.windT > 0 && !e.dead;
+      light(e.x + e.w / 2, e.y + e.h / 2, DARK_LIGHT.fire * (wind ? 1.2 : 1), wind ? 1 : 0.85);
+    }
+    // ลูกไฟ
+    if (g.fires) {
+      for (let i = 0; i < g.fires.length; i++) light(g.fires[i].x, g.fires[i].y, DARK_LIGHT.ball, 0.9);
+    }
+    // ผู้เล่น (หรือร่างตอนตาย)
+    const p = g.deathAnim || g.player;
+    light(p.x + p.w / 2, p.y + p.h / 2, dk.radius, 1);
+
+    c.globalCompositeOperation = 'source-over';
+    c.globalAlpha = 1;
+    const ctx = this.ctx;
+    ctx.setTransform(this.S, 0, 0, this.S, 0, 0);
+    ctx.drawImage(cv, 0, 0, vw, vh);
+  };
+
   // ── ลูกไฟผี (เขียวผี ต่างจากลูกไฟบอส) — ctx ถูก translate ไปที่ลูกไฟแล้ว ──
   Renderer.prototype.drawGhostFire = function (s, time) {
     const ctx = this.ctx, r = s.r;

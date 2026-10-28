@@ -1221,6 +1221,7 @@
       for (let i = 0; i < g.fires.length; i++) this.drawShot(g.fires[i], time);
     }
     this.drawParticles(g.particles);
+    if (g.stage && g.stage.dark) this.drawDarkness(g, time); // ความมืดสลัวสเตจ 4 (render-haunted.js)
 
     ctx.setTransform(S, 0, 0, S, 0, 0);
     if (g.flash > 0) {

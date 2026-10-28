@@ -1,5 +1,7 @@
 /* QA ของสเตจ 4 Haunted House ในเบราว์เซอร์จริง (Playwright Chromium)
- *   node tools/2026-10-22_qa-haunted.cjs [phase]      phase: logic (ค่าเริ่มต้น) | visual
+ *   node tools/2026-10-22_qa-haunted.cjs [phase]      phase: logic (ค่าเริ่มต้น) | visual | dark | perf
+ *   dark: วงแสง/หนาม/ขอบบล็อกสวิตช์/ฟักทองยิงไฟใต้ความมืด (QA_OUT เหมือน visual)
+ *   perf: RAF p95 สเตจ 4 ≤ 1.2 × Castle ที่ 1366×768 และ 390×844 (QA_ROUNDS รอบ ค่าเริ่มต้น 3)
  *   visual: QA_OUT=<โฟลเดอร์ screenshot> QA_BASE=<commit เทียบสเตจ 1–3, ค่าเริ่มต้น bceb32d>
  * เปิด static server ของตัวเองที่ 127.0.0.1:8001 ตรวจผ่าน CQ.debug.game + กดคีย์บอร์ด/คลิกจริง
  * มี assertion ไหน FAIL จะจบด้วย exit code 1
@@ -16,7 +18,7 @@ catch (e) {
 const { chromium } = playwright;
 const root = path.resolve(__dirname, '..');
 const phase = process.argv[2] || 'logic';
-const PHASES = ['logic', 'visual'];
+const PHASES = ['logic', 'visual', 'dark', 'perf'];
 const URL_BASE = 'http://127.0.0.1:8001/?seed=qa-haunted';
 // visual: สเตจ 1–3 ต้องตรงกับ commit ก่อนเพิ่มภาพสเตจ 4 ทุกพิกเซล (เสิร์ฟต้นไม้เก่าที่ /__baseline__/ ด้วย git show)
 const BASE = process.env.QA_BASE || 'bceb32d';
@@ -394,7 +396,10 @@ async function visual(browser) {
     let slime = 0;
     const orig = r.drawSlime;
     r.drawSlime = function () { slime++; return orig.apply(this, arguments); };
-    r.render(g, 5);
+    // ตรวจภาพตัวฟักทองเอง: ปิดความมืดชั่วคราว (ความมืดตรวจแยกใน phase dark)
+    const dk = g.stage.dark;
+    g.stage.dark = null;
+    try { r.render(g, 5); } finally { g.stage.dark = dk; }
     r.drawSlime = orig;
     Object.assign(e, saved);
     const c = document.getElementById('game').getContext('2d');
@@ -459,6 +464,227 @@ async function visual(browser) {
   await context.close();
 }
 
+// ── dark ────────────────────────────────────────────────────────
+// ความมืดสลัวของสเตจ 4: วาดเองด้วย render() ทั้งตอนเปิดความมืดและตอนปิด (g.stage.dark = null ชั่วคราว)
+// แล้วเทียบความสว่างพิกเซลในกรอบเดียวกัน ปิด minimap/HUD ระหว่างวัดเพื่อไม่ให้ปนมุมจอ
+async function dark(browser) {
+  fs.mkdirSync(SHOTS, { recursive: true });
+  const { context, page, errors } = await frozenPage(browser, '/');
+  await startFrozen(page, 'haunted');
+
+  // probe(spec): spec.player = [wx, wy] ศูนย์กลางผู้เล่น (โลก), spec.cam = [wx, wy] จุดกลางจอ, spec.patch = { enemyIdx: { ... } }
+  // spec.rects = [{ name, x, y, w, h }] (โลก), spec.circle = { name, x, y, r } (โลก)
+  // คืน { on: {name: {lum, sd}}, off: {...} } — sd = ส่วนเบี่ยงเบนความสว่างในกรอบ (ความชัดของลาย/ขอบ)
+  const probe = spec => page.evaluate(spec => {
+    const r = CQ.debug.renderer, g = CQ.debug.game, p = g.player;
+    const saved = { x: p.x, y: p.y, mm: g.showMinimap, dark: g.stage.dark, cam: { x: r.cam.x, y: r.cam.y } };
+    const savedE = {};
+    if (spec.player) { p.x = spec.player[0] - p.w / 2; p.y = spec.player[1] - p.h / 2; }
+    Object.keys(spec.patch || {}).forEach(i => { const e = g.enemies[i]; savedE[i] = {}; Object.keys(spec.patch[i]).forEach(k => { savedE[i][k] = e[k]; e[k] = spec.patch[i][k]; }); });
+    const c = r.clampCam(spec.cam[0] - r.viewW / 2, spec.cam[1] - r.viewH / 2);
+    r.cam.x = c.x; r.cam.y = c.y;
+    g.showMinimap = false;
+    const ctx = document.getElementById('game').getContext('2d');
+    const measure = () => {
+      const out = {};
+      (spec.rects || []).forEach(q => {
+        const x0 = Math.round((q.x - r.cx) * r.S), y0 = Math.round((q.y - r.cy) * r.S);
+        const w = Math.max(1, Math.round(q.w * r.S)), h = Math.max(1, Math.round(q.h * r.S));
+        const d = ctx.getImageData(x0, y0, w, h).data;
+        let s = 0, s2 = 0; const n = d.length / 4;
+        for (let i = 0; i < d.length; i += 4) { const l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; s += l; s2 += l * l; }
+        out[q.name] = { lum: s / n, sd: Math.sqrt(Math.max(0, s2 / n - (s / n) * (s / n))) };
+      });
+      if (spec.circle) {
+        const q = spec.circle, R = q.r * r.S, cxs = (q.x - r.cx) * r.S, cys = (q.y - r.cy) * r.S;
+        const x0 = Math.max(0, Math.floor(cxs - R)), y0 = Math.max(0, Math.floor(cys - R));
+        const w = Math.min(ctx.canvas.width - x0, Math.ceil(2 * R)), h = Math.min(ctx.canvas.height - y0, Math.ceil(2 * R));
+        const d = ctx.getImageData(x0, y0, w, h).data;
+        let s = 0, n = 0;
+        for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
+          const dx = x0 + xx + 0.5 - cxs, dy = y0 + yy + 0.5 - cys;
+          if (dx * dx + dy * dy > R * R) continue;
+          const i = (yy * w + xx) * 4;
+          s += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; n++;
+        }
+        out[q.name] = { lum: n ? s / n : 0, sd: 0 };
+      }
+      return out;
+    };
+    let res;
+    try {
+      g.stage.dark = null;
+      r.render(g, 5);
+      const off = measure();
+      g.stage.dark = saved.dark;
+      r.render(g, 5);
+      res = { on: measure(), off: off, S: r.S, cx: r.cx, cy: r.cy };
+    } finally {
+      g.stage.dark = saved.dark;
+      p.x = saved.x; p.y = saved.y; g.showMinimap = saved.mm;
+      Object.keys(savedE).forEach(i => Object.assign(g.enemies[i], savedE[i]));
+    }
+    if (!spec.keepCam) { r.cam.x = saved.cam.x; r.cam.y = saved.cam.y; }
+    return res;
+  }, spec);
+  const ratio = (a, b) => b > 0 ? +(a / b).toFixed(3) : 0;
+
+  const info = await page.evaluate(() => {
+    const r = CQ.debug.renderer, g = CQ.debug.game, lv = g.lv, T = CQ.PHYS.T, TILE = CQ.TILE;
+    const lights = [];
+    lv.switches.forEach(s => lights.push([(s.tx + 0.5) * T, (s.ty + 0.5) * T]));
+    g.coins.forEach(c => { if (!c.taken) lights.push([c.x, c.y]); });
+    g.enemies.forEach(e => { if (e.kind === 'pfire') lights.push([e.x + e.w / 2, e.y + e.h / 2]); });
+    r.decor.forEach(d => { if (d.k === 'candle' || d.k === 'candelabra' || d.k === 'jacklamp') lights.push([d.x, d.y - 20]); });
+    const far = (x, y, k) => lights.every(l => Math.hypot(l[0] - x, l[1] - y) > k * T);
+    const cells = t => { const a = []; for (let i = 0; i < lv.tiles.length; i++) if (lv.tiles[i] === t) a.push({ tx: i % lv.w, ty: Math.floor(i / lv.w) }); return a; };
+    const spike = cells(TILE.SPIKE).find(c => far((c.tx + 0.5) * T, (c.ty + 0.5) * T, 3.5));
+    const ghost = cells(TILE.PURPLE).concat(cells(TILE.ORANGE)).find(c => CQ.Switches.isGhost(lv, c.tx, c.ty) && far((c.tx + 0.5) * T, (c.ty + 0.5) * T, 2.5));
+    const solid = cells(TILE.PURPLE).concat(cells(TILE.ORANGE)).find(c => !CQ.Switches.isGhost(lv, c.tx, c.ty) && far((c.tx + 0.5) * T, (c.ty + 0.5) * T, 2.5));
+    const pfIdx = g.enemies.findIndex(e => e.kind === 'pfire' && !e.dead);
+    const pf = g.enemies[pfIdx];
+    const p = g.player;
+    return { T, viewW: r.viewW, viewH: r.viewH, fn: typeof r.drawDarkness, spike, ghost, solid, pfIdx, pf: pf && { x: pf.x + pf.w / 2, y: pf.y + pf.h / 2 }, player: [p.x + p.w / 2, p.y + p.h / 2] };
+  });
+  const T = info.T;
+  check('drawDarkness is a Renderer method', info.fn === 'function', info.fn);
+
+  // ── 1) วงแสงรอบผู้เล่น: กลางจอสว่างกว่ามุมไกลอย่างน้อย 1.4 เท่า ──
+  {
+    const [px, py] = info.player;
+    // มุมจอที่ไกลจากผู้เล่นที่สุด: กรอบ 2×2 ช่อง ห่างขอบ 4 หน่วย
+    const camC = await page.evaluate(([px, py]) => { const r = CQ.debug.renderer; return r.clampCam(px - r.viewW / 2, py - r.viewH / 2); }, [px, py]);
+    const sx = px - camC.x, sy = py - camC.y;
+    const cxw = sx < info.viewW / 2 ? camC.x + info.viewW - 4 - 2 * T : camC.x + 4;
+    const cyw = sy < info.viewH / 2 ? camC.y + info.viewH - 4 - 2 * T : camC.y + 4;
+    const a = await probe({ player: [px, py], cam: [px, py], circle: { name: 'near', x: px, y: py, r: 2 * T }, rects: [{ name: 'corner', x: cxw, y: cyw, w: 2 * T, h: 2 * T }] });
+    const rr = ratio(a.on.near.lum, a.on.corner.lum);
+    check('dark: lum around player (2 tiles) >= 1.4 × far corner', rr >= 1.4, { ratio: rr, on: a.on, off: a.off });
+    check('dark: far corner is really dimmed (<= 0.8 × no-dark)', a.on.corner.lum <= 0.8 * a.off.corner.lum, { on: a.on.corner, off: a.off.corner });
+    check('dark: player circle stays bright (>= 0.85 × no-dark)', a.on.near.lum >= 0.85 * a.off.near.lum, { on: a.on.near, off: a.off.near });
+    await probe({ player: [px, py], cam: [px, py], keepCam: true });
+    await page.screenshot({ path: path.join(SHOTS, 'dark-normal.png') });
+  }
+
+  // ── 2) หนามนอกวงแสงยังอ่านออก (≥ 35% ของตอนไม่มืด) ──
+  if (!info.spike) check('fixture: a spike tile away from other lights', false);
+  else {
+    const s = info.spike, wx = (s.tx + 0.5) * T, wy = (s.ty + 0.5) * T;
+    // ผู้เล่นห่างหนาม 8 ช่องแนวนอน (นอกวงแสง 5.5 ช่อง) กล้องอยู่กลางระหว่างสองจุด
+    const pxw = wx + 8 * T, cam = [wx + 4 * T, wy - T];
+    const b = await probe({ player: [pxw, wy - 16], cam: cam, keepCam: true, rects: [{ name: 'spike', x: s.tx * T + 1, y: s.ty * T + 12, w: T - 2, h: T - 12 }] });
+    const rb = ratio(b.on.spike.lum, b.off.spike.lum);
+    check('dark: spike outside the light keeps >= 35% brightness', rb >= 0.35, { ratio: rb, on: b.on.spike, off: b.off.spike, tile: s });
+    check('dark: that spike is really outside the light (<= 0.9 × no-dark)', rb <= 0.9, rb);
+    check('dark: spike edges still contrast (sd >= 0.4 × no-dark)', b.on.spike.sd >= 0.4 * b.off.spike.sd, { on: b.on.spike.sd, off: b.off.spike.sd });
+    await page.screenshot({ path: path.join(SHOTS, 'dark-spikes.png') });
+  }
+
+  // ── 3) ขอบบล็อกสวิตช์ (ทั้งทึบและโปร่ง) นอกวงแสงยังชัด ──
+  for (const [tag, cell] of [['ghost', info.ghost], ['solid', info.solid]]) {
+    if (!cell) { check('fixture: ' + tag + ' switch block away from other lights', false); continue; }
+    const wx = (cell.tx + 0.5) * T, wy = (cell.ty + 0.5) * T;
+    const c = await probe({ player: [wx + 8 * T, wy], cam: [wx + 4 * T, wy], rects: [{ name: 'blk', x: cell.tx * T, y: cell.ty * T, w: T, h: T }] });
+    const rc = ratio(c.on.blk.sd, c.off.blk.sd);
+    check('dark: ' + tag + ' switch-block outline contrast outside the light >= 0.6 × no-dark', rc >= 0.6, { ratio: rc, on: c.on.blk, off: c.off.blk, cell });
+  }
+
+  // ── 4) ฟักทองยิงไฟ: มีแสงเอง และสว่างขึ้นตอนเตือน (windT) ──
+  if (!info.pf) check('fixture: a fire pumpkin', false);
+  else {
+    const { x, y } = info.pf;
+    // วงแหวนรอบตัว (ไม่รวมตัวฟักทองเองที่เปลี่ยนภาพตอนเตือน): กรอบเหนือหัว 1–2 ช่อง
+    const ring = [{ name: 'ring', x: x - T, y: y - 2.2 * T, w: 2 * T, h: T }];
+    const idle = await probe({ player: [x + 9 * T, y], cam: [x, y], patch: { [info.pfIdx]: { windT: 0 } }, rects: ring });
+    const wind = await probe({ player: [x + 9 * T, y], cam: [x, y], keepCam: true, patch: { [info.pfIdx]: { windT: 0.5 } }, rects: ring });
+    check('dark: fire pumpkin is a light source (ring >= 0.8 × no-dark)', idle.on.ring.lum >= 0.8 * idle.off.ring.lum, { on: idle.on.ring, off: idle.off.ring });
+    check('dark: fire pumpkin brightens while winding up', wind.on.ring.lum > idle.on.ring.lum * 1.03, { idle: idle.on.ring.lum, wind: wind.on.ring.lum });
+    await page.screenshot({ path: path.join(SHOTS, 'dark-pumpkin-windup.png') });
+  }
+
+  // ── 5) แคช: offscreen canvas ใช้ซ้ำ ไม่สร้าง gradient ใหม่ทุกเฟรม ──
+  const cache = await page.evaluate(() => {
+    const r = CQ.debug.renderer, g = CQ.debug.game, P = CanvasRenderingContext2D.prototype;
+    const origR = P.createRadialGradient, origL = P.createLinearGradient;
+    const run = () => { let n = 0; P.createRadialGradient = function () { n++; return origR.apply(this, arguments); }; P.createLinearGradient = function () { n++; return origL.apply(this, arguments); }; try { r.render(g, 6); } finally { P.createRadialGradient = origR; P.createLinearGradient = origL; } return n; };
+    r.render(g, 5);
+    const cv1 = r.darkCv;
+    const withDark = run();
+    const cv2 = r.darkCv;
+    const saved = g.stage.dark; g.stage.dark = null;
+    let withoutDark;
+    try { withoutDark = run(); } finally { g.stage.dark = saved; }
+    return { same: !!cv1 && cv1 === cv2, withDark, withoutDark };
+  });
+  check('dark: offscreen canvas reused between frames', cache.same, cache);
+  check('dark: no gradients created per frame by the darkness', cache.withDark === cache.withoutDark, cache);
+
+  check('dark: no console/page errors', errors.length === 0, errors);
+  await context.close();
+}
+
+// ── perf ────────────────────────────────────────────────────────
+// RAF p95 สเตจ 4 (มีความมืด) เทียบ Castle ใน browser เดียวกัน ที่ 1366×768 และ 390×844 (มือถือ)
+// วิธีเดียวกับ tools/2026-10-16_qa-resolution-performance.cjs: หยุดเกม แทน render ของ loop ด้วย noop
+// แล้วเรียก render เองทุก RAF (40 เฟรมอุ่นเครื่อง + 120 เฟรมวัด) สลับลำดับสเตจทุกรอบ เปิดหน้าใหม่ทุกครั้ง
+async function perf(browser) {
+  const ROUNDS = +(process.env.QA_ROUNDS || 3);
+  const sizes = [
+    ['1366x768', { viewport: { width: 1366, height: 768 } }],
+    ['390x844', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }]
+  ];
+  const errors = [];
+  for (const [label, opts] of sizes) {
+    const context = await browser.newContext(opts);
+    const page = await context.newPage();
+    page.on('pageerror', e => errors.push(label + ' pageerror: ' + e.message));
+    const pool = { haunted: { frame: [], sub: [] }, castle: { frame: [], sub: [] } };
+    const roundsP95 = [];
+    for (let round = 0; round < ROUNDS; round++) {
+      const row = {};
+      for (const st of round % 2 ? ['castle', 'haunted'] : ['haunted', 'castle']) {
+        await openStage(page, st);
+        await page.evaluate(() => { CQ.debug.game && document.getElementById('btn-pause') && document.getElementById('btn-pause').click(); });
+        await page.waitForFunction(() => CQ.debug.state === 'paused', null, { timeout: 2000 }).catch(() => {});
+        const m = await page.evaluate(async () => {
+          const g = CQ.debug.game, r = CQ.debug.renderer, render = r.render;
+          r.render = () => {};
+          const intervals = [], sub = [];
+          let prev;
+          try {
+            g.player.onGround = true; g.player.vx = 120;
+            for (let i = 0; i < 160; i++) {
+              const now = await new Promise(requestAnimationFrame);
+              if (i >= 40) intervals.push(now - prev);
+              prev = now;
+              const t = performance.now();
+              render.call(r, g, i / 60);
+              if (i >= 40) sub.push(performance.now() - t);
+            }
+          } finally { r.render = render; }
+          return { intervals, sub, dark: !!g.stage.dark, state: CQ.debug.state };
+        });
+        pool[st].frame.push(...m.intervals); pool[st].sub.push(...m.sub);
+        row[st] = { p95: p95(m.intervals), sub95: p95(m.sub), dark: m.dark, state: m.state };
+      }
+      roundsP95.push(row);
+    }
+    const h = p95(pool.haunted.frame), c = p95(pool.castle.frame);
+    const hs = p95(pool.haunted.sub), cs = p95(pool.castle.sub);
+    console.log('      ' + label + ' rounds: ' + JSON.stringify(roundsP95));
+    console.log('      ' + label + ' pooled RAF p95 haunted ' + h.toFixed(2) + ' ms / castle ' + c.toFixed(2) + ' ms (ratio ' + (h / c).toFixed(3) + '); render() p95 haunted ' + hs.toFixed(2) + ' ms / castle ' + cs.toFixed(2) + ' ms');
+    check(label + ': haunted measured with darkness on', roundsP95.every(r => r.haunted.dark && r.haunted.state === 'paused' && r.castle.state === 'paused'), roundsP95);
+    check(label + ': RAF p95 haunted <= 1.2 × castle', h <= 1.2 * c, { haunted: h, castle: c, ratio: +(h / c).toFixed(3) });
+    await context.close();
+  }
+  check('perf: no page errors', errors.length === 0, errors);
+}
+
+function p95(a) {
+  const s = a.slice().sort((x, y) => x - y);
+  return s[Math.floor(s.length * 0.95)];
+}
+
 (async () => {
   if (!PHASES.includes(phase)) { console.error('unknown phase: ' + phase + ' (use ' + PHASES.join('|') + ')'); process.exit(2); }
   const server = await startServer();
@@ -466,6 +692,8 @@ async function visual(browser) {
   try {
     if (phase === 'logic') await logic(browser);
     else if (phase === 'visual') await visual(browser);
+    else if (phase === 'dark') await dark(browser);
+    else if (phase === 'perf') await perf(browser);
   } catch (e) {
     failed++;
     console.log('FAIL  exception — ' + (e && e.stack || e));
