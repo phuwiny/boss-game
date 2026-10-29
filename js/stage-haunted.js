@@ -178,6 +178,6 @@
   CQ.STAGES.push({
     id: 'haunted', no: 4, name: 'Haunted House', th: 'บ้านผีสิง', theme: 'haunted', sections: SECTIONS,
     hp: 5, shoot: true, fixedCoins: true, checkpointReturn: true, motion: 'v2',
-    dark: { alpha: 0.5, radius: 5.5 * 32 }
+    dark: { alpha: 0.95, radius: 3.2 * 32 }
   });
 })(typeof window !== 'undefined' ? window : globalThis);

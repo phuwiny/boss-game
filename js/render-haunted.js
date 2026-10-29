@@ -768,9 +768,14 @@
   // ขอบเผื่อรอบแผนที่แสงคงที่: clampCam ให้กล้องขึ้นเหนือด่านได้ 3 ช่อง + จอสั่นได้ถึง ~10 หน่วย
   // (ส่วนที่ยังเลยขอบเผื่อไปอีก drawDarkness เติมสีมืดให้เอง)
   const DARK_PAD = 4 * T;
-  const DARK_LIGHT = { fire: 2.5 * T, ball: 1.5 * T, sw: 1.5 * T, coin: 1.1 * T, decor: 2 * T };
+  const DARK_LIGHT = { fire: 3.8 * T, ball: 1.5 * T, sw: 1.2 * T, coin: 1.1 * T, decor: 1.4 * T };
+  // ความแรงของแสงที่ขยับได้: เหรียญเรืองพอให้เห็นในความมืดจัด / ฟักทองยิงไฟเป็นแหล่งแสง (ตอนเตือนสว่างเต็ม)
+  const DARK_COIN_A = 0.7, DARK_FIRE_A = 0.9;
   // บล็อกสวิตช์เจาะความมืดเป็นสี่เหลี่ยมพอดีช่อง ขอบ/เส้นประจึงยังคมแม้อยู่นอกวงแสง (บล็อกโปร่งจางกว่าจึงเจาะมากกว่า)
-  const DARK_CUT_SOLID = 0.3, DARK_CUT_GHOST = 0.45;
+  // ความมืดจัด (alpha 0.95) ต้องเจาะเกินครึ่งให้ลายขอบเหลือ >= 0.6 เท่าของตอนไม่มืด
+  const DARK_CUT_SOLID = 0.62, DARK_CUT_GHOST = 0.68;
+  // หนามเจาะเป็นรูปซี่หนามจาง ๆ ในแผนที่คงที่ (หนามไม่ขยับ) อ่านออกนอกวงแสงแต่ช่องว่างระหว่างซี่ยังมืด
+  const DARK_CUT_SPIKE = 0.62;
   // รูปแบบความจางของแสง: soft = ค่อย ๆ จาง / pool = วงแสงผู้เล่น สว่างเต็มถึง ~0.55 ของรัศมีแล้วจางเร็ว
   const LIGHT_STOPS = {
     soft: [[0, 1], [0.45, 0.85], [0.75, 0.4], [1, 0]],
@@ -825,6 +830,21 @@
       const s = lv.switches[i];
       light((s.tx + 0.5) * T, (s.ty + 0.5) * T, DARK_LIGHT.sw, 0.8);
     }
+    // หนาม: เจาะเป็นซี่ ๆ ตามรูปสไปรต์ (drawHauntedSpikes: 3 ซี่ ฐาน 10 สูงจาก y 13 ถึง 30) path เดียว fill ครั้งเดียว
+    c.globalAlpha = DARK_CUT_SPIKE;
+    c.beginPath();
+    for (let i = 0; i < lv.tiles.length; i++) {
+      if (lv.tiles[i] !== TILE.SPIKE) continue;
+      const bx = ((i % lv.w) * T + DARK_PAD) * DARK_RES, by = (Math.floor(i / lv.w) * T + DARK_PAD) * DARK_RES;
+      for (let j = 0; j < 3; j++) {
+        const x0 = bx + (1 + j * 10) * DARK_RES;
+        c.moveTo(x0 - 0.5, by + 31 * DARK_RES);
+        c.lineTo(x0 + 5 * DARK_RES, by + 12 * DARK_RES);
+        c.lineTo(x0 + 10 * DARK_RES + 0.5, by + 31 * DARK_RES);
+        c.closePath();
+      }
+    }
+    c.fill();
     this.darkMap = { lv: lv, decor: this.decor, alpha: alpha, cv: cv };
     return cv;
   };
@@ -901,13 +921,13 @@
     // 3) แสงที่เปลี่ยนได้: เหรียญที่ยังไม่เก็บ (เรืองจาง ๆ) ฟักทองยิงไฟ (สว่างขึ้นตอน windT) ลูกไฟ ผู้เล่น
     for (let i = 0; i < g.coins.length; i++) {
       const co = g.coins[i];
-      if (!co.taken && !co.hidden) light(co.x, co.y, DARK_LIGHT.coin, 0.35);
+      if (!co.taken && !co.hidden) light(co.x, co.y, DARK_LIGHT.coin, DARK_COIN_A);
     }
     for (let i = 0; i < g.enemies.length; i++) {
       const e = g.enemies[i];
       if (e.kind !== 'pfire' || (e.dead && e.deadT > 0.6)) continue;
       const wind = e.windT > 0 && !e.dead;
-      light(e.x + e.w / 2, e.y + e.h / 2, DARK_LIGHT.fire * (wind ? 1.2 : 1), wind ? 1 : 0.85);
+      light(e.x + e.w / 2, e.y + e.h / 2, DARK_LIGHT.fire * (wind ? 1.2 : 1), wind ? 1 : DARK_FIRE_A, 'pool');
     }
     if (g.fires) {
       for (let i = 0; i < g.fires.length; i++) light(g.fires[i].x, g.fires[i].y, DARK_LIGHT.ball, 0.9);
