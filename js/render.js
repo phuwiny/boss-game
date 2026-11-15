@@ -78,6 +78,11 @@
       sky: ['#171526', '#262039', '#382b40'],
       plank: { edge: '#3b2616', mid: '#6a4529', light: '#86603c', grain: 'rgba(30,16,6,0.45)', knot: '#2e1c0e', leg: '#55565e' },
       tuft: '#5a5268'
+    },
+    // สเตจ 4: ช่อง ฉากหลัง ของตกแต่ง วาดใน js/render-haunted.js (hauntedTileSprite ฯลฯ)
+    haunted: {
+      id: 'haunted',
+      sky: ['#0e0a1f', '#1d1536', '#2e1f45']
     }
   };
 
@@ -442,6 +447,7 @@
   Renderer.prototype.tileSprite = function (lv, tx, ty, t) {
     const W = CQ.World;
     const th = this.theme;
+    if (th.id === 'haunted') return this.hauntedTileSprite(lv, tx, ty, t);
     if (th.id === 'castle' && (t === TILE.GROUND || t === TILE.BRICK)) {
       if (t === TILE.BRICK) {
         const top = !W.isSolid(lv, tx, ty - 1) && ty > 0;
@@ -504,7 +510,9 @@
       c.closePath();
       c.fill();
     };
-    if (this.theme.id === 'castle') {
+    if (this.theme.id === 'haunted') {
+      this.layers = this.buildHauntedLayers(mk);
+    } else if (this.theme.id === 'castle') {
       // ปราสาท: ผนังไกลมีหน้าต่างโค้งรับแสงจันทร์ + แนวเสาหินและธงใกล้ ๆ
       this.layers = {
         far: mk(1024, 320, function (c, w, h) {
@@ -765,6 +773,7 @@
     ctx.fillRect(0, 0, vw, vh);
     if (this.theme.id === 'forest') { this.drawForestSky(time); return; }
     if (this.theme.id === 'castle') { this.drawCastleSky(time); return; }
+    if (this.theme.id === 'haunted') { this.drawHauntedSky(time); return; }
 
     const sx = vw * 0.8 - this.cx * 0.01, sy = 64 - (this.cy - this.camMaxY()) * 0.05;
     ctx.fillStyle = 'rgba(255,245,190,0.35)';
@@ -860,6 +869,7 @@
     }
     const forest = th.id === 'forest';
     const castle = th.id === 'castle';
+    const haunted = th.id === 'haunted';
     const W = CQ.World;
     const empty = function (x, y) { return W.tileAt(lv, x, y) === TILE.EMPTY; };
     const ground = function (x, y) { return W.tileAt(lv, x, y) === TILE.GROUND; };
@@ -874,6 +884,7 @@
         const flat = ground(tx - 1, ty) && ground(tx + 1, ty) && empty(tx - 1, ty - 1) && empty(tx + 1, ty - 1);
         let room = 0;
         while (room < 4 && empty(tx, ty - 1 - room)) room++;
+        if (haunted) { this.hauntedDecorAt(decor, x, y, r, flat, room, busy.has(tx)); continue; }
         if (castle) {
           // ปราสาท: คบเพลิงบนผนัง ธง กระดูก เศษหิน
           if (r < 10 && flat && room >= 4 && !busy.has(tx)) decor.push({ k: 'torch', x: x, y: y, back: true });
@@ -899,6 +910,7 @@
         else if (r < 66) decor.push({ k: 'rock', x: x, y: y, back: true });
       }
     }
+    if (haunted) this.hauntedCeilingDecor(decor, lv); // ใยแมงมุมตามมุมเพดาน (render-haunted.js)
     if (lv.start) decor.push({ k: 'sign', x: (lv.start.tx + 3) * T + 16, y: (lv.start.ty + 1) * T, back: true });
     if (lv.boss) {
       // บัลลังก์ด้านหลังบอส
@@ -923,6 +935,9 @@
         else if (t === TILE.ONEWAY) c.fillStyle = 'rgba(255,255,255,0.4)';
         else if (t === TILE.SPIKE) c.fillStyle = '#ff7070';
         else if (t === TILE.SPRING) c.fillStyle = '#ffb347';
+        else if (t === TILE.PURPLE) c.fillStyle = 'rgba(190,140,255,0.55)';
+        else if (t === TILE.ORANGE) c.fillStyle = 'rgba(255,170,80,0.55)';
+        else if (t === TILE.SWITCH) c.fillStyle = '#ffffff';
         else continue;
         c.fillRect(tx, ty, 1, 1);
       }
@@ -1113,6 +1128,8 @@
           ctx.moveTo(d.x + 3, d.y); ctx.lineTo(d.x + 5, d.y - 6);
           ctx.stroke();
           break;
+        default:
+          this.drawHauntedDecor(d, time); // ของตกแต่งสเตจ 4 (render-haunted.js)
       }
     }
   };
@@ -1150,6 +1167,7 @@
   // ── วาดทั้งเฟรม ────────────────────────────────────────────────
   Renderer.prototype.render = function (g, time) {
     const ctx = this.ctx, S = this.S;
+    if (this.theme.id === 'haunted') this.preloadHauntedArt();
     if (this.theme.id === 'grassland' && !this.grasslandConcept && typeof Image !== 'undefined') {
       const img = new Image();
       this.grasslandConcept = img;
@@ -1205,6 +1223,7 @@
       for (let i = 0; i < g.fires.length; i++) this.drawShot(g.fires[i], time);
     }
     this.drawParticles(g.particles);
+    if (g.stage && g.stage.dark) this.drawDarkness(g, time); // ความมืดสลัวสเตจ 4 (render-haunted.js)
 
     ctx.setTransform(S, 0, 0, S, 0, 0);
     if (g.flash > 0) {
@@ -1255,6 +1274,7 @@
     const ctx = this.ctx;
     for (let i = 0; i < g.lv.platforms.length; i++) {
       const pl = g.lv.platforms[i];
+      if (pl.axis === 'y') { this.drawVTrack(pl); continue; }
       const y = pl.y + 7;
       const xa = pl.minX + 10, xb = pl.maxX + pl.w - 10;
       ctx.strokeStyle = 'rgba(70,50,30,0.35)';
@@ -1271,6 +1291,7 @@
   Renderer.prototype.drawPlatform = function (pl) {
     const ctx = this.ctx;
     if (pl.x + pl.w < this.cx || pl.x > this.cx + this.viewW) return;
+    if (this.theme.id === 'haunted') { this.drawHauntedPlatform(pl); return; }
     ctx.fillStyle = '#7a4c25';
     rr(ctx, pl.x, pl.y, pl.w, pl.h, 5); ctx.fill();
     ctx.fillStyle = '#c88a4e';
@@ -1417,7 +1438,7 @@
     ctx.restore();
   };
 
-  /** กระสุน: light (Bobo), wind (Mew), fire (Aclaire), boss (ลูกไฟของบอส) */
+  /** กระสุน: light (Bobo), wind (Mew), fire (Aclaire), boss (ลูกไฟของบอส), ghost (ลูกไฟผีของฟักทอง) */
   Renderer.prototype.drawShot = function (s, time) {
     const ctx = this.ctx;
     if (s.x + 30 < this.cx || s.x - 30 > this.cx + this.viewW) return;
@@ -1444,6 +1465,8 @@
       ctx.beginPath(); ctx.arc(-r * 1.6, 0, r * 0.9, -1.1, 1.1); ctx.stroke();
       ctx.strokeStyle = 'rgba(125,255,154,0.6)'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(-r * 4, -r * 0.5); ctx.lineTo(-r * 1.5, -r * 0.5); ctx.moveTo(-r * 4.5, r * 0.5); ctx.lineTo(-r * 2, r * 0.5); ctx.stroke();
+    } else if (s.kind === 'ghost') {
+      this.drawGhostFire(s, time); // ลูกไฟผีของฟักทอง (render-haunted.js)
     } else {
       // ลูกไฟ (Aclaire สีส้มทอง / บอสสีแดงเข้ม ใหญ่กว่า)
       const boss = s.kind === 'boss';
@@ -1594,6 +1617,7 @@
 
   Renderer.prototype.drawEnemy = function (e, time) {
     if (e.kind === 'boar') this.drawBoar(e, time);
+    else if (e.kind === 'phop' || e.kind === 'pfire') this.drawPumpkin(e, time);
     else this.drawSlime(e);
   };
 
@@ -1745,6 +1769,20 @@
   // ── ตัวละคร (pixel art จาก js/sprites.js) ───────────────────────
   // เก็บ backing canvas ตาม density ของภาพ แต่ขนาดวาดและ anchor ใช้ logical pixel เดิม
   const heroCache = {};
+  const heroV2Cache = {};
+  function heroFrameV2(id, pose, img) {
+    const key = id + '|' + pose;
+    if (!heroV2Cache[key]) {
+      const art = CQ.CharacterArtV2;
+      const index = art.poses.indexOf(pose);
+      if (index < 0) return null;
+      const c = makeCanvas(art.w * art.density, art.h * art.density);
+      const x = index % 4 * c.width, y = Math.floor(index / 4) * c.height;
+      c.getContext('2d').drawImage(img, x, y, c.width, c.height, 0, 0, c.width, c.height);
+      heroV2Cache[key] = { c: c, w: art.w, h: art.h, ax: art.ax, density: art.density };
+    }
+    return heroV2Cache[key];
+  }
   function heroFrame(id, pose, hue) {
     const key = id + '|' + pose + '|' + (hue == null ? '' : hue);
     let fr = heroCache[key];
@@ -1769,14 +1807,15 @@
   }
 
   /** เลือกท่าจากสถานะผู้เล่น */
-  function heroPose(p, g, time, dead) {
-    if (dead) return 'dead';
-    if (p.floating) return 'jump'; // ลอยตัว (Mew): แขนชูขึ้น
-    if (!p.onGround) return p.vy < 0 ? 'jump' : 'fall';
+  function heroPose(p, g, time, dead, v2) {
+    if (dead) return v2 ? (p.t < 0.15 ? 'dead1' : p.t < 0.6 ? 'dead2' : 'dead3') : 'dead';
+    if (p.floating) return v2 ? 'jumpApex' : 'jump'; // ลอยตัว (Mew): แขนชูขึ้น
+    if (!p.onGround) return v2 ? (p.vy < -150 ? 'jumpUp' : p.vy > 150 ? 'jumpFall' : 'jumpApex') : p.vy < 0 ? 'jump' : 'fall';
+    if (v2 && g.landSquash > 0) return 'land';
     if (Math.abs(p.vx) > 25) {
       const TAU = Math.PI * 2;
       const a = (((g.runPhase || 0) % TAU) + TAU) % TAU;
-      return 'run' + (1 + Math.floor(a / (Math.PI / 2)) % 4);
+      return 'run' + (1 + Math.floor(a / (TAU / (v2 ? 8 : 4))) % (v2 ? 8 : 4));
     }
     return (time % 3.3) < 0.12 ? 'blink' : 'idle';
   }
@@ -1803,8 +1842,14 @@
       ctx.fillStyle = 'hsla(' + ((hue + 60) % 360) + ',100%,70%,0.35)';
       ellipse(ctx, sx, sy - 17 * S, 19 * S, 21 * S); ctx.fill();
     }
+    // motion v2 (stage.motion === 'v2'): ยืด/หด + เอนตามความเร็ว ยึดที่เท้า (hitbox ไม่เปลี่ยน)
+    const mo = !dead && g.motion && g.stage && g.stage.motion === 'v2' ? g.motion : null;
     // ต่อจากนี้วาดในพิกัดที่หันขวาเสมอ แล้วกลับภาพตามทิศที่หัน
     ctx.translate(sx, 0);
+    if (mo) {
+      const lean = Math.round(mo.lean * 200) / 200; // ปัดทีละ 0.005 rad กันภาพสั่นตอนค่อย ๆ เปลี่ยน
+      if (lean) { ctx.translate(0, sy); ctx.rotate(lean); ctx.translate(0, -sy); }
+    }
     ctx.scale(f, 1);
     if (pw && shown(pw.mush) && Math.abs(p.vx) > 230) {
       // เห็ด: เส้นความเร็วแบบพิกเซลด้านหลังตัว
@@ -1820,10 +1865,20 @@
       // Keep feather tips outside the hair/body silhouette at small mobile scales.
       ctx.drawImage(wf.c, (-6 - wf.w * 2) * k, sy - 27 * k, wf.w * 2 * k, wf.h * 2 * k);
     }
-    const fr = heroFrame(p.ch || 'bobo', heroPose(p, g, time, dead), hue);
+    const id = p.ch || 'bobo';
+    const art = CQ.CharacterArtV2;
+    const sheet = art && g.stage && g.stage.motion === 'v2' && hue == null ? this.hauntedImage('hero_' + id, art.sheets[id]) : null;
+    const v2 = !!sheet;
+    const pose = heroPose(p, g, time, dead, v2);
+    const fr = (v2 && heroFrameV2(id, pose, sheet)) || heroFrame(id, pose, hue);
     ctx.imageSmoothingEnabled = fr.density > 1;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(fr.c, -fr.ax * k, sy - (fr.h - 1) * k, fr.w * k, fr.h * k);
+    if (mo) {
+      // scale(1 - s/2, 1 + s): ขนาดหลังยืด/หดปัดเป็นจำนวนเต็มพิกเซลจอ ขอบล่างภาพ (sy + k) คงที่
+      const s = mo.stretch - (g.landSquash || 0);
+      const sxk = 1 - s * 0.5, dw = Math.round(fr.w * k * sxk), dh = Math.round(fr.h * k * (1 + s));
+      ctx.drawImage(fr.c, Math.round(-fr.ax * k * sxk), sy + k - dh, dw, dh);
+    } else ctx.drawImage(fr.c, -fr.ax * k, sy - (fr.h - 1) * k, fr.w * k, fr.h * k);
     ctx.restore();
   };
 
@@ -2001,5 +2056,7 @@
     ctx.restore();
   };
 
+  // ฟังก์ชันช่วยวาดที่ไฟล์ render-*.js ใช้ร่วม
+  Renderer.util = { makeCanvas: makeCanvas, hash: hash, rng: rng, rr: rr, ellipse: ellipse, clamp: clamp };
   CQ.Renderer = Renderer;
 })(window);

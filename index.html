@@ -90,7 +90,7 @@
         <span class="char-pick-change">เปลี่ยน<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5.5 15.5 12 9 18.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </button>
 
-      <div class="section-label"><span>เลือกจุดหมาย</span><span>03 WORLDS</span></div>
+      <div class="section-label"><span>เลือกจุดหมาย</span><span>04 WORLDS</span></div>
       <!-- ปุ่มเลือกสเตจ สร้างจาก CQ.STAGES ใน js/main.js -->
       <div class="stages" id="stage-pick" role="radiogroup" aria-label="เลือกสเตจ"></div>
 
@@ -191,6 +191,7 @@
     <div class="card card-sm">
       <h2 class="screen-title" id="pause-heading">หยุดชั่วคราว</h2>
       <button class="btn btn-primary" id="btn-resume" type="button">เล่นต่อ</button>
+      <button class="btn" id="btn-checkpoint" type="button" hidden>กลับเช็กพอยต์</button>
       <fieldset class="touch-settings">
         <legend>ขนาดปุ่มสัมผัส</legend>
         <div class="size-options">
@@ -394,17 +395,22 @@
   <script src="js/level.js"></script>
   <script src="js/stage-forest.js"></script>
   <script src="js/stage-castle.js"></script>
+  <script src="js/stage-haunted.js"></script>
   <script src="js/world.js"></script>
+  <script src="js/switches.js"></script>
   <script src="js/boss.js"></script>
+  <script src="js/pumpkin.js"></script>
   <script src="js/characters.js"></script>
   <script src="js/spawn.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/2026-10-13_ui-settings.js"></script>
   <script src="js/input.js"></script>
   <script src="js/2026-10-15_character-art.js"></script>
+  <script src="js/2026-10-22_character-art-v2.js"></script>
   <script src="js/sprites.js"></script>
   <script src="js/hud.js"></script>
   <script src="js/render.js"></script>
+  <script src="js/render-haunted.js"></script>
   <script src="js/rps-rules.js"></script>
   <script src="js/rps.js"></script>
   <script src="js/rain-rules.js"></script>

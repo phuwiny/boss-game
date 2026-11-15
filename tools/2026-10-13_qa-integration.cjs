@@ -17,7 +17,8 @@ module.exports=async({page,width,height,out,results})=>{
  await shot('memory');
  await page.locator('#btn-mem-exit').click();
  await page.locator('#btn-mg-back').click();
- assert.equal(await page.locator('.stage-btn').count(),3);
+ assert.equal(await page.locator('.stage-btn').count(),await page.evaluate(()=>CQ.STAGES.length)); // ปุ่มสเตจครบทุกสเตจ (ตอนนี้ 4)
+ assert.equal(await page.evaluate(()=>CQ.STAGES.length),4);
  for(const stage of ['grassland','forest','castle']){
   await page.locator('.stage-'+stage).click();
   await shot(stage+'-title');

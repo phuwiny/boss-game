@@ -29,3 +29,18 @@ CQ.CharacterArt={...art,frames:{...art.frames,bobo:{...art.frames.bobo,idle:{pix
 assert.notEqual(S.build('bobo','idle').source,art.version);
 CQ.CharacterArt=art;assert.equal(S.build('bobo','idle').source,art.version);
 console.log(`PASS ${checked} raster frames, star masks, missing/malformed fallback`);
+
+// Stage 4 uses the approved 4x4 normalized image sheets. The original nine
+// poses above remain the fallback for a blocked image request.
+require('../js/2026-10-22_character-art-v2.js');
+const v2=CQ.CharacterArtV2;
+const fs=require('node:fs'),path=require('node:path');
+assert.deepEqual([v2.w,v2.h,v2.ax,v2.density],[54,48,32,2]);
+assert.deepEqual(v2.poses,['run1','run2','run3','run4','run5','run6','run7','run8','jumpUp','jumpApex','jumpFall','land','dead1','dead2','dead3']);
+for(const id of ['bobo','mew','aclaire']){
+ assert.ok(v2.sheets[id].startsWith('assets/characters/'));
+ assert.ok(fs.statSync(path.join(__dirname,'..',v2.sheets[id])).size>0);
+ const old=bounds(S.build(id,'idle').px,108,2);
+ assert.ok(old[3]-old[1] <= 48,'original idle fits the shared 54x48 v2 frame');
+}
+console.log('PASS Stage 4 v2 manifest, sheet paths, and shared frame geometry');

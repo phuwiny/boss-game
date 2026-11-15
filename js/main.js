@@ -12,6 +12,8 @@
   const Input = CQ.Input;
   const Spawn = CQ.Spawn;
   const Boss = CQ.Boss;
+  const Pumpkin = CQ.Pumpkin;
+  const Switches = CQ.Switches;
   const CHAR_KEY = 'coinquest.char';  // ตัวละครที่เลือกไว้
   const MODE_KEY = 'coinquest.mode';  // โหมดที่เล่นล่าสุด
   const STAGE_KEY = 'coinquest.stage'; // สเตจที่เลือกไว้
@@ -27,7 +29,19 @@
     light: ['#ffffff', '#fff6b0', '#ffe066'],
     wind: ['#c9ffd4', '#7dff9a', '#2ecc71'],
     fire: ['#ffe08a', '#ff9b3a', '#ff5a1a'],
-    boss: ['#fff0a0', '#ff9b3a', '#e8361e']
+    boss: ['#fff0a0', '#ff9b3a', '#e8361e'],
+    ghost: ['#c9ffe4', '#7dffb0', '#2ecc71']
+  };
+  // สีอนุภาคตอนสลับสวิตช์ (ตามสีที่ทึบหลังสลับ)
+  const SWITCH_COLORS = {
+    purple: ['#b07cff', '#e2ccff', '#ffffff'],
+    orange: ['#ff9f43', '#ffd8a8', '#ffffff']
+  };
+  // ภาพเมนูของสเตจเดิม (สเตจใหม่ใส่ stage.menuArt เอง)
+  const MENU_ART = {
+    grassland: 'assets/2026-10-13_grassland-menu.webp',
+    forest: 'assets/2026-10-13_forest-menu.webp',
+    castle: 'assets/2026-10-14_castle-menu.webp'
   };
 
   const $ = function (id) { return document.getElementById(id); };
@@ -122,8 +136,13 @@
       if (lv.tiles[i] === TILE.SPRING) springs.push({ tx: i % lv.w, ty: Math.floor(i / lv.w), hit: -10 });
     }
     const seedInfo = currentSeed();
-    const rng = Spawn.makeRng(Spawn.modeSeed(seedInfo.seed, timed ? 'timed' : 'normal', stage.id));
-    const picked = Spawn.pick(getPool(stage), lv.w, rng, { coins: Spawn.coinsFor(stage, timed ? 'timed' : 'normal'), items: Spawn.itemsFor(stage, ch) });
+    // fixedCoins: เหรียญ/ไอเทมวางตายตัวในด่าน ไม่สุ่มรายวัน (ทุกโหมดใช้ชุดเดียวกัน)
+    let picked = { coins: [], items: lv.items };
+    if (!stage.fixedCoins) {
+      const rng = Spawn.makeRng(Spawn.modeSeed(seedInfo.seed, timed ? 'timed' : 'normal', stage.id));
+      picked = Spawn.pick(getPool(stage), lv.w, rng, { coins: Spawn.coinsFor(stage, timed ? 'timed' : 'normal'), items: Spawn.itemsFor(stage, ch) });
+    }
+    Switches.setState(lv, 'purple', []);
     const center = function (o) { return { tx: o.tx, ty: o.ty, x: o.tx * T + T / 2, y: o.ty * T + T / 2 }; };
     const coins = lv.coins.map(center).concat(picked.coins.map(center));
     // Boss Stage: เหรียญจากบอส ซ่อนไว้จนกว่าจะชนะบอส (นับรวมในเป้าหมาย)
@@ -144,11 +163,12 @@
       player: W.makePlayer(lv.start.tx, lv.start.ty, ch, stage.hp),
       coins: coins.map(function (c, i) { c.taken = false; c.phase = i * 0.83; return c; }),
       items: picked.items.map(function (it, i) { const o = center(it); o.type = it.type; o.taken = false; o.phase = i * 1.7; return o; }),
-      enemies: lv.enemies.map(W.makeEnemy),
+      enemies: lv.enemies.map(function (e) { return Pumpkin.isPumpkin(e.kind) ? Pumpkin.makePumpkin(e) : W.makeEnemy(e); }),
       checkpoints: lv.checkpoints.map(function (c) { return { tx: c.tx, ty: c.ty, active: false, raise: 0 }; }),
       springs: springs,
       particles: [],
-      respawn: { tx: lv.start.tx, ty: lv.start.ty },
+      respawn: { tx: lv.start.tx, ty: lv.start.ty, sw: 'purple' }, // sw = สถานะสวิตช์ตอนเกิดใหม่ (สเตจ 4)
+      swCD: 0, // กันสวิตช์สลับซ้ำรัว ๆ (วินาที)
       collected: 0,
       total: coins.length,
       goal: coins.length, // ทุกโหมด: เก็บครบทุกเหรียญในฉาก = จบ
@@ -161,6 +181,9 @@
       shake: 0,
       flash: 0,
       landSquash: 0,
+      // motion v2 (เฉพาะ stage.motion === 'v2'): stretch = ยืดตอนกระโดด, lean = เอนตามความเร็ว (เรเดียน)
+      motion: { stretch: 0, lean: 0, jumpT: 0, skid: false, idleT: 0 },
+      hitStop: 0, // หยุดภาพชั่วครู่ตอนพลาด (วินาที) ระหว่างนี้ step ไม่จำลองแต่ยังวาด
       runPhase: 0,
       deathAnim: null,
       clearT: 0,
@@ -174,7 +197,7 @@
       spawners: lv.rocks.map(Boss.makeSpawner),
       shotCD: 0
     };
-    document.body.classList.toggle('boss-stage', !!stage.boss);
+    document.body.classList.toggle('boss-stage', !!(stage.boss || stage.shoot)); // แสดงปุ่มยิงบนมือถือ
     renderer.setLevel(lv, stage.theme);
     renderer.prepareHero(ch.id);
     renderer.look = 0;
@@ -214,15 +237,68 @@
     }
   }
 
+  // ── motion v2 (สเตจที่ stage.motion === 'v2') ─────────────────────
+  const MOTION = {
+    STRETCH: 0.14,   // ยืดตัวตอนกระโดด
+    STRETCH_T: 0.18, // คืนเข้า 0 แบบ ease-out ภายในเวลานี้ (วินาที)
+    LEAN: 0.08,      // เอนสูงสุด (เรเดียน) ที่ |vx| = RUN × 1.5
+    LEAN_K: 10,      // ความไวของการเอน (ยิ่งมากยิ่งตามทัน)
+    SKID_V: 120,     // กลับตัวขณะวิ่งเร็วกว่านี้ = ฝุ่นเบรก
+    IDLE_T: 0.1,     // ยืนนิ่งนานเท่านี้แล้วออกตัว = ฝุ่นออกตัว
+    HIT_STOP: 0.12
+  };
+  const motionV2 = function () { return g.stage.motion === 'v2'; };
+
+  function resetMotion() {
+    const m = g.motion;
+    m.stretch = 0; m.lean = 0; m.jumpT = 0; m.skid = false; m.idleT = 0;
+    g.hitStop = 0;
+  }
+
+  /** อัปเดตยืด/เอน/ฝุ่นหลังฟิสิกส์ผู้เล่น 1 สเต็ป (prevVx = vx ก่อนสเต็ป) */
+  function stepMotion(p, prevVx, dt) {
+    const m = g.motion;
+    m.jumpT = Math.max(0, m.jumpT - dt);
+    const u = m.jumpT / MOTION.STRETCH_T;
+    m.stretch = MOTION.STRETCH * u * u; // ease-out: ลดเร็วตอนแรกแล้วค่อย ๆ เข้า 0
+    const want = Math.max(-1, Math.min(1, p.vx / (P.RUN * 1.5))) * MOTION.LEAN;
+    m.lean += (want - m.lean) * (1 - Math.exp(-dt * MOTION.LEAN_K));
+    if (Math.abs(m.lean) < 1e-4) m.lean = 0;
+    const fx = p.x + p.w / 2, fy = p.y + p.h;
+    if (!p.onGround) { m.skid = false; m.idleT = 0; return; }
+    // กลับตัวขณะวิ่ง: ฝุ่นเบรกครั้งเดียวตอนเริ่มไถล
+    const skid = Math.abs(p.vx) > MOTION.SKID_V && Math.sign(p.vx) !== p.face;
+    if (skid && !m.skid) dust(fx + Math.sign(p.vx) * 6, fy, 5);
+    m.skid = skid;
+    // ออกตัวจากยืนนิ่ง: ฝุ่นเล็ก ๆ หลังเท้า
+    if (Math.abs(p.vx) < 5) m.idleT += dt;
+    else {
+      if (m.idleT >= MOTION.IDLE_T && Math.abs(prevVx) < 5) dust(fx - Math.sign(p.vx) * 6, fy, 3);
+      m.idleT = 0;
+    }
+  }
+
   // ── การจำลองโลกเกม 1 สเต็ป ─────────────────────────────────────
   function step(dt, inp) {
+    // hit-stop (motion v2): หยุดการจำลองทั้งหมดชั่วครู่ ภาพยังวาดตามปกติ
+    if (g.hitStop > 0) { g.hitStop = Math.max(0, g.hitStop - dt); return; }
     const lv = g.lv;
     for (let i = 0; i < lv.platforms.length; i++) W.stepPlatform(lv.platforms[i], dt);
+    const pumpkinEvents = [];
+    // ระหว่างกำลังพลาด: ฟักทองยังขยับได้ แต่ทิ้งลูกไฟ/เสียงที่เกิดขึ้น (ไม่มีลูกไฟค้างหรือเสียงลอย ๆ)
+    const pumpkinFires = g.deathAnim ? [] : g.fires;
+    const pumpkinEv = g.deathAnim ? [] : pumpkinEvents;
     for (let i = g.enemies.length - 1; i >= 0; i--) {
       const e = g.enemies[i];
-      W.stepEnemy(e, lv, dt);
+      if (Pumpkin.isPumpkin(e.kind)) Pumpkin.stepPumpkin(e, lv, g.player, dt, pumpkinFires, pumpkinEv);
+      else W.stepEnemy(e, lv, dt);
       if (e.dead && e.deadT > 0.7) g.enemies.splice(i, 1);
     }
+    for (let i = 0; i < pumpkinEvents.length; i++) {
+      if (pumpkinEvents[i].type === 'pwind') Sound.sfx.pumpkinWind();
+      else if (pumpkinEvents[i].type === 'pfire') Sound.sfx.pumpkinFire();
+    }
+    if (g.swCD > 0) g.swCD -= dt;
 
     if (g.deathAnim) {
       const d = g.deathAnim;
@@ -238,11 +314,14 @@
     events.length = 0;
     const jumpPressed = pendingJump;
     pendingJump = false;
+    const prevVx = p.vx;
     W.stepPlayer(p, { left: inp.left, right: inp.right, jump: inp.jump, jumpPressed: jumpPressed }, lv, dt, events);
+    if (lv.swPending.size) Switches.settle(lv, switchBodies());
     if (p.invuln > 0) p.invuln -= dt;
     if (p.onGround && Math.abs(p.vx) > 25) g.runPhase += dt * Math.abs(p.vx) * 0.075;
 
     for (let i = 0; i < events.length; i++) handleEvent(events[i], p);
+    if (motionV2()) stepMotion(p, prevVx, dt);
     if (p.dead) { kill(); return; }
     updatePowers(p, dt);
 
@@ -289,7 +368,7 @@
       if (hurtPlayer(p, e, 'enemy')) return;
     }
 
-    if (g.stage.boss && stepBossStage(p, inp, dt)) return;
+    if ((g.stage.boss || g.stage.shoot) && stepBossStage(p, inp, dt)) return;
 
     for (let i = 0; i < g.checkpoints.length; i++) {
       const cp = g.checkpoints[i];
@@ -302,8 +381,10 @@
       case 'jump':
         Sound.sfx.jump();
         dust(p.x + p.w / 2, p.y + p.h, 4);
+        if (motionV2()) g.motion.jumpT = MOTION.STRETCH_T;
         break;
       case 'land':
+        if (motionV2()) g.motion.jumpT = 0; // ลงพื้น: เลิกยืด ใช้ landSquash (หด) แทน
         if (ev.speed > 260) {
           g.landSquash = Math.min(0.22, ev.speed / 2600);
           dust(p.x + p.w / 2, p.y + p.h, ev.speed > 600 ? 8 : 4);
@@ -311,10 +392,13 @@
         }
         break;
       case 'bonk':
+        // โหม่งสวิตช์จากด้านล่าง = สลับบล็อกม่วง/ส้ม (ติดคูลดาวน์ = เสียงโหม่งธรรมดา)
+        if (W.tileAt(g.lv, ev.tx, ev.ty) === TILE.SWITCH && toggleSwitch(ev)) break;
         Sound.sfx.bonk();
         break;
       case 'airjump':
         Sound.sfx.airjump();
+        if (motionV2()) g.motion.jumpT = MOTION.STRETCH_T;
         if (ev.wing) {
           for (let i = 0; i < 6; i++) {
             spawn({ kind: 'feather', x: p.x + p.w / 2 + (Math.random() - 0.5) * 20, y: p.y + p.h - 4, vx: (Math.random() - 0.5) * 70, vy: 20 + Math.random() * 40, g: 30, size: 5 + Math.random() * 3, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 6, color: '#ffffff', life: 0.7 + Math.random() * 0.3 });
@@ -430,6 +514,33 @@
     burst(e.x + e.w / 2, e.y + e.h / 2, 8, ['#58d26d', '#a8f0b4'], 140, 'circle');
   }
 
+  /** ศัตรูที่มีพลังชีวิตหลายขีด (ฟักทองยิงไฟ) โดนกระสุนแต่ยังไม่ตาย (เหยียบหัวแตกทันที) */
+  function hitTough(e) {
+    e.hp--;
+    e.flash = 0.12;
+    Sound.sfx.bossHit();
+    burst(e.x + e.w / 2, e.y + e.h / 2, 6, ['#ff9f43', '#ffd8a8', '#ffffff'], 120, 'circle');
+  }
+
+  // ── สวิตช์ม่วง/ส้ม (สเตจ 4) ──────────────────────────────────────
+  /** ตัวที่ทับบล็อกสีได้: ผู้เล่น + ศัตรูที่ยังไม่ตาย */
+  function switchBodies() {
+    const list = [g.player];
+    for (let i = 0; i < g.enemies.length; i++) if (!g.enemies[i].dead) list.push(g.enemies[i]);
+    return list;
+  }
+
+  /** สลับสวิตช์ทั้งด่าน (source = {tx, ty} ของสวิตช์ที่โดน) คืน true ถ้าสลับจริง */
+  function toggleSwitch(source) {
+    if (g.swCD > 0) return false;
+    const sw = Switches.toggle(g.lv, switchBodies());
+    g.swCD = 0.3;
+    Sound.sfx.switchFlip();
+    g.shake = Math.max(g.shake, 2);
+    burst(source.tx * T + T / 2, source.ty * T + T / 2, 10, SWITCH_COLORS[sw], 150, 'star');
+    return true;
+  }
+
   /** หมูป่าสลบ STUN_TIME วินาที (ไม่ตาย) knock = โดนดาวชน: กระเด็นเล็กน้อย */
   function stunBoar(e, p, knock) {
     e.stunT = P.STUN_TIME;
@@ -482,7 +593,7 @@
   function activateCheckpoint(cp) {
     cp.active = true;
     cp.raise = 0;
-    g.respawn = { tx: cp.tx, ty: cp.ty };
+    g.respawn = { tx: cp.tx, ty: cp.ty, sw: g.lv.sw }; // จำสถานะสวิตช์ตอนแตะเช็กพอยต์
     Sound.sfx.checkpoint();
     burst(cp.tx * T + 24, (cp.ty - 1) * T, 10, ['#2ecc71', '#ffffff', '#ffd23f'], 130, 'star');
     toast('บันทึกจุดเช็กพอยต์แล้ว');
@@ -499,6 +610,14 @@
     g.rocks.length = 0;
     Sound.sfx.die();
     burst(p.x + p.w / 2, p.y + p.h / 2, 10, ['#ff6a3d', '#ffd3ad', '#ffffff'], 160, 'circle');
+    if (motionV2()) {
+      resetMotion();
+      g.hitStop = MOTION.HIT_STOP;
+      // วิญญาณขาวอมเขียวลอยขึ้นจากตัว 1 วินาที
+      for (let i = 0; i < 7; i++) {
+        spawn({ kind: 'circle', x: p.x + p.w / 2 + (Math.random() - 0.5) * p.w, y: p.y + p.h * (0.25 + Math.random() * 0.55), vx: (Math.random() - 0.5) * 30, vy: -45 - Math.random() * 45, g: -12, size: 2.5 + Math.random() * 2.5, color: 'rgba(215,255,232,0.85)', life: 1 });
+      }
+    }
   }
 
   function respawn() {
@@ -506,9 +625,43 @@
     g.player = W.makePlayer(r.tx, r.ty, g.char, g.stage.hp);
     g.player.invuln = 1.5;
     g.deathAnim = null;
+    resetMotion();
     pendingJump = false;
+    // กระสุน/ลูกไฟถูกล้างแล้วใน kill() และระหว่างกำลังพลาดไม่มีอะไรเพิ่มเข้ามา (ลูกไฟฟักทองถูกทิ้ง บอสไม่ขยับ)
+    // บล็อกที่จะทึบแต่ทับผู้เล่น/ศัตรูอยู่ ค้างโปร่งไว้ก่อน (ใช้ชุดตัวเดียวกับตอนสลับสวิตช์)
+    Switches.setState(g.lv, r.sw || 'purple', switchBodies());
     // Boss Stage: บอสที่ยังไม่แพ้กลับมาพลังเต็มที่เดิม (แพ้แล้วไม่กลับมาอีก)
     if (g.boss && !g.bossDefeated) g.boss = Boss.makeBoss(g.lv);
+  }
+
+  /**
+   * เมนูหยุดเกม "กลับเช็กพอยต์" (สเตจ 4): ย้ายไปจุดเกิดใหม่ล่าสุดโดยไม่นับว่าพลาด
+   * คงพลังชีวิต กันตาย และไอเทมที่มีไว้ สวิตช์กลับเป็นสถานะที่เช็กพอยต์จำไว้
+   */
+  function returnToCheckpoint() {
+    if (state !== 'paused' || !g.stage.checkpointReturn) return;
+    if (g.deathAnim) {
+      respawn(); // หยุดเกมระหว่างกำลังพลาด: เกิดใหม่ตามปกติ (นับพลาดไปแล้ว)
+    } else {
+      const r = g.respawn, old = g.player;
+      const p = W.makePlayer(r.tx, r.ty, g.char, g.stage.hp);
+      p.hp = old.hp;
+      p.guard = old.guard;
+      p.guardCooldown = old.guardCooldown;
+      p.pw = old.pw;
+      p.vx = 0;
+      p.vy = 0;
+      p.ride = null;
+      p.invuln = P.HURT_INVULN;
+      g.player = p;
+      Switches.setState(g.lv, r.sw || 'purple', switchBodies());
+      g.shots.length = 0;
+      g.fires.length = 0;
+      pendingJump = false;
+      resetMotion();
+    }
+    renderer.updateCamera(focusPoint(), g.player.face, 0, true);
+    resumeGame();
   }
 
   // ── Boss Stage: ยิงพลัง บอส ลูกไฟ หินหล่น ─────────────────────────
@@ -529,6 +682,11 @@
       const res = Boss.stepShot(s, lv, dt) || shotHit(s, p);
       if (!res) continue;
       g.shots.splice(i, 1);
+      if (res === 'wall') {
+        // กระสุนผู้เล่นชนสวิตช์ = สลับได้เหมือนโหม่ง
+        const sx = Math.floor(s.x / T), sy = Math.floor(s.y / T);
+        if (W.tileAt(lv, sx, sy) === TILE.SWITCH) toggleSwitch({ tx: sx, ty: sy });
+      }
       if (res !== 'expire') burst(s.x, s.y, 6, SHOT_COLORS[s.kind], 110, 'circle');
     }
 
@@ -545,18 +703,19 @@
       }
     }
 
-    // ลูกไฟของบอส
+    // ลูกไฟของบอส / ลูกไฟผีของฟักทอง
     for (let i = g.fires.length - 1; i >= 0; i--) {
       const f = g.fires[i];
+      const fc = SHOT_COLORS[f.kind] || SHOT_COLORS.boss;
       if (Boss.stepShot(f, lv, dt)) {
         g.fires.splice(i, 1);
-        burst(f.x, f.y, 6, SHOT_COLORS.boss, 100, 'circle');
+        burst(f.x, f.y, 6, fc, 100, 'circle');
         continue;
       }
       if (!Boss.shotHits(f, { x: p.x + 3, y: p.y + 4, w: p.w - 6, h: p.h - 4 })) continue;
       if (p.invuln > 0) continue;
       g.fires.splice(i, 1);
-      burst(f.x, f.y, 10, SHOT_COLORS.boss, 140, 'circle');
+      burst(f.x, f.y, 10, fc, 140, 'circle');
       if (p.pw.star > 0) continue;
       if (hurtPlayer(p, f, 'fire')) return true;
     }
@@ -601,6 +760,7 @@
       const e = g.enemies[i];
       if (e.dead || !Boss.shotHits(s, e)) continue;
       if (e.kind === 'boar') stunBoar(e, p, false); // หมูป่าไม่มีวันตาย: สลบแทน
+      else if (e.hp > 1) hitTough(e);
       else knockOut(e, { x: s.x, w: 0, face: Math.sign(s.vx) });
       return 'hit';
     }
@@ -751,6 +911,13 @@
     return parts.join(' · ');
   }
 
+  /** จำนวนเหรียญของสเตจที่วางเหรียญตายตัว (นับจากด่าน ครั้งเดียวต่อสเตจ) */
+  const fixedCoinCounts = {};
+  function fixedCoinCount(stage) {
+    if (fixedCoinCounts[stage.id] == null) fixedCoinCounts[stage.id] = CQ.parseLevel(stage.sections).coins.length;
+    return fixedCoinCounts[stage.id];
+  }
+
   function refreshTitle() {
     const info = currentSeed();
     const ch = CQ.getCharacter(charId);
@@ -759,13 +926,15 @@
     ui.titleCharTag.textContent = ch.tagline;
     const stage = CQ.getStage(stageId);
     const extra = stage.bossCoins || 0;
-    const nNormal = Spawn.coinsFor(stage, 'normal') + extra;
+    const nNormal = stage.fixedCoins ? fixedCoinCount(stage) : Spawn.coinsFor(stage, 'normal') + extra;
     ui.descNormal.textContent = stage.boss ? 'ชนะบอสและเก็บครบ ' + nNormal + ' เหรียญ' : 'เก็บให้ครบทั้ง ' + nNormal + ' เหรียญในฉาก';
     ui.descTimed.textContent = 'เก็บให้มากที่สุดใน ' + Spawn.TIMED_TIME + ' วินาที';
-    ui.btnTimed.title = 'มีเหรียญ ' + (Spawn.coinsFor(stage, 'timed') + extra) + ' เหรียญในฉาก มากกว่าโหมดปกติ';
-    const selectedStage = CQ.getStage(stageId);
+    ui.btnTimed.title = stage.fixedCoins
+      ? 'ใช้เหรียญชุดเดียวกับโหมดปกติ ' + nNormal + ' เหรียญ'
+      : 'มีเหรียญ ' + (Spawn.coinsFor(stage, 'timed') + extra) + ' เหรียญในฉาก มากกว่าโหมดปกติ';
+    const selectedStage = stage;
     const landscape = $('title-landscape');
-    const art = selectedStage.theme === 'castle' ? 'assets/2026-10-14_castle-menu.webp' : 'assets/2026-10-13_' + selectedStage.theme + '-menu.webp';
+    const art = selectedStage.menuArt || MENU_ART[selectedStage.theme] || null;
     landscape.hidden = !art;
     if (art && landscape.getAttribute('src') !== art) landscape.src = art;
     landscape.parentElement.dataset.stage = selectedStage.theme;
@@ -1013,7 +1182,7 @@
     state = 'playing';
     g.showMinimap = true;
     setScreen(null);
-    toast(stageLabel(g.stage) + (g.mode === 'timed' ? ' · โหมดจับเวลา' : '') + (g.stage.boss ? ' · กด X หรือปุ่มยิง เพื่อยิงพลัง' : ''));
+    toast(stageLabel(g.stage) + (g.mode === 'timed' ? ' · โหมดจับเวลา' : '') + (g.stage.boss || g.stage.shoot ? ' · กด X หรือปุ่มยิง เพื่อยิงพลัง' : ''));
     ui.hud.hidden = false;
     document.body.classList.add('in-game');
     layoutHud();
@@ -1028,6 +1197,7 @@
   function pauseGame() {
     if (state !== 'playing') return;
     state = 'paused';
+    $('btn-checkpoint').hidden = !g.stage.checkpointReturn;
     setScreen(ui.pause);
     Sound.stopMusic(true);
   }
@@ -1360,6 +1530,7 @@
     bindButton('btn-again', function () { startGame(); });
     bindButton('btn-win-home', goTitle);
     bindButton('btn-resume', resumeGame);
+    bindButton('btn-checkpoint', returnToCheckpoint);
     bindButton('btn-restart', function () { startGame(); });
     bindButton('btn-home', goTitle);
     bindButton('btn-pause', function () { if (state === 'playing') pauseGame(); else if (state === 'paused') resumeGame(); });

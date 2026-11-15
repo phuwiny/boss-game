@@ -51,7 +51,13 @@
 
   function isSolid(lv, tx, ty) {
     const t = tileAt(lv, tx, ty);
-    return t === TILE.GROUND || t === TILE.BRICK;
+    if (t === TILE.GROUND || t === TILE.BRICK || t === TILE.SWITCH) return true;
+    // บล็อกม่วง/ส้ม: ทึบเฉพาะฝั่งที่ตรงกับสถานะ และต้องไม่อยู่ใน pending (ยังมีตัวทับอยู่)
+    if (t === TILE.PURPLE || t === TILE.ORANGE) {
+      if (lv.sw !== (t === TILE.PURPLE ? 'purple' : 'orange')) return false;
+      return !(lv.swPending && lv.swPending.has(ty * lv.w + tx));
+    }
+    return false;
   }
 
   function isOneWay(lv, tx, ty) {
@@ -109,7 +115,8 @@
       if (platforms) {
         for (let i = 0; i < platforms.length; i++) {
           const pl = platforms[i];
-          if (b.x + b.w > pl.x && b.x < pl.x + pl.w && prevBottom <= pl.y + 0.01 && bottom >= pl.y) {
+          // เทียบกับผิวแพลตฟอร์มก่อนขยับในเฟรมนี้ (pl.dy ขาขึ้นเท่านั้น) ไม่งั้นแพลตฟอร์มขาขึ้นจะวิ่งหนีเท้าแล้วทะลุ
+          if (b.x + b.w > pl.x && b.x < pl.x + pl.w && prevBottom <= pl.y - Math.min(pl.dy || 0, 0) + 0.01 && bottom >= pl.y) {
             b.y = pl.y - b.h;
             b.vy = 0;
             b.onGround = true;
@@ -122,12 +129,18 @@
       const ty = Math.floor(b.y / T);
       const tx0 = Math.floor(b.x / T);
       const tx1 = Math.floor((b.x + b.w - EPS) / T);
+      let hitTx = -1;
       for (let tx = tx0; tx <= tx1; tx++) {
         if (isSolid(lv, tx, ty)) {
-          b.y = (ty + 1) * T;
-          b.vy = 0;
-          return 'head';
+          if (hitTx < 0 || tileAt(lv, tx, ty) === TILE.SWITCH) hitTx = tx; // ถ้าชนหลายช่อง ให้สวิตช์มาก่อน
         }
+      }
+      if (hitTx >= 0) {
+        b.y = (ty + 1) * T;
+        b.vy = 0;
+        b.bonkTx = hitTx;
+        b.bonkTy = ty;
+        return 'head';
       }
     }
     return null;
@@ -219,10 +232,15 @@
       p.guardCooldown = Math.max(0, p.guardCooldown - dt);
       if (p.guardCooldown === 0) p.guard = p.guardMax;
     }
-    p.prevBottom = p.y + p.h;
 
-    // ยืนบนแพลตฟอร์มเคลื่อนที่ → เคลื่อนตาม
+    // ยืนบนแพลตฟอร์มเคลื่อนที่ → เคลื่อนตาม (แนวนอนก่อน แล้วค่อยแนวตั้ง)
     if (p.ride && p.ride.dx) moveX(p, p.ride.dx, lv);
+    if (p.ride && p.ride.dy) {
+      const ride = p.ride;
+      // moveY ล้าง onGround/ride ทุกครั้ง จึงคืนค่าให้ถ้ายังไม่โดนเพดานหรือพื้นทึบ (ไม่งั้นโคโยตี้/กระโดดจะเพี้ยน)
+      if (!moveY(p, ride.dy, lv, null) && p.vy >= 0 && !p.onGround) { p.onGround = true; p.ride = ride; }
+    }
+    p.prevBottom = p.y + p.h; // คิดหลังขยับตามแพลตฟอร์ม ไม่งั้นเหยียบศัตรู/ลงแพลตฟอร์มคลาดเคลื่อน
 
     const pw = p.pw;
     const st = p.st || DEFAULT_STATS;
@@ -285,7 +303,7 @@
     const hit = moveY(p, p.vy * dt, lv, lv.platforms);
     if (hit === 'head') {
       p.jumping = false;
-      if (ev) ev.push({ type: 'bonk' });
+      if (ev) ev.push({ type: 'bonk', tx: p.bonkTx, ty: p.bonkTy });
     }
     if (p.onGround && !wasGround && ev) ev.push({ type: 'land', speed: fallSpeed });
 
@@ -407,6 +425,20 @@
       pl.waitT -= dt;
       pl.dx = 0;
       pl.vx = 0;
+      pl.dy = 0;
+      pl.vy = 0;
+      return;
+    }
+    if (pl.axis === 'y') {
+      // รางแนวตั้ง: dir -1 = ขึ้น, 1 = ลง
+      let ny = pl.y + pl.dir * pl.speed * dt;
+      if (ny >= pl.maxY) { ny = pl.maxY; pl.dir = -1; pl.waitT = pl.wait; }
+      else if (ny <= pl.minY) { ny = pl.minY; pl.dir = 1; pl.waitT = pl.wait; }
+      pl.dx = 0;
+      pl.vx = 0;
+      pl.dy = ny - pl.y;
+      pl.vy = pl.dy / dt;
+      pl.y = ny;
       return;
     }
     let nx = pl.x + pl.dir * pl.speed * dt;
