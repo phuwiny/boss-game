@@ -343,3 +343,7 @@ Preview: `http://127.0.0.1:8001` ขณะ local preview process ยังทำ
 - [x] แก้ปีกถูกตัวละครบังด้วยขนาด/ตำแหน่งวาด และตรวจภาพซ้ำทั้งสองแนวจอ; คง Bobo ไม่มีปากและ Aclaire ตาฟ้า
 
 ผลและภาพอยู่ใน `.logs/2026-10-14_boss-special-qa.md` และ `.logs/2026-10-14_boss-special/` ใช้ fixture ย้ายตัวละครเข้าลานบอส/เก็บเหรียญก่อนลาน และจัดเวลาไอเทม จึงไม่ถือเป็นการเล่นทั้งด่านโดยไม่จัด state หรือทดสอบมือถือจริง รายการ V4 ที่กว้างกว่าขอบเขตนี้ยังคงว่าง
+
+## Stage 4 Haunted House — 2026-11-15
+
+รายละเอียดข้อกำหนดและลำดับงานอยู่ใน `docs/superpowers/specs/2026-10-22-stage4-codex-visual-handoff.md` และ `docs/superpowers/plans/2026-10-22-stage4-haunted-house.md` งานภาพที่พินอนุมัติแล้วอยู่ใน commit `5011588` และบันทึก `.logs/2026-11-15_haunted-imagegen.md` ส่วนงานเชื่อมภาพทำใน branch `codex/stage4-art-integration` พร้อมผลตรวจใน `.logs/2026-11-15_haunted-qa.md`
