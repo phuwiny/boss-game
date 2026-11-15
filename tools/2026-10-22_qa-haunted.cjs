@@ -384,6 +384,37 @@ async function visual(browser) {
     } finally { p.vx=old.vx; p.onGround=old.onGround; g.runPhase=old.phase; CQ.CharacterArtV2=old.art; r.render(g,5); }
   });
   check('Stage 4 hero draw selects v2 sheet and original fallback', v2Draw.withV2 !== v2Draw.fallback, v2Draw);
+  const mewJump = await page.evaluate(() => {
+    const r = CQ.debug.renderer, g = CQ.debug.game, p = g.player;
+    const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+    const saved = { ch:p.ch, vx:p.vx, vy:p.vy, onGround:p.onGround, floating:p.floating, phase:g.runPhase, art:CQ.CharacterArtV2 };
+    const hash = () => {
+      ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
+      r.drawHero(p,g,5,false);
+      const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      let h = 2166136261;
+      for (let i=0;i<data.length;i++) h=Math.imul(h^data[i],16777619);
+      return h>>>0;
+    };
+    try {
+      p.ch='mew'; p.vx=0; p.onGround=false;
+      const out={};
+      for (const [name,vy,floating] of [['rising',-220,false],['apex',0,false],['falling',220,false],['floating',0,true]]) {
+        p.vy=vy; p.floating=floating;
+        const stage4=hash(); CQ.CharacterArtV2=null;
+        const old=hash(); CQ.CharacterArtV2=saved.art;
+        out[name]=stage4===old;
+      }
+      p.onGround=true; p.floating=false; p.vx=180; g.runPhase=Math.PI*1.25;
+      const stage4Run=hash(); CQ.CharacterArtV2=null;
+      out.runRemainsV2=stage4Run!==hash();
+      return out;
+    } finally {
+      p.ch=saved.ch; p.vx=saved.vx; p.vy=saved.vy; p.onGround=saved.onGround; p.floating=saved.floating;
+      g.runPhase=saved.phase; CQ.CharacterArtV2=saved.art; r.render(g,5);
+    }
+  });
+  check('Mew Stage 4 jump/fall/floating match stages 1-3 while running stays v2', Object.values(mewJump).every(Boolean), mewJump);
   await page.screenshot({ path: path.join(SHOTS, 'haunted-start.png') });
 
   const theme = await page.evaluate(() => {
