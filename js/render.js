@@ -1868,9 +1868,7 @@
     const id = p.ch || 'bobo';
     const art = CQ.CharacterArtV2;
     const sheet = art && g.stage && g.stage.motion === 'v2' && hue == null ? this.hauntedImage('hero_' + id, art.sheets[id]) : null;
-    // Mew keeps the approved Stage 1–3 jump/fall silhouettes in Stage 4.
-    // Her eight-frame run and the other Stage 4 motion poses still use v2.
-    const v2 = !!sheet && !(id === 'mew' && !dead && (p.floating || !p.onGround));
+    const v2 = !!sheet;
     const pose = heroPose(p, g, time, dead, v2);
     const fr = (v2 && heroFrameV2(id, pose, sheet)) || heroFrame(id, pose, hue);
     ctx.imageSmoothingEnabled = fr.density > 1;
