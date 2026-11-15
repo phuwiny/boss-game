@@ -1167,6 +1167,7 @@
   // ── วาดทั้งเฟรม ────────────────────────────────────────────────
   Renderer.prototype.render = function (g, time) {
     const ctx = this.ctx, S = this.S;
+    if (this.theme.id === 'haunted') this.preloadHauntedArt();
     if (this.theme.id === 'grassland' && !this.grasslandConcept && typeof Image !== 'undefined') {
       const img = new Image();
       this.grasslandConcept = img;
@@ -1768,6 +1769,20 @@
   // ── ตัวละคร (pixel art จาก js/sprites.js) ───────────────────────
   // เก็บ backing canvas ตาม density ของภาพ แต่ขนาดวาดและ anchor ใช้ logical pixel เดิม
   const heroCache = {};
+  const heroV2Cache = {};
+  function heroFrameV2(id, pose, img) {
+    const key = id + '|' + pose;
+    if (!heroV2Cache[key]) {
+      const art = CQ.CharacterArtV2;
+      const index = art.poses.indexOf(pose);
+      if (index < 0) return null;
+      const c = makeCanvas(art.w * art.density, art.h * art.density);
+      const x = index % 4 * c.width, y = Math.floor(index / 4) * c.height;
+      c.getContext('2d').drawImage(img, x, y, c.width, c.height, 0, 0, c.width, c.height);
+      heroV2Cache[key] = { c: c, w: art.w, h: art.h, ax: art.ax, density: art.density };
+    }
+    return heroV2Cache[key];
+  }
   function heroFrame(id, pose, hue) {
     const key = id + '|' + pose + '|' + (hue == null ? '' : hue);
     let fr = heroCache[key];
@@ -1792,14 +1807,15 @@
   }
 
   /** เลือกท่าจากสถานะผู้เล่น */
-  function heroPose(p, g, time, dead) {
-    if (dead) return 'dead';
-    if (p.floating) return 'jump'; // ลอยตัว (Mew): แขนชูขึ้น
-    if (!p.onGround) return p.vy < 0 ? 'jump' : 'fall';
+  function heroPose(p, g, time, dead, v2) {
+    if (dead) return v2 ? (p.t < 0.15 ? 'dead1' : p.t < 0.6 ? 'dead2' : 'dead3') : 'dead';
+    if (p.floating) return v2 ? 'jumpApex' : 'jump'; // ลอยตัว (Mew): แขนชูขึ้น
+    if (!p.onGround) return v2 ? (p.vy < -150 ? 'jumpUp' : p.vy > 150 ? 'jumpFall' : 'jumpApex') : p.vy < 0 ? 'jump' : 'fall';
+    if (v2 && g.landSquash > 0) return 'land';
     if (Math.abs(p.vx) > 25) {
       const TAU = Math.PI * 2;
       const a = (((g.runPhase || 0) % TAU) + TAU) % TAU;
-      return 'run' + (1 + Math.floor(a / (Math.PI / 2)) % 4);
+      return 'run' + (1 + Math.floor(a / (TAU / (v2 ? 8 : 4))) % (v2 ? 8 : 4));
     }
     return (time % 3.3) < 0.12 ? 'blink' : 'idle';
   }
@@ -1849,7 +1865,12 @@
       // Keep feather tips outside the hair/body silhouette at small mobile scales.
       ctx.drawImage(wf.c, (-6 - wf.w * 2) * k, sy - 27 * k, wf.w * 2 * k, wf.h * 2 * k);
     }
-    const fr = heroFrame(p.ch || 'bobo', heroPose(p, g, time, dead), hue);
+    const id = p.ch || 'bobo';
+    const art = CQ.CharacterArtV2;
+    const sheet = art && g.stage && g.stage.motion === 'v2' && hue == null ? this.hauntedImage('hero_' + id, art.sheets[id]) : null;
+    const v2 = !!sheet;
+    const pose = heroPose(p, g, time, dead, v2);
+    const fr = (v2 && heroFrameV2(id, pose, sheet)) || heroFrame(id, pose, hue);
     ctx.imageSmoothingEnabled = fr.density > 1;
     ctx.imageSmoothingQuality = 'high';
     if (mo) {

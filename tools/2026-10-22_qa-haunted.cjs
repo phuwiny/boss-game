@@ -20,7 +20,7 @@ catch (e) {
 const { chromium } = playwright;
 const root = path.resolve(__dirname, '..');
 const phase = process.argv[2] || 'logic';
-const PHASES = ['logic', 'visual', 'dark', 'perf', 'motion'];
+const PHASES = ['logic', 'visual', 'dark', 'perf', 'motion', 'timed'];
 const URL_BASE = 'http://127.0.0.1:8001/?seed=qa-haunted';
 // visual/motion: สเตจ 1–3 ต้องตรงกับ commit ก่อนเริ่มงานสเตจ 4 ทุกพิกเซล (เสิร์ฟต้นไม้เก่าที่ /__baseline__/ ด้วย git show)
 // 3a7c233 = แผนงานสเตจ 4 (ก่อนแก้ main.js/world.js/render.js ใด ๆ ของ branch) — อย่าใช้ commit กลาง branch
@@ -344,6 +344,46 @@ async function visual(browser) {
   // ── สเตจ 4 ──
   const { context, page, errors } = await frozenPage(browser, '/');
   await startFrozen(page, 'haunted');
+  await page.waitForFunction(() => {
+    const images = CQ.debug.renderer.hauntedImages || {};
+    return ['bg','tiles','blocks','platform','hop','fire','fireball','decor','hero_bobo','hero_mew','hero_aclaire']
+      .every(key => images[key] && images[key].naturalWidth > 0);
+  });
+  const v2Art = await page.evaluate(() => {
+    const art = CQ.CharacterArtV2, img = CQ.debug.renderer.hauntedImages.hero_bobo;
+    const c = document.createElement('canvas'); c.width = 108; c.height = 96;
+    const ctx = c.getContext('2d'), hashes = [];
+    for (let i = 0; i < 8; i++) {
+      ctx.clearRect(0,0,108,96);
+      ctx.drawImage(img, (i % 4) * 108, Math.floor(i / 4) * 96, 108, 96, 0, 0, 108, 96);
+      const data = ctx.getImageData(0,0,108,96).data;
+      let hash = 2166136261;
+      for (let j = 0; j < data.length; j++) hash = Math.imul(hash ^ data[j], 16777619);
+      hashes.push(hash >>> 0);
+    }
+    return { version: art.version, unique: new Set(hashes).size };
+  });
+  check('Stage 4 motion sheet loaded with eight distinct run frames', v2Art.unique === 8, v2Art);
+  const v2Draw = await page.evaluate(() => {
+    const r = CQ.debug.renderer, g = CQ.debug.game, p = g.player;
+    const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+    const old = { vx: p.vx, onGround: p.onGround, phase: g.runPhase, art: CQ.CharacterArtV2 };
+    const hash = () => {
+      ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
+      r.drawHero(p,g,5,false);
+      const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      let h = 2166136261;
+      for (let i = 0; i < data.length; i++) h = Math.imul(h ^ data[i],16777619);
+      return h >>> 0;
+    };
+    try {
+      p.vx = 180; p.onGround = true; g.runPhase = Math.PI * 1.25;
+      const withV2 = hash(); CQ.CharacterArtV2 = null;
+      const fallback = hash();
+      return { withV2, fallback };
+    } finally { p.vx=old.vx; p.onGround=old.onGround; g.runPhase=old.phase; CQ.CharacterArtV2=old.art; r.render(g,5); }
+  });
+  check('Stage 4 hero draw selects v2 sheet and original fallback', v2Draw.withV2 !== v2Draw.fallback, v2Draw);
   await page.screenshot({ path: path.join(SHOTS, 'haunted-start.png') });
 
   const theme = await page.evaluate(() => {
@@ -481,6 +521,62 @@ async function visual(browser) {
 
   check('haunted visual: no console/page errors', errors.length === 0, errors);
   await context.close();
+
+  // Every production image may fail independently; the code-drawn stage must
+  // still render and accept real input without retrying failed URLs each frame.
+  const fallbackContext = await browser.newContext({ viewport: { width: 844, height: 390 } });
+  await fallbackContext.addInitScript(freezeClock);
+  await fallbackContext.route('**/assets/**', route => route.abort());
+  const fallbackPage = await fallbackContext.newPage();
+  const fallbackErrors = [];
+  fallbackPage.on('pageerror', e => fallbackErrors.push(e.message));
+  await fallbackPage.goto(URL_BASE, { waitUntil: 'networkidle' });
+  await startFrozen(fallbackPage, 'haunted');
+  const before = await fallbackPage.evaluate(() => CQ.debug.game.player.x);
+  await fallbackPage.keyboard.down('ArrowRight');
+  await fallbackPage.evaluate(() => window.__step(30));
+  await fallbackPage.keyboard.up('ArrowRight');
+  const fallback = await fallbackPage.evaluate(() => ({
+    x: CQ.debug.game.player.x,
+    bg: CQ.debug.renderer.hauntedImages.bg,
+    theme: CQ.debug.renderer.theme.id
+  }));
+  check('blocked images: procedural Haunted House stays playable', fallback.theme === 'haunted' && fallback.bg === false && fallback.x > before && fallbackErrors.length === 0, { before, fallback, fallbackErrors });
+  await fallbackContext.close();
+
+  for (const [width, height] of [[360,640],[390,844],[640,360],[844,390],[1366,768]]) {
+    const capture = await frozenPage(browser, '/');
+    await capture.page.setViewportSize({ width, height });
+    await capture.page.waitForTimeout(100);
+    await startFrozen(capture.page, 'haunted');
+    await capture.page.evaluate(() => window.__step(3));
+    await capture.page.evaluate(() => CQ.debug.renderer.render(CQ.debug.game, 5));
+    const painted = await capture.page.evaluate(() => {
+      const c = document.getElementById('game');
+      const d = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
+      return CQ.debug.renderer.theme.id === 'haunted' && d[3] > 0;
+    });
+    check(`${width}x${height}: canvas painted`, painted);
+    const prefix = `haunted-${width}x${height}`;
+    await capture.page.screenshot({ path: path.join(SHOTS, prefix + '-start.png') });
+    await capture.page.evaluate(() => { CQ.Switches.setState(CQ.debug.game.lv, 'orange', []); window.__step(2); });
+    await capture.page.screenshot({ path: path.join(SHOTS, prefix + '-switched.png') });
+    await capture.page.evaluate(() => {
+      const r = CQ.debug.renderer, g = CQ.debug.game;
+      const e = g.enemies.find(enemy => enemy.kind === 'pfire');
+      if (e) {
+        e.windT = 0.8;
+        const pos = r.clampCam(e.x - r.viewW / 2, e.y - r.viewH / 2);
+        r.cam.x = pos.x; r.cam.y = pos.y;
+        r.render(g, 5);
+      }
+    });
+    await capture.page.screenshot({ path: path.join(SHOTS, prefix + '-pumpkin.png') });
+    await capture.page.locator('#btn-pause').click();
+    await capture.page.screenshot({ path: path.join(SHOTS, prefix + '-pause.png') });
+    check(`${width}x${height}: four Stage 4 screenshots and pause menu`, await capture.page.locator('#screen-pause').isVisible() && capture.errors.length === 0, capture.errors);
+    await capture.context.close();
+  }
 }
 
 // ── dark ────────────────────────────────────────────────────────
@@ -944,17 +1040,44 @@ function p95(a) {
   return s[Math.floor(s.length * 0.95)];
 }
 
+async function timed(browser) {
+  const { context, page, errors } = await frozenPage(browser, '/');
+  await page.locator('.stage-haunted').click();
+  await page.locator('#btn-timed').click();
+  await page.waitForFunction(() => CQ.debug.state === 'playing');
+  await page.keyboard.down('ArrowRight');
+  await page.keyboard.down('KeyX');
+  for (let i = 0; i < 120; i++) {
+    await page.evaluate(() => window.__step(60));
+    if (i % 20 === 19) {
+      const state = await page.evaluate(() => ({ state: CQ.debug.state, time: CQ.debug.game.time, coins: CQ.debug.game.collected }));
+      console.log('timed progress', i + 1, state);
+    }
+  }
+  await page.keyboard.up('ArrowRight');
+  await page.keyboard.up('KeyX');
+  await page.evaluate(() => window.__step(120)); // clear animation before the result screen
+  const result = await page.evaluate(() => ({ state: CQ.debug.state, time: CQ.debug.game.time, limit: CQ.debug.game.limit, coins: CQ.debug.game.collected }));
+  check('timed mode finishes naturally at 120 seconds with real keyboard input', result.state === 'won' && result.time >= result.limit && result.limit === 120, result);
+  check('timed mode: no page errors', errors.length === 0, errors);
+  await context.close();
+}
+
 (async () => {
   if (!PHASES.includes(phase)) { console.error('unknown phase: ' + phase + ' (use ' + PHASES.join('|') + ')'); process.exit(2); }
   const server = await startServer();
   // perf: ปลด vsync/จำกัดเฟรม ให้ RAF วัดงานจริง (ไม่ถูกปัดเป็น 16.7/33.4 ms)
-  const browser = await chromium.launch(phase === 'perf' ? { args: ['--disable-gpu-vsync', '--disable-frame-rate-limit'] } : {});
+  const browser = await chromium.launch(Object.assign(
+    phase === 'perf' ? { args: ['--disable-gpu-vsync', '--disable-frame-rate-limit'] } : {},
+    process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}
+  ));
   try {
     if (phase === 'logic') await logic(browser);
     else if (phase === 'visual') await visual(browser);
     else if (phase === 'dark') await dark(browser);
     else if (phase === 'perf') await perf(browser);
     else if (phase === 'motion') await motion(browser);
+    else if (phase === 'timed') await timed(browser);
   } catch (e) {
     failed++;
     console.log('FAIL  exception — ' + (e && e.stack || e));

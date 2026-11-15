@@ -23,6 +23,42 @@
   const LAMP = { purple: '#c48cff', orange: '#ffa340' };
   const GHOST_ALPHA = 0.33; // บล็อกโปร่ง: alpha สูงสุดของทุกพิกเซล (ข้อกำหนด ≤ 0.35)
 
+  // Keep image loading lazy and independent per asset. A failed request leaves the
+  // existing procedural renderer available for the entire stage.
+  const HAUNTED_ART = {
+    bg: 'assets/2026-11-15_haunted-bg.png',
+    tiles: 'assets/haunted/2026-11-15_tiles.png',
+    blocks: 'assets/haunted/2026-11-15_switch-blocks.png',
+    platform: 'assets/haunted/2026-11-15_vplatform.png',
+    hop: 'assets/haunted/2026-11-15_pumpkin-hop.png',
+    fire: 'assets/haunted/2026-11-15_pumpkin-fire.png',
+    fireball: 'assets/haunted/2026-11-15_fireball.png',
+    decor: 'assets/haunted/2026-11-15_decor.png'
+  };
+  Renderer.prototype.hauntedImage = function (key, path) {
+    const cache = this.hauntedImages || (this.hauntedImages = {});
+    if (cache[key] === undefined) {
+      if (typeof Image === 'undefined') return null;
+      const img = new Image();
+      cache[key] = img;
+      img.onload = () => { this.layers = null; this.sprites = {}; };
+      img.onerror = () => { cache[key] = false; };
+      img.src = path || HAUNTED_ART[key];
+    }
+    const img = cache[key];
+    return img && img.naturalWidth ? img : null;
+  };
+  Renderer.prototype.preloadHauntedArt = function () {
+    Object.keys(HAUNTED_ART).forEach(key => this.hauntedImage(key));
+    const art = CQ.CharacterArtV2;
+    if (art && art.sheets) Object.keys(art.sheets).forEach(id => this.hauntedImage('hero_' + id, art.sheets[id]));
+  };
+
+  function sheetCell(c, img, cell, size, dx, dy, dw, dh) {
+    c.drawImage(img, (cell % Math.floor(img.naturalWidth / size)) * size,
+      Math.floor(cell / Math.floor(img.naturalWidth / size)) * size, size, size, dx, dy, dw, dh);
+  }
+
   /** ลายพระจันทร์เสี้ยว + ดาวเล็ก (บล็อกม่วง) */
   function moonMark(c, P) {
     // เสี้ยว = วงกลมใหญ่ลบวงกลมเล็ก (clip แบบ evenodd ใช้ได้ทั้งบล็อกทึบและโปร่ง)
@@ -211,16 +247,31 @@
   /** สไปรต์ช่องของสเตจ 4 (แคชตาม key ที่รวมสี+สถานะ) */
   Renderer.prototype.hauntedTileSprite = function (lv, tx, ty, t) {
     const W = CQ.World;
+    const tiles = this.hauntedImage('tiles'), blocks = this.hauntedImage('blocks');
     if (t === TILE.PURPLE || t === TILE.ORANGE) {
       const color = t === TILE.PURPLE ? 'purple' : 'orange';
       const ghost = CQ.Switches.isGhost(lv, tx, ty);
+      if (blocks) {
+        const cell = (color === 'orange' ? 2 : 0) + (ghost ? 1 : 0);
+        return this.sprite('hart_block_' + cell, 32, 32, function (c) {
+          if (!ghost) { c.fillStyle = color === 'orange' ? '#5a260f' : '#291641'; c.fillRect(0, 0, 32, 32); }
+          c.globalAlpha = ghost ? GHOST_ALPHA : 1;
+          sheetCell(c, blocks, cell, 64, 0, 0, 32, 32);
+          c.globalAlpha = 1;
+        });
+      }
       return this.sprite('hsw_' + color + (ghost ? '_ghost' : '_solid'), 32, 32, function (c) { drawSwitchBlock(c, color, ghost); });
     }
     if (t === TILE.SWITCH) {
       const sw = lv.sw === 'orange' ? 'orange' : 'purple';
+      if (blocks) return this.sprite('hart_switch_' + sw, 32, 32, function (c) { sheetCell(c, blocks, sw === 'orange' ? 6 : 4, 64, 0, 0, 32, 32); });
       return this.sprite('hswitch_' + sw, 32, 32, function (c) { drawSwitchBox(c, sw); });
     }
     if (t === TILE.GROUND) {
+      if (tiles) {
+        const top = ty > 0 && !W.isSolid(lv, tx, ty - 1);
+        return this.sprite('hart_floor_' + (top ? 0 : 1), 32, 32, function (c) { sheetCell(c, tiles, top ? 0 : 1, 64, 0, 0, 32, 32); });
+      }
       const solid = function (x, y) { return W.isSolid(lv, x, y); };
       let mask = 0;
       if (ty > 0 && !solid(tx, ty - 1)) mask |= 1;
@@ -230,22 +281,36 @@
       return this.sprite('hfloor' + mask + '_' + v, 32, 32, function (c) { drawHauntedFloor(c, mask, v); });
     }
     if (t === TILE.BRICK) {
+      if (tiles) return this.sprite('hart_brick', 32, 32, function (c) { sheetCell(c, tiles, 2, 64, 0, 0, 32, 32); });
       const top = ty > 0 && !W.isSolid(lv, tx, ty - 1);
       const v = hash(tx, ty) % 3;
       return this.sprite('hbrick' + (top ? 1 : 0) + '_' + v, 32, 32, function (c) { drawHauntedBrick(c, top, v); });
     }
     if (t === TILE.ONEWAY) {
+      if (tiles) return this.sprite('hart_plank', 32, 32, function (c) { sheetCell(c, tiles, 4, 64, 0, 0, 32, 32); });
       let mask = 0;
       if (W.tileAt(lv, tx - 1, ty) !== TILE.ONEWAY) mask |= 1;
       if (W.tileAt(lv, tx + 1, ty) !== TILE.ONEWAY) mask |= 2;
       return this.sprite('hplank' + mask, 32, 32, function (c) { drawHauntedPlank(c, mask); });
     }
-    if (t === TILE.SPIKE) return this.sprite('hspike', 32, 32, drawHauntedSpikes);
+    if (t === TILE.SPIKE) return tiles
+      ? this.sprite('hart_spike', 32, 32, function (c) { sheetCell(c, tiles, 3, 64, 0, 0, 32, 32); })
+      : this.sprite('hspike', 32, 32, drawHauntedSpikes);
     return null;
   };
 
   // ── ฉากหลัง parallax: ผนังวอลเปเปอร์เก่า หน้าต่างพระจันทร์ + เสา/ม่านใกล้ ๆ ──
   Renderer.prototype.buildHauntedLayers = function (mk) {
+    const bg = this.hauntedImage('bg');
+    if (bg) {
+      const far = mk(1024, 320, function (c, w, h) {
+        const sourceH = Math.round(bg.naturalWidth * h / w);
+        const sy = Math.round((bg.naturalHeight - sourceH) / 2);
+        c.drawImage(bg, 0, Math.max(0, sy), bg.naturalWidth, Math.min(sourceH, bg.naturalHeight), 0, 0, w, h);
+      });
+      far.fill = '#2a1a22';
+      return { far: far };
+    }
     const layers = {
       far: mk(1024, 320, function (c, w, h) {
         c.fillStyle = '#211832';
@@ -464,6 +529,23 @@
 
   Renderer.prototype.drawHauntedDecor = function (d, time) {
     const ctx = this.ctx;
+    const decor = this.hauntedImage('decor');
+    if (decor && ['candle', 'portrait', 'jacklamp', 'cobweb', 'bat'].includes(d.k)) {
+      let cell, x, y, w, h;
+      if (d.k === 'candle') { cell = Math.floor(time * 8 + d.x) % 3; w = 22; h = 28; x = d.x - w / 2; y = d.y - h; }
+      else if (d.k === 'portrait') { cell = 5; w = 36; h = 48; x = d.x - w / 2; y = d.y - 98; }
+      else if (d.k === 'jacklamp') { cell = 6; w = 22; h = 24; x = d.x - w / 2; y = d.y - h; }
+      else if (d.k === 'cobweb') { cell = d.dir < 0 ? 4 : 3; w = h = d.r * 1.3; x = d.dir < 0 ? d.x - w : d.x; y = d.y; }
+      else { cell = 7 + Math.floor(time * 7 + d.ph) % 2; w = 40; h = 28; x = d.x - w / 2; y = d.y - h; }
+      if (d.k === 'cobweb') {
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(Math.sin(time * 1.3 + d.ph) * 0.08);
+        sheetCell(ctx, decor, cell, 64, d.dir < 0 ? -w : 0, 0, w, h);
+        ctx.restore();
+      } else sheetCell(ctx, decor, cell, 64, x, y, w, h);
+      return;
+    }
     switch (d.k) {
       case 'candle': {
         const s = d.s;
@@ -560,6 +642,11 @@
   // ── แพลตฟอร์มเลื่อน + รางแนวตั้ง ──────────────────────────────
   Renderer.prototype.drawHauntedPlatform = function (pl) {
     const ctx = this.ctx;
+    const art = this.hauntedImage('platform');
+    if (art) {
+      ctx.drawImage(art, 0, 0, 192, 64, pl.x, pl.y - 8, pl.w, pl.h + 12);
+      return;
+    }
     ctx.fillStyle = '#2e1c14';
     rr(ctx, pl.x, pl.y, pl.w, pl.h, 4); ctx.fill();
     ctx.fillStyle = '#5a3b2a';
@@ -590,6 +677,11 @@
     const x = pl.x + pl.w / 2;
     if (x + 20 < this.cx || x - 20 > this.cx + this.viewW) return;
     const ya = pl.minY + 2, yb = pl.maxY + pl.h - 2;
+    const art = this.hauntedImage('platform');
+    if (art) {
+      for (let y = ya; y < yb; y += 32) ctx.drawImage(art, 192, 0, 64, 64, x - 8, y, 16, Math.min(32, yb - y));
+      return;
+    }
     ctx.fillStyle = 'rgba(20,12,30,0.55)';
     ctx.fillRect(x - 3, ya, 6, yb - ya);
     ctx.strokeStyle = 'rgba(170,150,210,0.45)';
@@ -622,6 +714,19 @@
     if (e.dead && e.deadT > 0.6) return;
     const fire = e.kind === 'pfire';
     const wind = fire && e.windT > 0 && !e.dead;
+    const art = this.hauntedImage(fire ? 'fire' : 'hop');
+    if (art && !e.dead && !(e.flash > 0)) {
+      const cx = e.x + e.w / 2, by = e.y + e.h;
+      const cell = fire ? (wind ? 1 + Math.floor(time * 8) % 2 : 0) : (!e.onGround ? 2 : e.pause < 0.2 ? 1 : 0);
+      ctx.save();
+      ctx.translate(cx, by);
+      const breathe = fire && !wind ? 1 + Math.sin(time * 2.4 + e.x * 0.07) * 0.06 : 1;
+      ctx.scale((e.face < 0 ? -1 : 1) * breathe, breathe);
+      if (fire) ctx.drawImage(art, cell % 4 * 64, Math.floor(cell / 4) * 64, 64, 64, -21, -42, 42, 42);
+      else sheetCell(ctx, art, cell, 64, -19, -38, 38, 38);
+      ctx.restore();
+      return;
+    }
     const P = e.flash > 0 ? PUMPKIN_WHITE : PUMPKIN_PAL[e.kind];
     const w = e.w, h = e.h;
     let cx = e.x + w / 2;
@@ -948,6 +1053,14 @@
   // ── ลูกไฟผี (เขียวผี ต่างจากลูกไฟบอส) — ctx ถูก translate ไปที่ลูกไฟแล้ว ──
   Renderer.prototype.drawGhostFire = function (s, time) {
     const ctx = this.ctx, r = s.r;
+    const art = this.hauntedImage('fireball');
+    if (art) {
+      ctx.save();
+      ctx.rotate(Math.atan2(s.vy, s.vx));
+      sheetCell(ctx, art, Math.floor(time * 12) % 4, 32, -r * 2, -r * 1.4, r * 3.2, r * 2.8);
+      ctx.restore();
+      return;
+    }
     const fl = 1 + Math.sin(time * 34 + s.y) * 0.1;
     ctx.save();
     ctx.rotate(Math.atan2(s.vy, s.vx));

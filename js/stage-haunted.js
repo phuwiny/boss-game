@@ -177,6 +177,7 @@
 
   CQ.STAGES.push({
     id: 'haunted', no: 4, name: 'Haunted House', th: 'บ้านผีสิง', theme: 'haunted', sections: SECTIONS,
+    menuArt: 'assets/2026-11-15_haunted-menu.webp',
     hp: 5, shoot: true, fixedCoins: true, checkpointReturn: true, motion: 'v2',
     dark: { alpha: 0.95, radius: 3.2 * 32 }
   });
