@@ -52,6 +52,8 @@
     Object.keys(HAUNTED_ART).forEach(key => this.hauntedImage(key));
     const art = CQ.CharacterArtV2;
     if (art && art.sheets) Object.keys(art.sheets).forEach(id => this.hauntedImage('hero_' + id, art.sheets[id]));
+    // ท่าเสริมเฉพาะตัวละคร (เช่น float ของ Mew) เป็นภาพเดี่ยวขนาดเท่า 1 ช่อง
+    if (art && art.extras) Object.keys(art.extras).forEach(id => Object.keys(art.extras[id]).forEach(pose => this.hauntedImage('hero_' + id + '_' + pose, art.extras[id][pose])));
   };
 
   function sheetCell(c, img, cell, size, dx, dy, dw, dh) {

@@ -1770,14 +1770,15 @@
   // เก็บ backing canvas ตาม density ของภาพ แต่ขนาดวาดและ anchor ใช้ logical pixel เดิม
   const heroCache = {};
   const heroV2Cache = {};
-  function heroFrameV2(id, pose, img) {
+  /** img = ชีต 4x4 ของตัวละคร หรือภาพเดี่ยวของท่าเสริม (extra = true) */
+  function heroFrameV2(id, pose, img, extra) {
     const key = id + '|' + pose;
     if (!heroV2Cache[key]) {
       const art = CQ.CharacterArtV2;
-      const index = art.poses.indexOf(pose);
+      const index = extra ? 0 : art.poses.indexOf(pose);
       if (index < 0) return null;
       const c = makeCanvas(art.w * art.density, art.h * art.density);
-      const x = index % 4 * c.width, y = Math.floor(index / 4) * c.height;
+      const x = extra ? 0 : index % 4 * c.width, y = extra ? 0 : Math.floor(index / 4) * c.height;
       c.getContext('2d').drawImage(img, x, y, c.width, c.height, 0, 0, c.width, c.height);
       heroV2Cache[key] = { c: c, w: art.w, h: art.h, ax: art.ax, density: art.density };
     }
@@ -1807,9 +1808,15 @@
   }
 
   /** เลือกท่าจากสถานะผู้เล่น */
-  function heroPose(p, g, time, dead, v2) {
+  function heroPose(p, g, time, dead, v2, hasFloat) {
     if (dead) return v2 ? (p.t < 0.15 ? 'dead1' : p.t < 0.6 ? 'dead2' : 'dead3') : 'dead';
-    if (p.floating) return v2 ? 'jumpApex' : 'jump'; // ลอยตัว (Mew): แขนชูขึ้น
+    // ลอยตัว (Mew): ใช้ภาพ float ของตัวละครถ้ามี ไม่มีใช้ jumpApex (v2) หรือ jump (ชุดเดิม)
+    if (p.floating) return v2 ? (hasFloat ? 'float' : 'jumpApex') : 'jump';
+    if (!p.onGround && v2 && hasFloat && p.vy >= -150 && p.vy <= 150) {
+      // ช่วงต่อกับการลอย: jumpApex (ตัวงอ) แทรกแค่ 4–5 เฟรมระหว่างท่ายืด เห็นเป็นภาพกะพริบ
+      if (p.jumping && p.floatT > 0) return 'float'; // กดค้างขาขึ้น: กำลังจะลอย
+      if (p.floatT < p.floatMax) return 'jumpFall'; // เพิ่งเลิกลอย: ตกต่อเลย
+    }
     if (!p.onGround) return v2 ? (p.vy < -150 ? 'jumpUp' : p.vy > 150 ? 'jumpFall' : 'jumpApex') : p.vy < 0 ? 'jump' : 'fall';
     if (v2 && g.landSquash > 0) return 'land';
     if (Math.abs(p.vx) > 25) {
@@ -1869,8 +1876,9 @@
     const art = CQ.CharacterArtV2;
     const sheet = art && g.stage && g.stage.motion === 'v2' && hue == null ? this.hauntedImage('hero_' + id, art.sheets[id]) : null;
     const v2 = !!sheet;
-    const pose = heroPose(p, g, time, dead, v2);
-    const fr = (v2 && heroFrameV2(id, pose, sheet)) || heroFrame(id, pose, hue);
+    const floatImg = v2 && art.extras && art.extras[id] && art.extras[id].float ? this.hauntedImage('hero_' + id + '_float', art.extras[id].float) : null;
+    const pose = heroPose(p, g, time, dead, v2, !!floatImg);
+    const fr = (v2 && (pose === 'float' ? heroFrameV2(id, pose, floatImg, true) : heroFrameV2(id, pose, sheet))) || heroFrame(id, pose, hue);
     ctx.imageSmoothingEnabled = fr.density > 1;
     ctx.imageSmoothingQuality = 'high';
     if (mo) {
@@ -1881,6 +1889,8 @@
     } else ctx.drawImage(fr.c, -fr.ax * k, sy - (fr.h - 1) * k, fr.w * k, fr.h * k);
     ctx.restore();
   };
+
+  Renderer.heroPose = heroPose; // ให้ชุดทดสอบตรวจลำดับท่าได้ (CQ.Renderer.heroPose)
 
   /** วาดตัวละครลง canvas ของหน้าเมนู (ขยายเป็นจำนวนเต็มเท่า ภาพคม) */
   CQ.drawCharPreview = function (canvas, id, time, running) {

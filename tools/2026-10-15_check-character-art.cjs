@@ -43,4 +43,9 @@ for(const id of ['bobo','mew','aclaire']){
  const old=bounds(S.build(id,'idle').px,108,2);
  assert.ok(old[3]-old[1] <= 48,'original idle fits the shared 54x48 v2 frame');
 }
-console.log('PASS Stage 4 v2 manifest, sheet paths, and shared frame geometry');
+// ท่าเสริมเฉพาะตัวละคร: มีแค่ float ของ Mew ตัวอื่นไม่มี (ลอยตัวใช้ jumpApex)
+assert.deepEqual(Object.keys(v2.extras||{}),['mew']);
+assert.deepEqual(Object.keys(v2.extras.mew),['float']);
+assert.ok(fs.statSync(path.join(__dirname,'..',v2.extras.mew.float)).size>0);
+assert.equal(v2.sheets.mew,'assets/characters/2026-11-21_mew-motion-v2-dead3-frames.png');
+console.log('PASS Stage 4 v2 manifest, sheet paths, and shared frame geometry, Mew float extra');
