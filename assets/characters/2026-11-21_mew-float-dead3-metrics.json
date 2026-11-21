@@ -1,0 +1,30 @@
+{
+  "logical": [
+    54,
+    48
+  ],
+  "density": 2,
+  "ax": 32,
+  "shared_scale": 0.177319587628866,
+  "calibration": "existing idle 86px silhouette height applied to generated reference pose",
+  "bounds": {
+    "calibration": [
+      26,
+      8,
+      90,
+      94
+    ],
+    "float": [
+      25,
+      3,
+      91,
+      94
+    ],
+    "dead3": [
+      20,
+      4,
+      94,
+      94
+    ]
+  }
+}
