@@ -1812,6 +1812,11 @@
     if (dead) return v2 ? (p.t < 0.15 ? 'dead1' : p.t < 0.6 ? 'dead2' : 'dead3') : 'dead';
     // ลอยตัว (Mew): ใช้ภาพ float ของตัวละครถ้ามี ไม่มีใช้ jumpApex (v2) หรือ jump (ชุดเดิม)
     if (p.floating) return v2 ? (hasFloat ? 'float' : 'jumpApex') : 'jump';
+    if (!p.onGround && v2 && hasFloat && p.vy >= -150 && p.vy <= 150) {
+      // ช่วงต่อกับการลอย: jumpApex (ตัวงอ) แทรกแค่ 4–5 เฟรมระหว่างท่ายืด เห็นเป็นภาพกะพริบ
+      if (p.jumping && p.floatT > 0) return 'float'; // กดค้างขาขึ้น: กำลังจะลอย
+      if (p.floatT < p.floatMax) return 'jumpFall'; // เพิ่งเลิกลอย: ตกต่อเลย
+    }
     if (!p.onGround) return v2 ? (p.vy < -150 ? 'jumpUp' : p.vy > 150 ? 'jumpFall' : 'jumpApex') : p.vy < 0 ? 'jump' : 'fall';
     if (v2 && g.landSquash > 0) return 'land';
     if (Math.abs(p.vx) > 25) {
@@ -1884,6 +1889,8 @@
     } else ctx.drawImage(fr.c, -fr.ax * k, sy - (fr.h - 1) * k, fr.w * k, fr.h * k);
     ctx.restore();
   };
+
+  Renderer.heroPose = heroPose; // ให้ชุดทดสอบตรวจลำดับท่าได้ (CQ.Renderer.heroPose)
 
   /** วาดตัวละครลง canvas ของหน้าเมนู (ขยายเป็นจำนวนเต็มเท่า ภาพคม) */
   CQ.drawCharPreview = function (canvas, id, time, running) {

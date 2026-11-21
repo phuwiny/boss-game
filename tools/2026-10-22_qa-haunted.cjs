@@ -892,6 +892,41 @@ const pxDiff = (a, b) => {
   return n;
 };
 
+/** ลำดับท่าทีละเฟรมของ Mew: กดกระโดดค้างจนลอย แล้วปล่อยจนลงพื้น / และกดกระโดดสั้น ๆ (ไม่ลอย) */
+async function mewFloatPoses(browser) {
+  const { context, page, errors } = await frozenPage(browser, '/');
+  await page.locator('#btn-char').click();
+  await page.locator('.char-card').nth(1).click();
+  if (await page.locator('#btn-chars-ok').isVisible()) await page.locator('#btn-chars-ok').click();
+  await startFrozen(page, 'haunted');
+  const poses = async (n) => page.evaluate((n) => {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      window.__step(1);
+      const g = CQ.debug.game, p = g.player;
+      out.push(CQ.Renderer.heroPose(p, g, 0, false, true, true));
+    }
+    return out;
+  }, n);
+  const runs = seq => seq.reduce((r, x) => { if (r.length && r[r.length - 1][0] === x) r[r.length - 1][1]++; else r.push([x, 1]); return r; }, []);
+  await page.keyboard.down('Space');
+  const hold = await poses(60);
+  await page.keyboard.up('Space');
+  const release = await poses(90);
+  const hr = runs(hold), rr = runs(release);
+  check('mew hold-jump: rises then floats (jumpUp → float)', hold.includes('jumpUp') && hold.includes('float'), hr);
+  check('mew hold-jump: no jumpApex between jumpUp and float', !hold.includes('jumpApex'), hr);
+  check('mew after float: falls straight to jumpFall (no jumpApex)', rr.length > 0 && rr[0][0] === 'jumpFall' && !release.includes('jumpApex'), rr);
+  // กระโดดแตะสั้น ๆ (ไม่ลอย): ยังเห็น jumpApex ตามเดิม
+  await page.keyboard.down('Space');
+  await poses(3);
+  await page.keyboard.up('Space');
+  const tap = await poses(70);
+  check('mew tap-jump (no float): jumpApex still shown at the top', tap.includes('jumpApex') && !tap.includes('float'), runs(tap));
+  check('mew float poses: no console/page errors', errors.length === 0, errors);
+  await context.close();
+}
+
 async function motion(browser) {
   fs.mkdirSync(SHOTS, { recursive: true });
 
@@ -913,6 +948,9 @@ async function motion(browser) {
   check('grassland: hero box during jump same as baseline', JSON.stringify(runs.base.box.jump) === JSON.stringify(runs.now.box.jump), [runs.base.box.jump, runs.now.box.jump]);
   check('grassland: no hit-stop (deathAnim moved like baseline after 4 frames)', !!gi.die1 && gi.die1.y !== gi.die1.startY && JSON.stringify(gi.die1) === JSON.stringify(bi.die1), [bi.die1, gi.die1]);
   check('grassland: same particles as baseline (no extra dust / wisps)', JSON.stringify([gi.start, gi.turn.dust, gi.wisps1]) === JSON.stringify([bi.start, bi.turn.dust, bi.wisps1]), { base: [bi.start, bi.turn, bi.wisps1], now: [gi.start, gi.turn, gi.wisps1] });
+
+  // ── สเตจ 4: Mew กดกระโดดค้าง (ลอยตัว) ต้องไม่มีท่า jumpApex แทรกสั้น ๆ ระหว่างท่ายืด (เห็นเป็นภาพกะพริบ) ──
+  await mewFloatPoses(browser);
 
   // ── สเตจ 4: motion v2 ──
   const { context, page, errors } = await frozenPage(browser, '/');
