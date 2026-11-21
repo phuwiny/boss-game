@@ -14,6 +14,8 @@ const frameW = 108, frameH = 96;
 // ชีตที่แก้ภาพบางช่องภายหลัง (ช่องอื่นต้องเหมือนชีตเดิมทุกไบต์) และภาพท่าเสริมเฉพาะตัวละคร
 const SHEET_OVERRIDES = { mew: 'assets/characters/2026-11-21_mew-motion-v2-dead3-frames.png' };
 const EXTRAS = { mew: { float: 'assets/characters/2026-11-21_mew-float.png' } };
+// ช่องในชีตที่แทนด้วยภาพเดี่ยว: ภาพเดี่ยวคือต้นฉบับ ช่องในชีตต้องตรงกันทุกพิกเซล (แก้ภาพเดี่ยวแล้วต้องสร้างชีตใหม่)
+const CELL_SOURCES = { mew: { 14: 'assets/characters/2026-11-21_mew-dead3.png' } };
 
 function countOpaque(data, width, left, top, w, h) {
   let count = 0;
@@ -42,6 +44,14 @@ function countOpaque(data, width, left, top, w, h) {
       const sourceCount = countOpaque(source, sm.width, sx, sy, sw, sh);
       const frameCount = countOpaque(normalized, fm.width, fx, fy, frameW, frameH);
       if ((i < 15 && (!sourceCount || !frameCount)) || (i === 15 && (sourceCount || frameCount))) throw Error(`${id}: invalid pose cell ${i + 1}`);
+    }
+    for (const [cell, file] of Object.entries(CELL_SOURCES[id] || {})) {
+      const i = Number(cell), fx = i % 4 * frameW, fy = Math.floor(i / 4) * frameH;
+      const [inSheet, single] = await Promise.all([
+        sharp(frames).extract({ left: fx, top: fy, width: frameW, height: frameH }).ensureAlpha().raw().toBuffer(),
+        sharp(path.join(root, file)).ensureAlpha().raw().toBuffer()
+      ]);
+      if (!inSheet.equals(single)) throw Error(`${id}: sheet cell ${i} differs from ${file} — rebuild the sheet`);
     }
     sheets[id] = sheetPath;
   }
